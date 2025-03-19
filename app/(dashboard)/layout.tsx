@@ -7,7 +7,8 @@ import {
   PanelLeft,
   Settings,
   ShoppingCart,
-  Users2
+  Users2,
+  CalendarCheck2
 } from 'lucide-react';
 
 import {
@@ -31,6 +32,7 @@ import { VercelLogo } from '@/components/icons';
 import Providers from './providers';
 import { NavItem } from './nav-item';
 import { SearchInput } from './search';
+import { ClientBreadcrumb } from './client-breadcrumb';
 
 export default function DashboardLayout({
   children
@@ -73,7 +75,9 @@ function DesktopNav() {
         <NavItem href="#" label="Dashboard">
           <Home className="h-5 w-5" />
         </NavItem>
-
+        <NavItem href="/habits" label="Habits">
+          <CalendarCheck2 className="h-5 w-5" />
+        </NavItem>
         <NavItem href="#" label="Orders">
           <ShoppingCart className="h-5 w-5" />
         </NavItem>
@@ -85,7 +89,6 @@ function DesktopNav() {
         <NavItem href="/customers" label="Customers">
           <Users2 className="h-5 w-5" />
         </NavItem>
-
         <NavItem href="#" label="Analytics">
           <LineChart className="h-5 w-5" />
         </NavItem>
@@ -155,6 +158,13 @@ function MobileNav() {
             Customers
           </Link>
           <Link
+            href="/habits"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <CalendarCheck2 className="h-5 w-5" />
+            习惯养成
+          </Link>
+          <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
@@ -169,24 +179,6 @@ function MobileNav() {
 
 function DashboardBreadcrumb() {
   return (
-    <Breadcrumb className="hidden md:flex">
-      <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="#">Dashboard</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="#">Products</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>All Products</BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
+    <ClientBreadcrumb />
   );
 }
