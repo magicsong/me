@@ -72,7 +72,7 @@ function DesktopNav() {
           <span className="sr-only">Acme Inc</span>
         </Link>
 
-        <NavItem href="#" label="Dashboard">
+        <NavItem href="/dashboard" label="Dashboard">
           <Home className="h-5 w-5" />
         </NavItem>
         <NavItem href="/habits" label="Habits">
@@ -130,11 +130,11 @@ function MobileNav() {
             <span className="sr-only">Vercel</span>
           </Link>
           <Link
-            href="#"
+            href="/dashboard"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Home className="h-5 w-5" />
-            Dashboard
+            仪表盘
           </Link>
           <Link
             href="#"

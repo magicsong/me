@@ -33,6 +33,12 @@ export function ClientBreadcrumb() {
       name: 'Customers',
       page: '客户管理'
     };
+  } else if (pathname?.includes('/dashboard')) {
+    breadcrumbItems = {
+      link: '/dashboard',
+      name: 'Dashboard',
+      page: '今日概览'
+    };
   }
 
   return (
