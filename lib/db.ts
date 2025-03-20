@@ -136,7 +136,7 @@ export async function getHabitsFromDB() {
       
       let streak = 0;
       if (entries.length > 0) {
-        const sortedDates = entries.map(entry => entry.completedAt).sort((a, b) => b.getTime() - a.getTime());
+        const sortedDates = entries.map(entry => new Date(entry.completedAt)).sort((a, b) => b.getTime() - a.getTime());
         
         // 简单计算连续天数 (实际应用中可能需要更复杂的逻辑)
         let currentStreak = 0;
@@ -233,4 +233,16 @@ export async function completeHabitInDB(id: number, completed: boolean) {
   
   // 返回当前状态
   return existingEntry.length > 0;
+}
+
+// 获取习惯历史记录
+export async function getHabitHistoryFromDB(habitId: number) {
+  const entries = await db
+    .select()
+    .from(habitEntries)
+    .where(eq(habitEntries.habitId, habitId))
+    .orderBy(desc(habitEntries.completedAt));
+  
+  // 返回完成日期的数组
+  return entries.map(entry => entry.completedAt);
 }

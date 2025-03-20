@@ -5,7 +5,8 @@ import {
   getHabitsFromDB, 
   createHabitInDB,
   deleteHabitFromDB,
-  completeHabitInDB
+  completeHabitInDB,
+  getHabitHistoryFromDB
 } from '@/lib/db';
 
 export async function getHabits() {
@@ -51,4 +52,8 @@ export async function completeHabit(id: string) {
   
   revalidatePath('/habits');
   return { success: true };
+}
+
+export async function getHabitHistory(id: string) {
+  return getHabitHistoryFromDB(Number(id));
 }
