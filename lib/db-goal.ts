@@ -22,7 +22,7 @@ const db = drizzle(pool);
 
 // 定义表结构
 export const goals = pgTable('goals', {
-    id: text('id').primaryKey(),
+    id: serial('id').primaryKey(),
     title: text('title').notNull(),
     description: text('description'),
     type: text('type').notNull(),
@@ -30,6 +30,7 @@ export const goals = pgTable('goals', {
     endDate: timestamp('end_date').notNull(),
     userId: text('user_id').notNull(),
     createdAt: timestamp('created_at').notNull().$default(() => new Date()),
+    status: text('status').notNull().$default('in_progress'),
 });
 
 export const habits = pgTable('habits', {
@@ -62,9 +63,8 @@ export async function getGoalsInDB(userId: string) {
         const result = await db.select().from(goals)
             .where(eq(goals.userId, userId))
             .orderBy(desc(goals.createdAt))
-            .leftJoin(habitTargets, eq(goals.id, habitTargets.goalId))
-            .leftJoin(habits, eq(habitTargets.habitId, habits.id));
-
+            .innerJoin(habitTargets, eq(goals.id, habitTargets.goalId))
+            .innerJoin(habits, eq(habitTargets.habitId, habits.id));
         return result;
     } catch (error) {
         console.error('获取目标失败:', error);
@@ -72,7 +72,7 @@ export async function getGoalsInDB(userId: string) {
     }
 }
 
-export async function getGoalByIdInDB(id: string) {
+export async function getGoalByIdInDB(id: number) {
     try {
         const goal = await db.select().from(goals)
             .where(eq(goals.id, id))
@@ -86,7 +86,7 @@ export async function getGoalByIdInDB(id: string) {
     }
 }
 
-export async function calculateGoalProgress(goalId: string) {
+export async function calculateGoalProgress(goalId: number) {
     // 获取目标相关的习惯完成情况并计算进度
     // ...实现代码
 }
@@ -101,15 +101,13 @@ export async function createGoalInDB(data: {
 }) {
     try {
         const { habitTargets, ...goalData } = data;
-        const goalId = crypto.randomUUID(); // Generate a unique ID
-
-        const result = await db.insert(goals).values({ ...goalData, id: goalId }).returning();
+        const result = await db.insert(goals).values({ ...goalData }).returning();
 
         // Now insert the habit targets
         for (const targetData of habitTargets) {
             await createHabitTargetInDB({
                 ...targetData,
-                goalId,
+                goalId: result[0].id,
             });
         }
 
@@ -160,7 +158,7 @@ export async function getHabitTargetsByGoalIdInDB(goalId: string) {
 }
 export async function createHabitTargetInDB(data: {
     habitId: number;
-    goalId: string;
+    goalId: number;
     targetCompletionRate: number;
     currentCompletionRate?: number;
     userId: string;

@@ -1,4 +1,4 @@
-import { GoalForm } from '../goal-form';
+import { GoalForm } from './goal-form';
 import { getHabits } from '../../habits/actions';
 import { auth } from '@/lib/auth';
 

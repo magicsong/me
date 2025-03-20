@@ -148,8 +148,38 @@ export async function getGoals(userId: string) {
         throw new Error('You must be logged in to get goals');
     }
 
-    const goals = await getGoalsInDB(userId);
-    return goals;
+    const goalsData = await getGoalsInDB(userId);
+    
+    // Group goals by their ID
+    const goalsMap = new Map();
+    
+    goalsData.forEach(item => {
+        const goalId = item.goals.id;
+        
+        if (!goalsMap.has(goalId)) {
+            // Initialize a new goal entry with an empty habitTargets array
+            goalsMap.set(goalId, {
+                ...item.goals,
+                habitTargets: []
+            });
+        }
+        
+        // Add this habit target to the goal's habitTargets array
+        goalsMap.get(goalId).habitTargets.push({
+            id: item.habit_targets.id,
+            habitId: item.habit_targets.habitId,
+            goalId: item.habit_targets.goalId,
+            targetCompletionRate: item.habit_targets.targetCompletionRate,
+            currentCompletionRate: item.habit_targets.currentCompletionRate || 0,
+            userId: item.habit_targets.userId,
+            habit: item.habits // Include habit details
+        });
+    });
+    
+    // Convert the map back to an array
+    const formattedGoals = Array.from(goalsMap.values());
+    
+    return formattedGoals;
 }
 
 export async function getGoalById(id: string) {

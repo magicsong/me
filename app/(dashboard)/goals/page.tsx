@@ -17,7 +17,7 @@ function GoalStatusBadge({ status }: { status: GoalStatus }) {
     'failed': { label: '未达成', variant: 'destructive' }
   };
   
-  const { label, variant } = statusMap[status];
+  const { label, variant } = statusMap[status] || { label: 'Unknown', variant: 'default' };
   
   return <Badge variant={variant as any}>{label}</Badge>;
 }
@@ -80,7 +80,7 @@ async function GoalsList() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>习惯目标:</span>
-                  <span>{goal.habitTargets.length}个</span>
+                  <span>{goal.habitTargets?.length || 0}个</span>
                 </div>
                 
                 {/* 显示进度条 */}
