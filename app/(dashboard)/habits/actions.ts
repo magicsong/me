@@ -6,7 +6,8 @@ import {
   createHabitInDB,
   deleteHabitFromDB,
   completeHabitInDB,
-  getHabitHistoryFromDB
+  getHabitHistoryFromDB,
+  getHabitStatsFromDB  // 添加这个导入
 } from '@/lib/db';
 
 export async function getHabits() {
@@ -56,4 +57,10 @@ export async function completeHabit(id: string) {
 
 export async function getHabitHistory(id: string) {
   return getHabitHistoryFromDB(Number(id));
+}
+
+// 添加获取习惯统计数据的函数
+export async function getHabitStats(timeRange?: 'week' | 'month' | 'year') {
+  // 从数据库获取习惯统计数据
+  return getHabitStatsFromDB(timeRange);
 }

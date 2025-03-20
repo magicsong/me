@@ -10,6 +10,7 @@ import {
 import { HabitsList } from './habits-list';
 import { getHabits } from './actions';
 import { AddHabitButton } from './add-habit-button';
+import { HabitStats } from './habit-stats';
 
 export default async function HabitsPage() {
   const habits = await getHabits();
@@ -24,17 +25,25 @@ export default async function HabitsPage() {
         <AddHabitButton />
       </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>我的习惯</CardTitle>
-          <CardDescription>
-            管理你正在培养的习惯。点击完成按钮记录每日进度。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <HabitsList habits={habits} />
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>我的习惯</CardTitle>
+              <CardDescription>
+                管理你正在培养的习惯。点击完成按钮记录每日进度。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <HabitsList habits={habits} />
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="md:col-span-1">
+          <HabitStats />
+        </div>
+      </div>
     </>
   );
 }
