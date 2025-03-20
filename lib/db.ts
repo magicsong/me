@@ -11,7 +11,9 @@ import {
   pgEnum,
   serial,
   boolean,
-  date
+  date,
+  primaryKey,
+  json
 } from 'drizzle-orm/pg-core';
 import { count, eq, ilike, and, sql, desc } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
@@ -56,9 +58,49 @@ export const habitEntries = pgTable('habit_entries', {
   userId: text('user_id')  // 如果系统支持多用户，这里可以关联到用户表
 });
 
+// === Auth.js的Drizzle模式 ===
+export const users = pgTable('users', {
+  id: text('id').notNull().primaryKey(),
+  name: text('name'),
+  email: text('email').notNull(),
+  emailVerified: timestamp('email_verified', { mode: 'date' }),
+  image: text('image'),
+});
+
+export const accounts = pgTable('accounts', {
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  provider: text('provider').notNull(),
+  providerAccountId: text('provider_account_id').notNull(),
+  refresh_token: text('refresh_token'),
+  access_token: text('access_token'),
+  expires_at: integer('expires_at'),
+  token_type: text('token_type'),
+  scope: text('scope'),
+  id_token: text('id_token'),
+  session_state: text('session_state'),
+}, (account) => ({
+  compoundKey: primaryKey({ columns: [account.provider, account.providerAccountId] }),
+}));
+
+export const sessions = pgTable('sessions', {
+  sessionToken: text('session_token').notNull().primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  expires: timestamp('expires', { mode: 'date' }).notNull(),
+});
+
+export const verificationTokens = pgTable('verification_tokens', {
+  identifier: text('identifier').notNull(),
+  token: text('token').notNull(),
+  expires: timestamp('expires', { mode: 'date' }).notNull(),
+}, (vt) => ({
+  compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
+}));
+
 export type SelectProduct = typeof products.$inferSelect;
 export type SelectHabit = typeof habits.$inferSelect;
 export type SelectHabitEntry = typeof habitEntries.$inferSelect;
+export type SelectUser = typeof users.$inferSelect;
 
 export const insertProductSchema = createInsertSchema(products);
 export const insertHabitSchema = createInsertSchema(habits);
@@ -454,3 +496,4 @@ function getWeekNumber(date: Date): number {
   }
   return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
 }
+
