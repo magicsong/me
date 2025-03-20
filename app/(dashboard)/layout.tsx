@@ -67,6 +67,9 @@ function DesktopNav() {
         <NavItem href="/dashboard" label="Dashboard">
           <Home className="h-5 w-5" />
         </NavItem>
+        <NavItem href="/goals" label="Goals">
+          <Package2 className="h-5 w-5" />
+        </NavItem>
         <NavItem href="/habits" label="Habits">
           <CalendarCheck2 className="h-5 w-5" />
         </NavItem>

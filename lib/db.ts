@@ -89,6 +89,28 @@ export const sessions = pgTable('sessions', {
   expires: timestamp('expires', { mode: 'date' }).notNull(),
 });
 
+export const habitTargets = pgTable('habit_targets', {
+  id: serial('id').primaryKey(),
+  habitId: integer('habit_id').notNull().references(() => habits.id),
+  goalId: text('goal_id').notNull(),
+  targetCompletionRate: numeric('target_completion_rate', { precision: 5, scale: 2 }).notNull(),
+  currentCompletionRate: numeric('current_completion_rate', { precision: 5, scale: 2 }),
+  updateDate: date('update_date').notNull() .defaultNow(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+});
+
+export const goals = pgTable('goals', {
+  id: text('id').notNull().primaryKey(),
+  title: text('title').notNull(),
+  description: text('description'),
+  type: text('type').notNull(),
+  startDate: timestamp('start_date').notNull(),
+  endDate: timestamp('end_date').notNull(),
+  status: text('status').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+})
 export const verificationTokens = pgTable('verification_tokens', {
   identifier: text('identifier').notNull(),
   token: text('token').notNull(),
