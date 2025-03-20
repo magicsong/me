@@ -147,8 +147,10 @@ export async function deleteProductById(id: number) {
 }
 
 // 习惯相关的数据库函数
-export async function getHabitsFromDB() {
-  const allHabits = await db.select().from(habits).orderBy(desc(habits.createdAt));
+export async function getHabitsFromDB(userId: string) {
+  const allHabits = await db.select().from(habits)
+    .where(eq(habits.userId, userId))
+    .orderBy(desc(habits.createdAt));
   
   // 获取今天的日期，用于检查今天是否完成
   const today = new Date();
@@ -164,7 +166,8 @@ export async function getHabitsFromDB() {
         .where(
           and(
             eq(habitEntries.habitId, habit.id),
-            eq(habitEntries.completedAt, today)
+            eq(habitEntries.completedAt, today),
+            eq(habitEntries.userId, userId)
           )
         )
         .limit(1);
@@ -173,7 +176,12 @@ export async function getHabitsFromDB() {
       const entries = await db
         .select()
         .from(habitEntries)
-        .where(eq(habitEntries.habitId, habit.id))
+        .where(
+          and(
+            eq(habitEntries.habitId, habit.id),
+            eq(habitEntries.userId, userId)
+          )
+        )
         .orderBy(desc(habitEntries.completedAt));
       
       let streak = 0;
@@ -220,24 +228,35 @@ export async function getHabitsFromDB() {
   return habitsWithProgress;
 }
 
-export async function createHabitInDB(name: string, description: string, frequency: string) {
+export async function createHabitInDB(name: string, description: string, frequency: string, userId: string) {
   const result = await db.insert(habits).values({
     name,
     description: description || null,
-    frequency: frequency as 'daily' | 'weekly' | 'monthly'
+    frequency: frequency as 'daily' | 'weekly' | 'monthly',
+    userId
   }).returning();
   
   return result[0];
 }
 
-export async function deleteHabitFromDB(id: number) {
+export async function deleteHabitFromDB(id: number, userId: string) {
   // 首先删除所有关联的完成记录
-  await db.delete(habitEntries).where(eq(habitEntries.habitId, id));
+  await db.delete(habitEntries).where(
+    and(
+      eq(habitEntries.habitId, id),
+      eq(habitEntries.userId, userId)
+    )
+  );
   // 然后删除习惯本身
-  await db.delete(habits).where(eq(habits.id, id));
+  await db.delete(habits).where(
+    and(
+      eq(habits.id, id),
+      eq(habits.userId, userId)
+    )
+  );
 }
 
-export async function completeHabitInDB(id: number, completed: boolean) {
+export async function completeHabitInDB(id: number, completed: boolean, userId: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0); // 设置为今天的开始时间
   
@@ -248,7 +267,8 @@ export async function completeHabitInDB(id: number, completed: boolean) {
     .where(
       and(
         eq(habitEntries.habitId, id),
-        eq(habitEntries.completedAt, today)
+        eq(habitEntries.completedAt, today),
+        eq(habitEntries.userId, userId)
       )
     )
     .limit(1);
@@ -257,7 +277,8 @@ export async function completeHabitInDB(id: number, completed: boolean) {
   if (completed && existingEntry.length === 0) {
     await db.insert(habitEntries).values({
       habitId: id,
-      completedAt: today
+      completedAt: today,
+      userId
     });
     return true;
   }
@@ -267,7 +288,8 @@ export async function completeHabitInDB(id: number, completed: boolean) {
     await db.delete(habitEntries).where(
       and(
         eq(habitEntries.habitId, id),
-        eq(habitEntries.completedAt, today)
+        eq(habitEntries.completedAt, today),
+        eq(habitEntries.userId, userId)
       )
     );
     return false;
@@ -278,11 +300,16 @@ export async function completeHabitInDB(id: number, completed: boolean) {
 }
 
 // 获取习惯历史记录
-export async function getHabitHistoryFromDB(habitId: number) {
+export async function getHabitHistoryFromDB(habitId: number, userId: string) {
   const entries = await db
     .select()
     .from(habitEntries)
-    .where(eq(habitEntries.habitId, habitId))
+    .where(
+      and(
+        eq(habitEntries.habitId, habitId),
+        eq(habitEntries.userId, userId)
+      )
+    )
     .orderBy(desc(habitEntries.completedAt));
   
   // 返回完成日期的数组
@@ -290,7 +317,7 @@ export async function getHabitHistoryFromDB(habitId: number) {
 }
 
 // 获取习惯统计数据
-export async function getHabitStatsFromDB(timeRange: 'week' | 'month' | 'year' = 'week') {
+export async function getHabitStatsFromDB(userId: string, timeRange: 'week' | 'month' | 'year' = 'week') {
   // 计算日期范围
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -317,8 +344,9 @@ export async function getHabitStatsFromDB(timeRange: 'week' | 'month' | 'year' =
       break;
   }
   
-  // 获取所有习惯
-  const allHabits = await db.select().from(habits);
+  // 获取所有习惯，只获取该用户的习惯
+  const allHabits = await db.select().from(habits)
+    .where(eq(habits.userId, userId));
   
   // 没有习惯时返回空数据
   if (allHabits.length === 0) {
@@ -332,11 +360,16 @@ export async function getHabitStatsFromDB(timeRange: 'week' | 'month' | 'year' =
     };
   }
   
-  // 获取日期范围内的所有完成记录
+  // 获取日期范围内的所有完成记录，只获取该用户的记录
   const entries = await db
     .select()
     .from(habitEntries)
-    .where(sql`${habitEntries.completedAt} >= ${startDate} AND ${habitEntries.completedAt} <= ${today}`)
+    .where(
+      and(
+        sql`${habitEntries.completedAt} >= ${startDate} AND ${habitEntries.completedAt} <= ${today}`,
+        eq(habitEntries.userId, userId)
+      )
+    )
     .orderBy(habitEntries.completedAt);
   
   // 计算每个习惯的统计数据
@@ -379,7 +412,12 @@ export async function getHabitStatsFromDB(timeRange: 'week' | 'month' | 'year' =
     const habitEntryDates = await db
       .select()
       .from(habitEntries)
-      .where(eq(habitEntries.habitId, id))
+      .where(
+        and(
+          eq(habitEntries.habitId, id),
+          eq(habitEntries.userId, userId)
+        )
+      )
       .orderBy(desc(habitEntries.completedAt));
     
     // 计算streak

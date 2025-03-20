@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import {
+  CalendarCheck2,
   Home,
   LineChart,
   Package,
@@ -7,18 +7,11 @@ import {
   PanelLeft,
   Settings,
   ShoppingCart,
-  Users2,
-  CalendarCheck2
+  Users2
 } from 'lucide-react';
+import Link from 'next/link';
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from '@/components/ui/breadcrumb';
+import { VercelLogo } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -27,12 +20,11 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { Analytics } from '@vercel/analytics/react';
-import { User } from './user';
-import { VercelLogo } from '@/components/icons';
-import Providers from './providers';
-import { NavItem } from './nav-item';
-import { SearchInput } from './search';
 import { ClientBreadcrumb } from './client-breadcrumb';
+import { NavItem } from './nav-item';
+import Providers from './providers';
+import { SearchInput } from './search';
+import { User } from './user';
 
 export default function DashboardLayout({
   children

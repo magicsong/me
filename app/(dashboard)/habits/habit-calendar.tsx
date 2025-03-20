@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Cone, X } from 'lucide-react';
 import { getHabitHistory } from './actions';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,7 +26,7 @@ export function HabitCalendar({
   onClose,
   className
 }: {
-  habit: Habit | null;
+  habit: Habit ;
   onClose: () => void;
   className?: string;
 }) {
@@ -46,6 +46,7 @@ export function HabitCalendar({
         setCompletedDates(history.map((date: DateValue) => 
           date instanceof Date ? date : new Date(date)
         ));
+        console.log('Habit history loaded:', history);
       } catch (error) {
         console.error('Error loading habit history:', error);
       } finally {
@@ -166,12 +167,23 @@ export function HabitCalendar({
             <div 
               key={i} 
               className={cn(
-                "aspect-square flex flex-col items-center justify-center rounded-md text-sm",
-                isCompleted ? "bg-primary text-primary-foreground" : "hover:bg-muted",
-                isToday && !isCompleted && "border border-primary"
+                "aspect-square flex flex-col items-center justify-center rounded-md text-sm relative",
+                isToday && "ring-1 ring-primary"
               )}
             >
-              {date.getDate()}
+              {isCompleted ? (
+                <div className="flex flex-col items-center justify-center w-full h-full rounded-md bg-emerald-50/70 dark:bg-emerald-950/30">
+                  <div className="mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
+                      className="w-4 h-4 text-emerald-500 dark:text-emerald-400">
+                      <path d="M21.947 9.179a1.001 1.001 0 0 0-.868-.676l-5.701-.453-2.467-5.461a.998.998 0 0 0-1.822-.001L8.622 8.05l-5.701.453a1 1 0 0 0-.619 1.713l4.213 4.107-1.49 6.452a1 1 0 0 0 1.53 1.057L12 18.202l5.445 3.63a1.001 1.001 0 0 0 1.517-1.106l-1.829-6.4 4.536-4.082c.297-.268.406-.686.278-1.065z"/>
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{date.getDate()}</span>
+                </div>
+              ) : (
+                date.getDate()
+              )}
             </div>
           );
         })}
@@ -221,12 +233,23 @@ export function HabitCalendar({
             <div 
               key={i} 
               className={cn(
-                "aspect-square flex flex-col items-center justify-center rounded-md text-sm",
-                isCompleted ? "bg-primary text-primary-foreground" : "hover:bg-muted",
-                isToday && !isCompleted && "border border-primary"
+                "aspect-square flex flex-col items-center justify-center rounded-md text-sm relative",
+                isToday && "ring-1 ring-primary"
               )}
             >
-              {date.getDate()}
+              {isCompleted ? (
+                <div className="flex flex-col items-center justify-center w-full h-full rounded-md bg-emerald-50/70 dark:bg-emerald-950/30">
+                  <div className="mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
+                      className="w-4 h-4 text-emerald-500 dark:text-emerald-400">
+                      <path d="M21.947 9.179a1.001 1.001 0 0 0-.868-.676l-5.701-.453-2.467-5.461a.998.998 0 0 0-1.822-.001L8.622 8.05l-5.701.453a1 1 0 0 0-.619 1.713l4.213 4.107-1.49 6.452a1 1 0 0 0 1.53 1.057L12 18.202l5.445 3.63a1.001 1.001 0 0 0 1.517-1.106l-1.829-6.4 4.536-4.082c.297-.268.406-.686.278-1.065z"/>
+                    </svg>
+                  </div>
+                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{date.getDate()}</span>
+                </div>
+              ) : (
+                date.getDate()
+              )}
             </div>
           );
         })}
@@ -342,12 +365,23 @@ export function HabitCalendar({
       <div 
         key={date.toISOString()} 
         className={cn(
-          "aspect-square flex items-center justify-center text-xs",
-          isCompleted ? "bg-primary text-primary-foreground rounded-sm" : "",
-          isToday && !isCompleted && "border border-primary rounded-sm"
+          "aspect-square flex flex-col items-center justify-center text-xs relative",
+          isToday && "ring-1 ring-primary rounded-sm"
         )}
       >
-        {date.getDate()}
+        {isCompleted ? (
+          <div className="flex flex-col items-center justify-center w-full h-full rounded-sm bg-emerald-50/70 dark:bg-emerald-950/30">
+            <div className="mb-0.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
+                className="w-3 h-3 text-emerald-500 dark:text-emerald-400">
+                <path d="M21.947 9.179a1.001 1.001 0 0 0-.868-.676l-5.701-.453-2.467-5.461a.998.998 0 0 0-1.822-.001L8.622 8.05l-5.701.453a1 1 0 0 0-.619 1.713l4.213 4.107-1.49 6.452a1 1 0 0 0 1.53 1.057L12 18.202l5.445 3.63a1.001 1.001 0 0 0 1.517-1.106l-1.829-6.4 4.536-4.082c.297-.268.406-.686.278-1.065z"/>
+              </svg>
+            </div>
+            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{date.getDate()}</span>
+          </div>
+        ) : (
+          date.getDate()
+        )}
       </div>
     );
   };

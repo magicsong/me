@@ -103,7 +103,17 @@ export function HabitCheckInCard({
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">📅 今日习惯打卡（ {completedCount} / {totalCount} 已完成）</CardTitle>
         </div>
-        <Progress value={progress} className="h-2 mt-2" />
+        <div className="flex items-center justify-between mt-2">
+          <Progress 
+            value={progress} 
+            className="h-2 flex-1" 
+            style={{ 
+              background: 'rgba(200, 200, 200, 0.2)',
+              '--progress-background': 'linear-gradient(to right, #5c6bc0, #3949ab)'
+            } as React.CSSProperties} 
+          />
+          <span className="text-sm ml-2 text-muted-foreground">{Math.round(progress)}%</span>
+        </div>
           </CardHeader>
           <CardContent className="grid gap-3">
         {habits.length === 0 ? (

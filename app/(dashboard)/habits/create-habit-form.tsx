@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { createHabit } from './actions';
 import { useRouter } from 'next/navigation';
+import { Slider } from '@/components/ui/slider';
 
 interface CreateHabitFormProps {
   onSuccess?: () => void;
@@ -22,6 +23,7 @@ interface CreateHabitFormProps {
 export function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rewardPoints, setRewardPoints] = useState(10);
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true);
@@ -67,6 +69,43 @@ export function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
           </SelectContent>
         </Select>
       </div>
+      
+      {/* 价值属性 */}
+      <div className="space-y-2">
+        <Label htmlFor="category">价值类别</Label>
+        <Select name="category" defaultValue="health">
+          <SelectTrigger id="category">
+            <SelectValue placeholder="选择价值类别" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="health">健康</SelectItem>
+            <SelectItem value="productivity">效率</SelectItem>
+            <SelectItem value="mindfulness">心灵</SelectItem>
+            <SelectItem value="learning">学习</SelectItem>
+            <SelectItem value="social">社交</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      {/* 奖励点数 */}
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <Label htmlFor="rewardPoints">奖励点数</Label>
+          <span className="text-sm font-medium">{rewardPoints} 点</span>
+        </div>
+        <input type="hidden" name="rewardPoints" value={rewardPoints} />
+        <Slider
+          id="rewardPoints"
+          min={5}
+          max={50}
+          step={5}
+          value={[rewardPoints]}
+          onValueChange={(values) => setRewardPoints(values[0])}
+          className="py-4"
+        />
+        <p className="text-xs text-muted-foreground">设置完成此习惯后获得的奖励点数。点数越高表示习惯越重要或越难完成。</p>
+      </div>
+      
       <div className="flex justify-end gap-2 pt-2">
         <Button 
           type="submit" 
