@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -53,14 +53,15 @@ export default function LoginPage() {
     }
   }
   
-  async function handleGitHubSignIn() {
-    setIsLoading(true)
-    await signIn('github', { callbackUrl })
-  }
+async function handleGitHubSignIn() {
+  setIsLoading(true)
+  await signIn('github', { callbackUrl })
+}
 
   return (
     <div className="min-h-screen flex justify-center items-start md:items-center p-8 bg-gray-50">
-      <Card className="w-full max-w-md">
+      <Suspense fallback={<div>Loading...</div>}>
+        <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">欢迎登录</CardTitle>
           <CardDescription className="text-center">
@@ -118,6 +119,7 @@ export default function LoginPage() {
           </Button>
         </CardFooter>
       </Card>
+      </Suspense>
     </div>
   )
 }

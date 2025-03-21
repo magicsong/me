@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
+  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & { className?: string; value?: number }
 >(({ className, value, ...props }, ref) => {
   // 根据进度值计算颜色
   const getColorForProgress = (progress: number): string => {

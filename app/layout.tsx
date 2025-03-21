@@ -1,4 +1,5 @@
 import './globals.css';
+import { Suspense } from 'react'
 
 import { Analytics } from '@vercel/analytics/react';
 
@@ -15,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="flex min-h-screen w-full flex-col">{children}</body>
+      <body className="flex min-h-screen w-full flex-col"><Suspense>{children}</Suspense></body>
       <Analytics />
     </html>
   );
