@@ -13,7 +13,7 @@ COPY package.json pnpm-lock.yaml ./
 # 安装依赖
 RUN pnpm install --frozen-lockfile
 
-# 复制所有源代码
+# 复制所有源代码，确保包含iac目录
 COPY . .
 
 # 禁用类型检查，设置环境变量
@@ -39,6 +39,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/iac ./iac
 
 # 创建非 root 用户并设置权限
 RUN addgroup --system --gid 1001 nodejs \
