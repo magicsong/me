@@ -118,18 +118,32 @@ function MobileNav() {
       <SheetContent side="left" className="sm:max-w-xs">
         <nav className="grid gap-6 text-lg font-medium">
           <Link
-            href="#"
+            href="https://vercel.com/templates/next.js/admin-dashboard-tailwind-postgres-react-nextjs"
             className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
           >
-            <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
-            <span className="sr-only">Vercel</span>
+            <VercelLogo className="h-3 w-3 transition-all group-hover:scale-110" />
+            <span className="sr-only">Acme Inc</span>
           </Link>
           <Link
             href="/dashboard"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Home className="h-5 w-5" />
-            仪表盘
+            Dashboard
+          </Link>
+          <Link
+            href="/goals"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <Package2 className="h-5 w-5" />
+            Goals
+          </Link>
+          <Link
+            href="/habits"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <CalendarCheck2 className="h-5 w-5" />
+            Habits
           </Link>
           <Link
             href="#"
@@ -139,31 +153,31 @@ function MobileNav() {
             Orders
           </Link>
           <Link
-            href="#"
+            href="/"
             className="flex items-center gap-4 px-2.5 text-foreground"
           >
             <Package className="h-5 w-5" />
             Products
           </Link>
           <Link
-            href="#"
+            href="/customers"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Users2 className="h-5 w-5" />
             Customers
           </Link>
           <Link
-            href="/habits"
+            href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
-            <CalendarCheck2 className="h-5 w-5" />
-            习惯养成
+            <LineChart className="h-5 w-5" />
+            Analytics
           </Link>
           <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
-            <LineChart className="h-5 w-5" />
+            <Settings className="h-5 w-5" />
             Settings
           </Link>
         </nav>
