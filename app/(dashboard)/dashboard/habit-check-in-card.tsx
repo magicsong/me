@@ -2,13 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, CalendarIcon, CheckCheck } from 'lucide-react';
+import { CheckCircle2, Circle, CalendarIcon, CheckCheck, ThumbsUp, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useRouter } from 'next/navigation';
-import { completeHabit } from '../habits/actions';
+import { completeHabit, getHabitDifficultyHistory, saveHabitDifficulty } from '../habits/actions';
 import { HabitCalendar } from '../habits/habit-calendar';
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Textarea } from '@/components/ui/textarea';
 
 // 导入类型定义
 type Habit = {
@@ -21,6 +30,9 @@ type Habit = {
   streak: number;
 };
 
+// 难度评估类型
+type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
+
 // Toast 通知组件
 function Toast({ message }: { message: string }) {
   return (
@@ -32,6 +44,170 @@ function Toast({ message }: { message: string }) {
     >
       {message}
     </motion.div>
+  );
+}
+
+// 难度评估对话框组件
+function DifficultyDialog({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  habitName 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: (difficulty: DifficultyLevel, comment: string) => void;
+  habitName: string;
+}) {
+  const [selected, setSelected] = useState<DifficultyLevel>(null);
+  const [comment, setComment] = useState('');
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>完成难度评估</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            恭喜完成「{habitName}」！此次完成感觉如何？评估难度可帮助优化习惯设置。
+          </p>
+          
+          <div className="flex gap-3 justify-center mt-6">
+            <Button 
+              variant={selected === 'easy' ? 'default' : 'outline'} 
+              className={`flex-1 ${selected === 'easy' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              onClick={() => setSelected('easy')}
+            >
+              <ThumbsUp className="h-4 w-4 mr-2" />
+              简单
+            </Button>
+            <Button 
+              variant={selected === 'medium' ? 'default' : 'outline'} 
+              className={`flex-1 ${selected === 'medium' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}`}
+              onClick={() => setSelected('medium')}
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              适中
+            </Button>
+            <Button 
+              variant={selected === 'hard' ? 'default' : 'outline'} 
+              className={`flex-1 ${selected === 'hard' ? 'bg-red-600 hover:bg-red-700' : ''}`}
+              onClick={() => setSelected('hard')}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              困难
+            </Button>
+          </div>
+          
+          <div className="mt-6">
+            <label className="text-sm text-muted-foreground mb-2 block">
+              评价（可选）
+            </label>
+            <Textarea 
+              placeholder="写下你对这次完成的感受或想法..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              className="resize-none"
+              rows={3}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button 
+            variant="ghost" 
+            onClick={() => onClose()}
+          >
+            跳过
+          </Button>
+          <Button 
+            onClick={() => onConfirm(selected, comment)}
+            disabled={!selected}
+          >
+            确认
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// 难度调整建议组件
+function DifficultyFeedback({ habitId, habitName }: { habitId: string, habitName: string }) {
+  const [difficultyHistory, setDifficultyHistory] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    async function loadDifficultyData() {
+      try {
+        const data = await getHabitDifficultyHistory(habitId);
+        setDifficultyHistory(data);
+      } catch (error) {
+        console.error('加载难度数据失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadDifficultyData();
+  }, [habitId]);
+  
+  if (loading || !difficultyHistory) return null;
+  
+  // 根据最近的难度评估提供建议
+  const { easy, medium, hard, lastFive, recentEvaluations } = difficultyHistory;
+  const total = easy + medium + hard;
+  
+  if (total < 3) return null; // 数据不足
+  
+  // 计算最近5次评估中各难度的比例
+  const lastFiveCount = {
+    easy: lastFive.filter(d => d === 'easy').length,
+    medium: lastFive.filter(d => d === 'medium').length,
+    hard: lastFive.filter(d => d === 'hard').length
+  };
+  
+  let suggestion = null;
+  let color = '';
+  
+  if (lastFiveCount.easy >= 3) {
+    // 绿色区（太简单）
+    suggestion = `「${habitName}」对你来说变得容易了！考虑提升10%-20%的难度，例如增加数量或提高质量要求。`;
+    color = 'text-green-600';
+  } else if (lastFiveCount.hard >= 3) {
+    // 红色区（过度困难）
+    suggestion = `「${habitName}」似乎有些困难，建议拆分步骤或降低要求，设定更容易达成的小目标。`;
+    color = 'text-red-600';
+  } else if (lastFiveCount.medium >= 3) {
+    // 黄色区（理想边缘）
+    suggestion = `「${habitName}」难度适中，正处于成长区间，继续保持这个节奏！`;
+    color = 'text-yellow-600';
+  }
+  
+  // 获取最近一次评价
+  const latestComment = recentEvaluations && recentEvaluations[0]?.comment;
+  
+  if (!suggestion) return null;
+  
+  return (
+    <div className={`mt-1 text-xs ${color}`}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger className="cursor-help underline decoration-dotted">
+            习惯建议
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            <p>{suggestion}</p>
+            {latestComment && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <p className="font-medium text-xs">最近评价:</p>
+                <p className="text-xs italic">"{latestComment}"</p>
+              </div>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   );
 }
 
@@ -50,6 +226,10 @@ export function HabitCheckInCard({
   const [animatingHabitId, setAnimatingHabitId] = useState<string | null>(null);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const progress = totalCount > 0 ? (completedCount / totalCount * 100) : 0;
+  
+  // 难度评估对话框状态
+  const [difficultyDialogOpen, setDifficultyDialogOpen] = useState(false);
+  const [currentHabit, setCurrentHabit] = useState<Habit | null>(null);
   
   // 默认选择第一个习惯展示日历
   useEffect(() => {
@@ -71,7 +251,13 @@ export function HabitCheckInCard({
     setAnimatingHabitId(habit.id);
     
     try {
+      // 先完成打卡
       await completeHabit(habit.id);
+      
+      // 打开难度评估对话框
+      setCurrentHabit(habit);
+      setDifficultyDialogOpen(true);
+      
       setToast("🎉 已完成！继续加油！");
       
       // 3秒后清除通知
@@ -90,12 +276,38 @@ export function HabitCheckInCard({
       }, 500);
     }
   }
+  
+  // 处理难度评估确认
+  async function handleDifficultyConfirm(difficulty: DifficultyLevel, comment: string) {
+    if (currentHabit && difficulty) {
+      try {
+        // 使用新的专用函数保存难度评估，而不是completeHabit
+        await saveHabitDifficulty(currentHabit.id, difficulty, comment);
+        // 刷新数据
+        router.refresh();
+      } catch (error) {
+        console.error('保存难度评估失败:', error);
+      }
+    }
+    setDifficultyDialogOpen(false);
+    setCurrentHabit(null);
+  }
 
   return (
     <>
       <AnimatePresence>
         {toast && <Toast message={toast} />}
       </AnimatePresence>
+      
+      {/* 难度评估对话框 */}
+      {currentHabit && (
+        <DifficultyDialog 
+          isOpen={difficultyDialogOpen}
+          onClose={() => setDifficultyDialogOpen(false)}
+          onConfirm={handleDifficultyConfirm}
+          habitName={currentHabit.name}
+        />
+      )}
       
       <div className="flex flex-col md:flex-row gap-4 w-full">
         <Card className="flex-1">
@@ -157,6 +369,10 @@ export function HabitCheckInCard({
             <div className="font-medium">{habit.name}</div>
             {habit.description && (
               <div className="text-xs text-muted-foreground">{habit.description}</div>
+            )}
+            {/* 添加难度建议显示 */}
+            {habit.completedToday && (
+              <DifficultyFeedback habitId={habit.id} habitName={habit.name} />
             )}
           </div>
           

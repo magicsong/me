@@ -3,7 +3,8 @@ import { pgTable, pgEnum, serial, text, numeric, integer, timestamp, index, uniq
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
-
+// 添加难度级别枚举
+export const difficulty = pgEnum("difficulty", ['easy', 'medium', 'hard'])
 
 export const products = pgTable("products", {
 	id: serial("id").primaryKey().notNull(),
@@ -74,4 +75,21 @@ export const goals = pgTable("goals", {
 	user_id: text("user_id").notNull(),
 	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	status: text("status").default('in_progress').notNull(),
+});
+
+// 添加习惯难度评价表
+export const habit_difficulties = pgTable("habit_difficulties", {
+	id: serial("id").primaryKey().notNull(),
+	habit_id: integer("habit_id").notNull().references(() => habits.id),
+	user_id: text("user_id").notNull(),
+	completed_at: date("completed_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+	difficulty: difficulty("difficulty").notNull(),
+	comment: text("comment"),
+	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+},
+(table) => {
+	return {
+		idx_habit_difficulties_habit_id: index("idx_habit_difficulties_habit_id").using("btree", table.habit_id),
+		idx_habit_difficulties_completed_at: index("idx_habit_difficulties_completed_at").using("btree", table.completed_at),
+	}
 });

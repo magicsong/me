@@ -15,6 +15,13 @@
       "when": 1742741063065,
       "tag": "0001_whole_human_robot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1742744613289,
+      "tag": "0002_slow_ultimates",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,8 @@ import {
   getHabitHistoryFromDB,
   getHabitStatsFromDB,
   updateHabitInDB,
+  saveHabitDifficultyInDB,  // 添加此导入
+  getHabitDifficultyHistoryFromDB  // 添加此导入
 } from '@/lib/db';
 // 从新文件导入奖励相关函数
 import { 
@@ -67,11 +69,15 @@ export async function deleteHabit(id: string) {
   return { success: true };
 }
 
-export async function completeHabit(id: string) {
+// 定义难度类型
+export type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
+
+// 更新 completeHabit 不再处理难度评估
+export async function completeHabit(habitId: string) {
   const userId = await getCurrentUserId();
   // 首先获取当前习惯状态
   const habits = await getHabitsFromDB(userId);
-  const habit = habits.find(h => h.id === id);
+  const habit = habits.find(h => h.id === habitId);
   
   if (!habit) {
     throw new Error('习惯不存在');
@@ -79,7 +85,7 @@ export async function completeHabit(id: string) {
   
   // 切换完成状态
   const newCompletedState = !habit.completedToday;
-  await completeHabitInDB(Number(id), newCompletedState, userId);
+  await completeHabitInDB(Number(habitId), newCompletedState, userId);
   
   // 如果是完成习惯(从未完成到完成)，添加奖励
   if (newCompletedState) {
@@ -90,6 +96,30 @@ export async function completeHabit(id: string) {
     const rewardPoints = habit.rewardPoints || 10;
     await updateUserRewardsInDB(userId, -rewardPoints, habit.category);
   }
+  
+  revalidatePath('/habits');
+  return { success: true };
+}
+
+// 新增：单独的难度评价保存函数
+export async function saveHabitDifficulty(
+  habitId: string,
+  difficulty: DifficultyLevel,
+  comment?: string
+) {
+  const userId = await getCurrentUserId();
+  
+  if (!difficulty) {
+    throw new Error('难度评估不能为空');
+  }
+  
+  // 保存难度评估到数据库
+  await saveHabitDifficultyInDB(
+    Number(habitId),
+    userId,
+    difficulty,
+    comment
+  );
   
   revalidatePath('/habits');
   return { success: true };
@@ -145,4 +175,12 @@ export async function updateHabit(id: string, data: {
   
   revalidatePath('/habits');
   return { success: true };
+}
+
+// 获取习惯的难度历史
+export async function getHabitDifficultyHistory(habitId: string) {
+  const userId = await getCurrentUserId();
+  
+  // 从数据库获取该习惯的难度评估历史
+  return getHabitDifficultyHistoryFromDB(Number(habitId), userId);
 }

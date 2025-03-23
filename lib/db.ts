@@ -121,6 +121,20 @@ export const verificationTokens = pgTable('verification_tokens', {
   compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
 }));
 
+// 难度级别枚举
+export const difficultyEnum = pgEnum('difficulty', ['easy', 'medium', 'hard']);
+
+// 习惯难度评价表
+export const habitDifficulties = pgTable('habit_difficulties', {
+  id: serial('id').primaryKey(),
+  habitId: integer('habit_id').references(() => habits.id).notNull(),
+  userId: text('user_id').references(() => users.id).notNull(),
+  completedAt: date('completed_at').defaultNow().notNull(),
+  difficulty: difficultyEnum('difficulty').notNull(),
+  comment: text('comment'), // 文本评价
+  createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
 export type SelectProduct = typeof products.$inferSelect;
 export type SelectHabit = typeof habits.$inferSelect;
 export type SelectHabitEntry = typeof habitEntries.$inferSelect;
@@ -582,5 +596,100 @@ function getWeekNumber(date: Date): number {
     target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
   }
   return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+}
+
+// 保存难度评价到数据库
+export async function saveHabitDifficultyInDB(
+  habitId: number, 
+  userId: string, 
+  difficulty: string, 
+  comment?: string
+) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // 检查是否已有今天的难度评价
+  const existingDifficulty = await db
+    .select()
+    .from(habitDifficulties)
+    .where(
+      and(
+        eq(habitDifficulties.habitId, habitId),
+        eq(habitDifficulties.userId, userId),
+        eq(habitDifficulties.completedAt, today)
+      )
+    )
+    .limit(1);
+  
+  // 如果已存在今天的评价，则更新它
+  if (existingDifficulty.length > 0) {
+    await db.update(habitDifficulties)
+      .set({
+        difficulty: difficulty as 'easy' | 'medium' | 'hard',
+        comment: comment || null
+      })
+      .where(
+        and(
+          eq(habitDifficulties.habitId, habitId),
+          eq(habitDifficulties.userId, userId),
+          eq(habitDifficulties.completedAt, today)
+        )
+      );
+    return existingDifficulty[0].id;
+  }
+  
+  // 否则创建新评价
+  const result = await db.insert(habitDifficulties).values({
+    habitId,
+    userId,
+    completedAt: today,
+    difficulty: difficulty as 'easy' | 'medium' | 'hard',
+    comment: comment || null
+  }).returning();
+  
+  return result[0].id;
+}
+
+// 获取习惯的难度历史
+export async function getHabitDifficultyHistoryFromDB(habitId: number, userId: string) {
+  // 获取所有该习惯的难度评价
+  const difficulties = await db
+    .select()
+    .from(habitDifficulties)
+    .where(
+      and(
+        eq(habitDifficulties.habitId, habitId),
+        eq(habitDifficulties.userId, userId)
+      )
+    )
+    .orderBy(desc(habitDifficulties.completedAt))
+    .limit(20);
+  
+  // 统计各难度次数
+  const counts = {
+    easy: 0,
+    medium: 0,
+    hard: 0
+  };
+  
+  difficulties.forEach(entry => {
+    counts[entry.difficulty as 'easy' | 'medium' | 'hard']++;
+  });
+  
+  // 获取最近5次评价
+  const lastFive = difficulties.slice(0, 5).map(entry => entry.difficulty);
+  
+  return {
+    easy: counts.easy,
+    medium: counts.medium,
+    hard: counts.hard,
+    lastFive,
+    // 包括最近的评价及评论
+    recentEvaluations: difficulties.slice(0, 5).map(entry => ({
+      difficulty: entry.difficulty,
+      date: entry.completedAt,
+      comment: entry.comment
+    }))
+  };
 }
 
