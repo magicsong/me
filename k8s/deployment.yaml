@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: me-app
+  labels:
+    app: me-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: me-app
+  template:
+    metadata:
+      labels:
+        app: me-app
+    spec:
+      containers:
+      - name: me-app
+        image: me-app:latest  # 使用您的镜像仓库地址替换这里
+        ports:
+        - containerPort: 3000
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        env:
+        - name: NODE_ENV
+          value: "production"
