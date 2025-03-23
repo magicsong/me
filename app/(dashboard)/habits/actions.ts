@@ -9,6 +9,7 @@ import {
   completeHabitInDB,
   getHabitHistoryFromDB,
   getHabitStatsFromDB,
+  updateHabitInDB,
 } from '@/lib/db';
 // 从新文件导入奖励相关函数
 import { 
@@ -43,16 +44,14 @@ export async function createHabit(formData: FormData) {
   // 验证
   if (!name) throw new Error('习惯名称不能为空');
   
-  // 将数据保存到数据库
+  // 将数据保存到数据库 - 修改参数传递方式，分别传递category和rewardPoints
   const newHabit = await createHabitInDB(
     name, 
     description, 
     frequency, 
     userId, 
-    { 
-      category, 
-      rewardPoints 
-    }
+    category,  // 直接传递category字符串
+    rewardPoints  // 直接传递rewardPoints数值
   );
   
   revalidatePath('/habits');
@@ -113,4 +112,37 @@ export async function getHabitStats(timeRange?: 'week' | 'month' | 'year') {
 export async function getUserRewards() {
   const userId = await getCurrentUserId();
   return getUserRewardsFromDB(userId);
+}
+
+// 添加更新习惯的函数
+export async function updateHabit(id: string, data: {
+  name: string;
+  description?: string;
+  frequency?: 'daily' | 'weekly' | 'monthly';
+  category?: string;
+  rewardPoints?: number;
+}) {
+  const userId = await getCurrentUserId();
+  
+  // 验证
+  if (!data.name) throw new Error('习惯名称不能为空');
+  
+  // 确保解构出独立的字段传递给数据库函数
+  const { name, description, frequency, category, rewardPoints } = data;
+  
+  // 更新数据库 - 分别传递各个字段
+  await updateHabitInDB(
+    Number(id), 
+    userId, 
+    {
+      name,
+      description,
+      frequency,
+      category,       // 确保这是一个字符串
+      rewardPoints    // 确保这是一个数字
+    }
+  );
+  
+  revalidatePath('/habits');
+  return { success: true };
 }

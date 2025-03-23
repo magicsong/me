@@ -20,11 +20,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CalendarCheck, CheckCircle2, Trash2, Award, BookOpen, Brain, Heart, Users } from 'lucide-react';
-import { deleteHabit, completeHabit } from './actions';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CalendarCheck, CheckCircle2, Trash2, Award, BookOpen, Brain, Heart, Users, Pencil } from 'lucide-react';
+import { deleteHabit, completeHabit, updateHabit } from './actions';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { EditHabitForm } from './edit-habit-form';
 
 type Habit = {
   id: string;
@@ -42,6 +50,8 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [habitToEdit, setHabitToEdit] = useState<Habit | null>(null);
   
   async function handleDeleteHabit() {
     if (habitToDelete) {
@@ -59,6 +69,11 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
   function openDeleteDialog(id: string) {
     setHabitToDelete(id);
     setDeleteDialogOpen(true);
+  }
+
+  function openEditDialog(habit: Habit) {
+    setHabitToEdit(habit);
+    setEditDialogOpen(true);
   }
 
   // 获取类别对应的图标
@@ -133,9 +148,18 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
                   </TooltipProvider>
                 </div>
                 {habit.description && (
-                  <p className="text-xs text-muted-foreground mt-1 truncate max-w-[200px]">
-                    {habit.description}
-                  </p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-xs text-muted-foreground mt-1 truncate max-w-[200px]">
+                          {habit.description}
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        {habit.description}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </TableCell>
               <TableCell className="hidden md:table-cell">
@@ -168,19 +192,31 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
                 </Button>
               </TableCell>
               <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => openDeleteDialog(habit.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                </Button>
+                <div className="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditDialog(habit)}
+                    title="编辑"
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openDeleteDialog(habit.id)}
+                    title="删除"
+                  >
+                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
       
+      {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -197,6 +233,27 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 编辑习惯对话框 */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>编辑习惯</DialogTitle>
+            <DialogDescription>
+              修改习惯的详细信息。
+            </DialogDescription>
+          </DialogHeader>
+          {habitToEdit && (
+            <EditHabitForm 
+              habit={habitToEdit} 
+              onSuccess={() => {
+                setEditDialogOpen(false);
+                router.refresh();
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

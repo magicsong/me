@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,53 +12,77 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { createHabit } from './actions';
-import { useRouter } from 'next/navigation';
+import { updateHabit } from './actions';
 import { Slider } from '@/components/ui/slider';
 
-interface CreateHabitFormProps {
+type Habit = {
+  id: string;
+  name: string;
+  description?: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  category?: 'health' | 'productivity' | 'mindfulness' | 'learning' | 'social';
+  rewardPoints?: number;
+};
+
+interface EditHabitFormProps {
+  habit: Habit;
   onSuccess?: () => void;
 }
 
-export function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
-  const router = useRouter();
+export function EditHabitForm({ habit, onSuccess }: EditHabitFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rewardPoints, setRewardPoints] = useState(10);
+  const [name, setName] = useState(habit.name);
+  const [description, setDescription] = useState(habit.description || '');
+  const [frequency, setFrequency] = useState(habit.frequency);
+  const [category, setCategory] = useState(habit.category || 'health');
+  const [rewardPoints, setRewardPoints] = useState(habit.rewardPoints || 10);
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setIsSubmitting(true);
     try {
-      await createHabit(formData);
-      router.refresh();
-      // 清空表单
-      (document.getElementById('habit-form') as HTMLFormElement).reset();
-      // 调用成功回调
+      await updateHabit(habit.id, {
+        name,
+        description,
+        frequency,
+        category,
+        rewardPoints
+      });
       onSuccess?.();
     } catch (error) {
-      console.error('创建习惯失败:', error);
+      console.error('更新习惯失败:', error);
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <form id="habit-form" action={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">习惯名称</Label>
-        <Input id="name" name="name" placeholder="例如：每天喝水" required />
+        <Input 
+          id="name" 
+          value={name} 
+          onChange={(e) => setName(e.target.value)} 
+          placeholder="例如：每天喝水" 
+          required 
+        />
       </div>
+
       <div className="space-y-2">
         <Label htmlFor="description">描述（可选）</Label>
         <Textarea
           id="description"
-          name="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="为什么要养成这个习惯？"
           className="resize-none"
         />
       </div>
+
       <div className="space-y-2">
         <Label htmlFor="frequency">频率</Label>
-        <Select name="frequency" defaultValue="daily">
+        <Select value={frequency} onValueChange={setFrequency}>
           <SelectTrigger id="frequency">
             <SelectValue placeholder="选择频率" />
           </SelectTrigger>
@@ -70,10 +94,9 @@ export function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
         </Select>
       </div>
       
-      {/* 价值属性 */}
       <div className="space-y-2">
         <Label htmlFor="category">价值类别</Label>
-        <Select name="category" defaultValue="health">
+        <Select value={category} onValueChange={setCategory}>
           <SelectTrigger id="category">
             <SelectValue placeholder="选择价值类别" />
           </SelectTrigger>
@@ -87,13 +110,11 @@ export function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
         </Select>
       </div>
       
-      {/* 奖励点数 */}
       <div className="space-y-2">
         <div className="flex justify-between">
           <Label htmlFor="rewardPoints">奖励点数</Label>
           <span className="text-sm font-medium">{rewardPoints} 点</span>
         </div>
-        <input type="hidden" name="rewardPoints" value={rewardPoints} />
         <Slider
           id="rewardPoints"
           min={1}
@@ -112,7 +133,7 @@ export function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
           disabled={isSubmitting}
           className="w-full"
         >
-          {isSubmitting ? '创建中...' : '创建习惯'}
+          {isSubmitting ? '保存中...' : '保存修改'}
         </Button>
       </div>
     </form>

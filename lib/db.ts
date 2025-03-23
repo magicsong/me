@@ -47,7 +47,9 @@ export const habits = pgTable('habits', {
   description: text('description'),
   frequency: frequencyEnum('frequency').notNull().default('daily'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  userId: text('user_id') // 如果系统支持多用户，这里可以关联到用户表
+  userId: text('user_id'), // 如果系统支持多用户，这里可以关联到用户表
+  category: text('category'), // 习惯类别
+  rewardPoints: integer('reward_points').default(5) // 奖励积分
 });
 
 // 习惯完成记录表
@@ -242,6 +244,8 @@ export async function getHabitsFromDB(userId: string) {
         frequency: habit.frequency,
         createdAt: habit.createdAt.toISOString(),
         completedToday: todayEntry.length > 0,
+        category: habit.category,
+        rewardPoints: habit.rewardPoints,
         streak: streak
       };
     })
@@ -250,12 +254,14 @@ export async function getHabitsFromDB(userId: string) {
   return habitsWithProgress;
 }
 
-export async function createHabitInDB(name: string, description: string, frequency: string, userId: string) {
+export async function createHabitInDB(name: string, description: string, frequency: string, userId: string, category: string, rewardPoints: number) {
   const result = await db.insert(habits).values({
     name,
     description: description || null,
     frequency: frequency as 'daily' | 'weekly' | 'monthly',
-    userId
+    userId,
+    category: category || null,
+    rewardPoints: rewardPoints || 1
   }).returning();
   
   return result[0];
@@ -337,7 +343,28 @@ export async function getHabitHistoryFromDB(habitId: number, userId: string) {
   // 返回完成日期的数组
   return entries.map(entry => entry.completedAt);
 }
+export async function updateHabitInDB(id: number, userId: string, data: {
+  name: string;
+  description?: string;
+  frequency?: 'daily' | 'weekly' | 'monthly';
+  category?: string;
+  rewardPoints?: number;
+}) {
+  const { name, description, frequency, category, rewardPoints } = data;
 
+  await db.update(habits).set({
+    name,
+    description,
+    frequency,
+    category,
+    rewardPoints
+  }).where(
+    and(
+      eq(habits.id, id),
+      eq(habits.userId, userId)
+    )
+  );
+}
 // 获取习惯统计数据
 export async function getHabitStatsFromDB(userId: string, timeRange: 'week' | 'month' | 'year' = 'week') {
   // 计算日期范围

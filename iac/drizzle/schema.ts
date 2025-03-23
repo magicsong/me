@@ -22,6 +22,9 @@ export const habits = pgTable("habits", {
 	frequency: frequency("frequency").default('daily').notNull(),
 	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
 	user_id: text("user_id"),
+	category: text("category"),
+	reward_points: integer("reward_points").default(1).notNull(),
+	status: status("status").default('active').notNull(),
 });
 
 export const habit_entries = pgTable("habit_entries", {
