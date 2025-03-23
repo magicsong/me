@@ -22,6 +22,7 @@ ENV NEXT_IGNORE_ESLint=1
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # 构建应用
+RUN cp .env.example .env.local
 RUN pnpm build
 
 # 第二阶段：生产环境

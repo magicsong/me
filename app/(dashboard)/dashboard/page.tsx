@@ -4,6 +4,7 @@ import { getHabits, getHabitStats } from '../habits/actions';
 import { UserProfileCard } from '@/components/user-profile-card';
 import { auth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DailyQuote } from '@/components/DailyQuote'; // 导入DailyQuote组件
 
 export default async function DashboardPage() {
   // 获取用户会话
@@ -28,6 +29,11 @@ export default async function DashboardPage() {
           image={user.image}
         />
       )}
+      
+      {/* 每日推荐语录 */}
+      <div className="mb-6">
+        <DailyQuote />
+      </div>
       
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

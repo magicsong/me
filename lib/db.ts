@@ -135,6 +135,8 @@ export const habitDifficulties = pgTable('habit_difficulties', {
   createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
+
+
 export type SelectProduct = typeof products.$inferSelect;
 export type SelectHabit = typeof habits.$inferSelect;
 export type SelectHabitEntry = typeof habitEntries.$inferSelect;

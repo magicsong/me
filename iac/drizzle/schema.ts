@@ -93,3 +93,21 @@ export const habit_difficulties = pgTable("habit_difficulties", {
 		idx_habit_difficulties_completed_at: index("idx_habit_difficulties_completed_at").using("btree", table.completed_at),
 	}
 });
+
+// LLM缓存记录表
+export const llm_cache_records = pgTable("llm_cache_records", {
+	id: serial("id").primaryKey().notNull(),
+	request_hash: text("request_hash").notNull(),
+	prompt: text("prompt").notNull(),
+	model: text("model").notNull(),
+	response_content: text("response_content").notNull(),
+	response_thinking: text("response_thinking"),
+	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	user_id: text("user_id"),
+},
+(table) => {
+	return {
+		idx_llm_cache_records_request_hash: index("idx_llm_cache_records_request_hash").using("btree", table.request_hash),
+		idx_llm_cache_records_created_at: index("idx_llm_cache_records_created_at").using("btree", table.created_at),
+	}
+});

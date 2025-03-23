@@ -109,3 +109,15 @@ export async function GET() {
     message: 'Seeded successfully',
   });
 }
+
+// LLM测试种子数据API
+export async function POST() {
+  return Response.json({
+    message: 'LLM种子数据准备就绪',
+    sampleQuotes: [
+      "成功不在于永不跌倒，而在于跌倒后能否爬起来。",
+      "每一个今天都是礼物，这就是为什么它被称为present。",
+      "生活不是等待风暴过去，而是学会在雨中跳舞。"
+    ]
+  });
+}
