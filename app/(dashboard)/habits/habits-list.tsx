@@ -3,14 +3,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -33,6 +25,8 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EditHabitForm } from './edit-habit-form';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 
 type Habit = {
   id: string;
@@ -76,21 +70,21 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
     setEditDialogOpen(true);
   }
 
-  // 获取类别对应的图标
-  function getCategoryIcon(category?: string) {
+  // 获取类别对应的图标和颜色
+  function getCategoryStyles(category?: string) {
     switch (category) {
       case 'health':
-        return <Heart className="h-4 w-4 text-red-500" />;
+        return { icon: <Heart className="h-5 w-5" />, color: 'border-red-500', bgColor: 'bg-red-50', textColor: 'text-red-700' };
       case 'productivity':
-        return <Award className="h-4 w-4 text-amber-500" />;
+        return { icon: <Award className="h-5 w-5" />, color: 'border-amber-500', bgColor: 'bg-amber-50', textColor: 'text-amber-700' };
       case 'mindfulness':
-        return <Brain className="h-4 w-4 text-blue-500" />;
+        return { icon: <Brain className="h-5 w-5" />, color: 'border-blue-500', bgColor: 'bg-blue-50', textColor: 'text-blue-700' };
       case 'learning':
-        return <BookOpen className="h-4 w-4 text-green-500" />;
+        return { icon: <BookOpen className="h-5 w-5" />, color: 'border-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' };
       case 'social':
-        return <Users className="h-4 w-4 text-purple-500" />;
+        return { icon: <Users className="h-5 w-5" />, color: 'border-purple-500', bgColor: 'bg-purple-50', textColor: 'text-purple-700' };
       default:
-        return <Award className="h-4 w-4 text-gray-500" />;
+        return { icon: <Award className="h-5 w-5" />, color: 'border-gray-500', bgColor: 'bg-gray-50', textColor: 'text-gray-700' };
     }
   }
 
@@ -118,103 +112,114 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
     );
   }
 
+  // 计算进度，暂时以30天为目标
+  const calculateProgress = (streak: number) => {
+    const target = 30; // 假设30天为养成习惯的目标
+    const progress = Math.min((streak / target) * 100, 100);
+    return Math.round(progress);
+  };
+
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>名称</TableHead>
-            <TableHead className="hidden md:table-cell">类别/频率</TableHead>
-            <TableHead className="hidden md:table-cell">连续天数</TableHead>
-            <TableHead>今日完成</TableHead>
-            <TableHead className="text-right">操作</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {habits.map((habit) => (
-            <TableRow key={habit.id}>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-                  {habit.name}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge variant="outline" className="ml-1">+{habit.rewardPoints || 10}</Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        完成可获得 {habit.rewardPoints || 10} 点奖励
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                {habit.description && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <p className="text-xs text-muted-foreground mt-1 truncate max-w-[200px]">
-                          {habit.description}
-                        </p>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        {habit.description}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1">
-                    {getCategoryIcon(habit.category)}
-                    <span className="text-xs">{getCategoryName(habit.category)}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {habits.map((habit) => {
+          const categoryStyles = getCategoryStyles(habit.category);
+          const progress = calculateProgress(habit.streak);
+          
+          return (
+            <Card 
+              key={habit.id} 
+              className={`overflow-hidden ${categoryStyles.color} border-l-4 hover:shadow-md transition-shadow`}
+            >
+              <CardHeader className={`${categoryStyles.bgColor} pb-2`}>
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1 rounded-full ${categoryStyles.bgColor}`}>
+                      {categoryStyles.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-lg flex items-center gap-2">
+                        {habit.name}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="ml-1">+{habit.rewardPoints || 10}</Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              完成可获得 {habit.rewardPoints || 10} 点奖励
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className={categoryStyles.textColor}>{getCategoryName(habit.category)}</span>
+                        <span>·</span>
+                        <span>
+                          {{
+                            daily: '每日',
+                            weekly: '每周',
+                            monthly: '每月'
+                          }[habit.frequency]}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-xs capitalize text-muted-foreground">
-                    {{
-                      daily: '每日',
-                      weekly: '每周',
-                      monthly: '每月'
-                    }[habit.frequency]}
-                  </span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEditDialog(habit)}
+                      title="编辑"
+                    >
+                      <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openDeleteDialog(habit.id)}
+                      title="删除"
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </div>
                 </div>
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                {habit.streak} 天
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant={habit.completedToday ? "secondary" : "outline"}
-                  size="sm"
-                  className="gap-1"
-                  onClick={() => handleCompleteHabit(habit.id)}
-                >
-                  <CheckCircle2 className={`h-4 w-4 ${habit.completedToday ? 'text-green-500' : ''}`} />
-                  {habit.completedToday ? '已完成' : '完成'}
-                </Button>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-1">
+              </CardHeader>
+              <CardContent className="pt-4">
+                {habit.description && (
+                  <p className="text-sm text-muted-foreground mb-4">{habit.description}</p>
+                )}
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <CalendarCheck className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">连续: {habit.streak} 天</span>
+                  </div>
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(habit)}
-                    title="编辑"
+                    variant={habit.completedToday ? "secondary" : "outline"}
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => handleCompleteHabit(habit.id)}
                   >
-                    <Pencil className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openDeleteDialog(habit.id)}
-                    title="删除"
-                  >
-                    <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                    <CheckCircle2 className={`h-4 w-4 ${habit.completedToday ? 'text-green-500' : ''}`} />
+                    {habit.completedToday ? '已完成' : '完成'}
                   </Button>
                 </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+              </CardContent>
+              <CardFooter className="pt-0 pb-4">
+                <div className="w-full">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>习惯养成进度</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <Progress 
+                    value={progress} 
+                    className={`h-2 ${categoryStyles.color.replace('border', 'bg')}`} 
+                  />
+                </div>
+              </CardFooter>
+            </Card>
+          );
+        })}
+      </div>
       
       {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

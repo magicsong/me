@@ -26,8 +26,8 @@ export default async function HabitsPage() {
         <AddHabitButton />
       </div>
       
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="md:col-span-2">
+      <div className="grid gap-4 md:grid-cols-12">
+        <div className="md:col-span-9">
           <Card>
             <CardHeader>
               <CardTitle>我的习惯</CardTitle>
@@ -41,7 +41,7 @@ export default async function HabitsPage() {
           </Card>
         </div>
         
-        <div className="md:col-span-1 space-y-4">
+        <div className="md:col-span-3 space-y-4">
           <RewardsStats />
           <HabitStats />
         </div>
