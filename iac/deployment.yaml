@@ -27,14 +27,14 @@ spec:
           requests:
             cpu: "0.2"
             memory: "256Mi"
+        envFrom:
+        - secretRef:
+            name: app-secret
         env:
         - name: NODE_ENV
           value: "production"
-        - name: POSTGRES_URL
-          valueFrom:
-            secretKeyRef:
-              name: postgres-credentials
-              key: url
+        - name: AUTH_TRUST_HOST
+          value: "true"
 
 ---
 apiVersion: v1
@@ -50,3 +50,4 @@ spec:
   - port: 80
     targetPort: 3000
   type: LoadBalancer
+
