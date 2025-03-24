@@ -98,7 +98,7 @@ export function PomodoroList() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">番茄钟历史</h3>
       </div>
@@ -175,7 +175,7 @@ export function PomodoroList() {
         )}
 
         {!loading && hasMore && (
-          <div className="flex justify-center">
+          <div className="flex justify-center pb-4">
             <Button variant="outline" onClick={loadMore}>
               加载更多
             </Button>

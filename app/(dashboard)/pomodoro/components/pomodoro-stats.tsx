@@ -89,50 +89,44 @@ export function PomodoroStats() {
       
       {loading ? (
         <div className="space-y-4">
-          <Skeleton className="h-[100px] w-full" />
-          <div className="grid grid-cols-2 gap-2">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
+          <Skeleton className="h-[180px] w-full" />
         </div>
       ) : (
         <>
           {stats && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardContent className="p-4 flex flex-col items-center justify-center">
-                    <span className="text-sm text-muted-foreground">总时长</span>
-                    <h3 className="text-2xl font-bold mt-1">
-                      {formatTime(stats.totalMinutes)}
-                    </h3>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 flex flex-col items-center justify-center">
-                    <span className="text-sm text-muted-foreground">成功率</span>
-                    <h3 className="text-2xl font-bold mt-1">
-                      {stats.total > 0 
-                        ? `${Math.round((stats.completed / stats.total) * 100)}%` 
-                        : '0%'}
-                    </h3>
-                  </CardContent>
-                </Card>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="md:col-span-1">
+                <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                  <span className="text-sm text-muted-foreground">总时长</span>
+                  <h3 className="text-2xl font-bold mt-1">
+                    {formatTime(stats.totalMinutes)}
+                  </h3>
+                </CardContent>
+              </Card>
+              <Card className="md:col-span-1">
+                <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                  <span className="text-sm text-muted-foreground">成功率</span>
+                  <h3 className="text-2xl font-bold mt-1">
+                    {stats.total > 0 
+                      ? `${Math.round((stats.completed / stats.total) * 100)}%` 
+                      : '0%'}
+                  </h3>
+                </CardContent>
+              </Card>
               
-              {stats.total > 0 && (
-                <Card>
+              {stats.total > 0 ? (
+                <Card className="md:col-span-1">
                   <CardContent className="p-4">
-                    <h4 className="text-sm font-medium mb-4 text-center">番茄钟状态分布</h4>
-                    <div className="h-[180px]">
+                    <h4 className="text-sm font-medium mb-2 text-center">番茄钟状态分布</h4>
+                    <div className="h-[150px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={pieData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={60}
-                            outerRadius={80}
+                            innerRadius={45}
+                            outerRadius={60}
                             paddingAngle={5}
                             dataKey="value"
                             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
@@ -145,6 +139,13 @@ export function PomodoroStats() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="md:col-span-1">
+                  <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+                    <span className="text-sm text-muted-foreground">数据分布</span>
+                    <p className="text-center mt-2">暂无完成的番茄钟数据</p>
                   </CardContent>
                 </Card>
               )}

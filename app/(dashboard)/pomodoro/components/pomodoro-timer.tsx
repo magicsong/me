@@ -33,6 +33,7 @@ export function PomodoroTimer({
   const [timeLeft, setTimeLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isFinished, setIsFinished] = useState(false); // 新增状态：计时结束但未确认完成
   const [selectedTag, setSelectedTag] = useState('');
   const [tags, setTags] = useState<any[]>([]);
   const [pomodoroId, setPomodoroId] = useState<number | null>(null);
@@ -73,12 +74,15 @@ export function PomodoroTimer({
   useEffect(() => {
     if (activePomodoro) {
       console.log("恢复番茄钟状态:", activePomodoro);
+      const endTime = activePomodoro.startTime + activePomodoro.duration * 1000*60;
       setTitle(activePomodoro.title || '');
       setDescription(activePomodoro.description || '');
       setDuration(activePomodoro.duration || 25);
       setCustomDuration((activePomodoro.duration || 25).toString());
-      setTimeLeft(Math.max(0, Math.floor((activePomodoro.endTime - Date.now()) / 1000)));
-      setIsRunning(true);
+      const remainingTime = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+      setTimeLeft(remainingTime);
+      setIsRunning(remainingTime > 0);
+      setIsFinished(remainingTime === 0);
       setSelectedTag(activePomodoro.tagId || '');
       if (activePomodoro.id) {
         setPomodoroId(activePomodoro.id);
@@ -93,7 +97,24 @@ export function PomodoroTimer({
         setTimeLeft((prevTime) => {
           const newTime = prevTime - 1;
           if (newTime <= 0) {
-            completePomodoro();
+            // 修改：计时结束时不自动完成
+            setIsRunning(false);
+            setIsFinished(true); // 设置为已结束状态
+            
+            // 播放提示音但不完成番茄钟
+            if (playSoundOnComplete && audioRef.current) {
+              try {
+                const playPromise = audioRef.current.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(error => {
+                    console.error('播放完成提示音失败:', error);
+                  });
+                }
+              } catch (error) {
+                console.error('播放完成提示音失败:', error);
+              }
+            }
+            
             return 0;
           }
           return newTime;
@@ -108,7 +129,7 @@ export function PomodoroTimer({
         clearInterval(timerRef.current);
       }
     };
-  }, [isRunning, timeLeft]);
+  }, [isRunning, timeLeft, playSoundOnComplete]);
 
   // 更新服务器端番茄钟状态
   const updateServerPomodoroStatus = useCallback(async (id: number, status: 'running' | 'completed' | 'canceled' | 'paused') => {
@@ -134,6 +155,7 @@ export function PomodoroTimer({
     console.log("番茄钟完成");
     setIsRunning(false);
     setIsCompleted(true);
+    setIsFinished(false); // 重置结束状态，确保不会同时显示多个按钮
 
     if (playSoundOnComplete && audioRef.current) {
       try {
@@ -303,6 +325,7 @@ export function PomodoroTimer({
     setIsRunning(false);
     setTimeLeft(duration * 60);
     setIsCompleted(false);
+    setIsFinished(false); // 重置结束状态
 
     // 如果有关联的番茄钟ID，更新其状态为取消
     if (pomodoroId) {
@@ -332,7 +355,7 @@ export function PomodoroTimer({
 
   return (
     <div className="space-y-6">
-      {!isRunning && !isCompleted && (
+      {!isRunning && !isCompleted && !isFinished && (
         <div className="grid gap-4">
           <div>
             <Label htmlFor="title">标题</Label>
@@ -420,7 +443,7 @@ export function PomodoroTimer({
         </div>
 
         <div className="flex gap-4">
-          {!isRunning && !isCompleted && (
+          {!isRunning && !isCompleted && !isFinished && (
             <Button
               size="lg"
               onClick={startPomodoro}
@@ -441,7 +464,18 @@ export function PomodoroTimer({
             </Button>
           )}
 
-          {(isRunning || timeLeft > 0) && (
+          {isFinished && !isCompleted && (
+            <Button
+              size="lg"
+              onClick={completePomodoro}
+              variant="default"
+              type="button"
+            >
+              <Check className="mr-2" /> 确认完成
+            </Button>
+          )}
+
+          {(isRunning || timeLeft > 0 || isFinished) && !isCompleted && (
             <Button
               size="lg"
               onClick={resetPomodoro}

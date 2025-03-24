@@ -12,12 +12,23 @@ export default function PomodoroPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="flex justify-between items-center p-4">
-        <h1 className="text-xl">番茄钟</h1>
+      {/* 统计信息放在顶部 */}
+      <header className="p-4 border-b">
+        <Card className="shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h1 className="text-xl font-bold">番茄钟</h1>
+            </div>
+            <PomodoroStats />
+          </CardContent>
+        </Card>
       </header>
-      <main className="flex flex-1 overflow-hidden">
-        <section className="flex-1 flex flex-col items-center justify-center bg-cover bg-center" style={{ backgroundImage: 'url(/path/to/background.jpg)' }}>
-          <Card className="w-full max-w-md">
+
+      {/* 主体内容改为两列布局 */}
+      <main className="flex flex-1 overflow-hidden p-4 gap-4">
+        {/* 左侧：番茄钟和标签管理 */}
+        <div className="w-1/2 flex flex-col gap-4">
+          <Card className="flex-shrink-0">
             <CardHeader>
               <CardTitle>番茄钟</CardTitle>
             </CardHeader>
@@ -29,25 +40,8 @@ export default function PomodoroPage() {
               />
             </CardContent>
           </Card>
-        </section>
-        <aside className="w-96 overflow-y-auto">
-          <Card className="m-4">
-            <CardHeader>
-              <CardTitle>统计</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PomodoroStats />
-            </CardContent>
-          </Card>
-          <Card className="m-4">
-            <CardHeader>
-              <CardTitle>历史记录</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PomodoroList />
-            </CardContent>
-          </Card>
-          <Card className="m-4">
+          
+          <Card className="flex-shrink-0">
             <CardHeader>
               <CardTitle>标签管理</CardTitle>
             </CardHeader>
@@ -55,7 +49,19 @@ export default function PomodoroPage() {
               <PomodoroTagManager />
             </CardContent>
           </Card>
-        </aside>
+        </div>
+        
+        {/* 右侧：历史记录，添加滚动能力 */}
+        <div className="w-1/2">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>历史记录</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[calc(100%-4rem)] overflow-y-auto">
+              <PomodoroList />
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );
