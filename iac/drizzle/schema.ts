@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, serial, text, numeric, integer, timestamp, index, uniqueIndex, foreignKey, date, varchar, jsonb } from "drizzle-orm/pg-core"
+import { pgTable, pgEnum, serial, text, numeric, integer, timestamp, index, uniqueIndex, foreignKey, date, varchar, jsonb,primaryKey } from "drizzle-orm/pg-core"
   import { sql } from "drizzle-orm"
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly'])
@@ -109,5 +109,50 @@ export const llm_cache_records = pgTable("llm_cache_records", {
 	return {
 		idx_llm_cache_records_request_hash: index("idx_llm_cache_records_request_hash").using("btree", table.request_hash),
 		idx_llm_cache_records_created_at: index("idx_llm_cache_records_created_at").using("btree", table.created_at),
+	}
+});
+
+// 番茄钟状态枚举
+export const pomodoroStatus = pgEnum("pomodoro_status", ['running', 'completed', 'canceled', 'paused'])
+
+// 番茄钟记录表
+export const pomodoros = pgTable("pomodoros", {
+	id: serial("id").primaryKey().notNull(),
+	title: text("title").notNull(),
+	description: text("description"),
+	duration: integer("duration").default(25).notNull(), // 默认25分钟
+	status: pomodoroStatus("status").default('running').notNull(),
+	start_time: timestamp("start_time", { mode: 'string' }).notNull(),
+	end_time: timestamp("end_time", { mode: 'string' }),
+	user_id: text("user_id").notNull(),
+	habit_id: integer("habit_id").references(() => habits.id),
+	goal_id: integer("goal_id").references(() => goals.id),
+	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+},
+(table) => {
+	return {
+		idx_pomodoros_user_id: index("idx_pomodoros_user_id").using("btree", table.user_id),
+		idx_pomodoros_status: index("idx_pomodoros_status").using("btree", table.status),
+		idx_pomodoros_start_time: index("idx_pomodoros_start_time").using("btree", table.start_time),
+	}
+});
+
+// 番茄钟标签表
+export const pomodoro_tags = pgTable("pomodoro_tags", {
+	id: serial("id").primaryKey().notNull(),
+	name: text("name").notNull(),
+	color: text("color").default('#FF5722').notNull(), // 默认番茄红色
+	user_id: text("user_id").notNull(),
+	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+});
+
+// 番茄钟与标签的关联表
+export const pomodoro_tag_relations = pgTable("pomodoro_tag_relations", {
+	pomodoro_id: integer("pomodoro_id").notNull().references(() => pomodoros.id),
+	tag_id: integer("tag_id").notNull().references(() => pomodoro_tags.id),
+},
+(table) => {
+	return {
+		pk: primaryKey({ columns: [table.pomodoro_id, table.tag_id] }),
 	}
 });

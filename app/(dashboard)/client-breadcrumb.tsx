@@ -39,6 +39,12 @@ export function ClientBreadcrumb() {
       name: 'Dashboard',
       page: '今日概览'
     };
+  } else if (pathname?.includes('/pomodoro')) {
+    breadcrumbItems = {
+      link: '/pomodoro',
+      name: 'Pomodoro',
+      page: '番茄钟'
+    };
   }
 
   return (

@@ -28,6 +28,7 @@ export function DailyQuote({ model = process.env.OPENAI_MODEL}) {
             enableThinking: true,
             temperature: 0.8,
             model: model,
+            cacheTimeMinutes: 60,
           }),
         });
 

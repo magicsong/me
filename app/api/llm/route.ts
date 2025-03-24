@@ -72,7 +72,7 @@ export async function POST(request: Request) {
             temperature = 0.7,
             maxTokens = 1000,
             model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-            cacheTimeMinutes = 1 // 默认缓存1分钟
+            cacheTimeMinutes = 60 // 默认缓存60分钟
         } = body;
 
         if (!prompt) {
