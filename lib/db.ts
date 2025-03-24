@@ -343,6 +343,47 @@ export async function completeHabitInDB(id: number, completed: boolean, userId: 
   return existingEntry.length > 0;
 }
 
+// 在特定日期完成习惯
+export async function completeHabitOnDateInDB(habitId: number, userId: string, targetDate: Date) {
+  // 将日期设置为当天的开始时间（0点0分0秒）
+  const normalizedDate = new Date(targetDate);
+  normalizedDate.setHours(0, 0, 0, 0);
+  
+  // 检查指定日期是否已有记录
+  const existingEntry = await db
+    .select()
+    .from(habitEntries)
+    .where(
+      and(
+        eq(habitEntries.habitId, habitId),
+        eq(habitEntries.completedAt, normalizedDate),
+        eq(habitEntries.userId, userId)
+      )
+    )
+    .limit(1);
+  
+  // 如果已存在记录，直接返回（避免重复记录）
+  if (existingEntry.length > 0) {
+    return existingEntry[0].id;
+  }
+  
+  // 检查日期是否在未来
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (normalizedDate > today) {
+    throw new Error('不能在未来日期补打卡');
+  }
+  
+  // 添加补打卡记录
+  const result = await db.insert(habitEntries).values({
+    habitId,
+    completedAt: normalizedDate,
+    userId
+  }).returning();
+  
+  return result[0].id;
+}
+
 // 获取习惯历史记录
 export async function getHabitHistoryFromDB(habitId: number, userId: string) {
   const entries = await db

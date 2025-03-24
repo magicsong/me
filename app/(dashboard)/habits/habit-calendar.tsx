@@ -4,9 +4,20 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Cone, X } from 'lucide-react';
-import { getHabitHistory } from './actions';
+import { getHabitHistory, completeHabitOnDate } from './actions';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/hooks/use-toast";
 
 type Habit = {
   id: string;
@@ -34,6 +45,13 @@ export function HabitCalendar({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [completedDates, setCompletedDates] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [backfillDialogOpen, setBackfillDialogOpen] = useState(false);
+  const [isBackfillLoading, setIsBackfillLoading] = useState(false);
+  const { toast } = useToast();
+  
+  // 检查是否开启了补打卡功能
+  const isBackfillEnabled = process.env.NEXT_PUBLIC_ALLOW_BACKFILL === 'true';
 
   // 加载习惯历史数据
   useEffect(() => {
@@ -138,6 +156,56 @@ export function HabitCalendar({
     });
   };
 
+  // 处理补打卡
+  const handleBackfill = async () => {
+    if (!selectedDate || !habit) return;
+    
+    setIsBackfillLoading(true);
+    try {
+      await completeHabitOnDate(
+        habit.id, 
+        selectedDate.toISOString()
+      );
+      
+      // 刷新习惯历史
+      const history = await getHabitHistory(habit.id);
+      setCompletedDates(history.map((date: DateValue) => 
+        date instanceof Date ? date : new Date(date)
+      ));
+      
+      toast({
+        title: "补打卡成功",
+        description: `已记录 ${selectedDate.toLocaleDateString()} 的完成情况`,
+      });
+    } catch (error) {
+      console.error('补打卡失败:', error);
+      toast({
+        title: "补打卡失败",
+        description: error instanceof Error ? error.message : "未知错误",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBackfillLoading(false);
+      setBackfillDialogOpen(false);
+    }
+  };
+
+  // 处理日期点击
+  const handleDateClick = (date: Date) => {
+    if (!isBackfillEnabled) return;
+    
+    // 检查日期是否已被完成
+    const isCompleted = isDateCompleted(date);
+    // 检查是否是未来日期
+    const isFutureDate = date > new Date();
+    
+    // 已完成或未来日期不允许补打卡
+    if (isCompleted || isFutureDate) return;
+    
+    setSelectedDate(date);
+    setBackfillDialogOpen(true);
+  };
+
   // 渲染周视图
   const renderWeekView = () => {
     const days = [];
@@ -159,34 +227,7 @@ export function HabitCalendar({
           </div>
         ))}
         
-        {days.map((date, i) => {
-          const isCompleted = isDateCompleted(date);
-          const isToday = date.toDateString() === new Date().toDateString();
-          
-          return (
-            <div 
-              key={i} 
-              className={cn(
-                "aspect-square flex flex-col items-center justify-center rounded-md text-sm relative",
-                isToday && "ring-1 ring-primary"
-              )}
-            >
-              {isCompleted ? (
-                <div className="flex flex-col items-center justify-center w-full h-full rounded-md bg-emerald-50/70 dark:bg-emerald-950/30">
-                  <div className="mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
-                      className="w-4 h-4 text-emerald-500 dark:text-emerald-400">
-                      <path d="M21.947 9.179a1.001 1.001 0 0 0-.868-.676l-5.701-.453-2.467-5.461a.998.998 0 0 0-1.822-.001L8.622 8.05l-5.701.453a1 1 0 0 0-.619 1.713l4.213 4.107-1.49 6.452a1 1 0 0 0 1.53 1.057L12 18.202l5.445 3.63a1.001 1.001 0 0 0 1.517-1.106l-1.829-6.4 4.536-4.082c.297-.268.406-.686.278-1.065z"/>
-                    </svg>
-                  </div>
-                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{date.getDate()}</span>
-                </div>
-              ) : (
-                date.getDate()
-              )}
-            </div>
-          );
-        })}
+        {days.map((date, i) => renderDayCell(date))}
       </div>
     );
   };
@@ -225,33 +266,7 @@ export function HabitCalendar({
         
         {calendar.map((date, i) => {
           if (!date) return <div key={`empty-${i}`} className="aspect-square" />;
-          
-          const isCompleted = isDateCompleted(date);
-          const isToday = date.toDateString() === new Date().toDateString();
-          
-          return (
-            <div 
-              key={i} 
-              className={cn(
-                "aspect-square flex flex-col items-center justify-center rounded-md text-sm relative",
-                isToday && "ring-1 ring-primary"
-              )}
-            >
-              {isCompleted ? (
-                <div className="flex flex-col items-center justify-center w-full h-full rounded-md bg-emerald-50/70 dark:bg-emerald-950/30">
-                  <div className="mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
-                      className="w-4 h-4 text-emerald-500 dark:text-emerald-400">
-                      <path d="M21.947 9.179a1.001 1.001 0 0 0-.868-.676l-5.701-.453-2.467-5.461a.998.998 0 0 0-1.822-.001L8.622 8.05l-5.701.453a1 1 0 0 0-.619 1.713l4.213 4.107-1.49 6.452a1 1 0 0 0 1.53 1.057L12 18.202l5.445 3.63a1.001 1.001 0 0 0 1.517-1.106l-1.829-6.4 4.536-4.082c.297-.268.406-.686.278-1.065z"/>
-                    </svg>
-                  </div>
-                  <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{date.getDate()}</span>
-                </div>
-              ) : (
-                date.getDate()
-              )}
-            </div>
-          );
+          return renderDayCell(date);
         })}
       </div>
     );
@@ -360,78 +375,115 @@ export function HabitCalendar({
   const renderDayCell = (date: Date) => {
     const isCompleted = isDateCompleted(date);
     const isToday = date.toDateString() === new Date().toDateString();
+    const isFutureDate = date > new Date();
+    const isClickable = isBackfillEnabled && !isCompleted && !isFutureDate;
     
     return (
       <div 
         key={date.toISOString()} 
         className={cn(
-          "aspect-square flex flex-col items-center justify-center text-xs relative",
-          isToday && "ring-1 ring-primary rounded-sm"
+          "aspect-square flex flex-col items-center justify-center rounded-md text-sm relative",
+          isToday && "ring-1 ring-primary",
+          isClickable && "cursor-pointer hover:bg-muted"
         )}
+        onClick={isClickable ? () => handleDateClick(date) : undefined}
       >
         {isCompleted ? (
-          <div className="flex flex-col items-center justify-center w-full h-full rounded-sm bg-emerald-50/70 dark:bg-emerald-950/30">
-            <div className="mb-0.5">
+          <div className="flex flex-col items-center justify-center w-full h-full rounded-md bg-emerald-50/70 dark:bg-emerald-950/30">
+            <div className="mb-1">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
-                className="w-3 h-3 text-emerald-500 dark:text-emerald-400">
+                className="w-4 h-4 text-emerald-500 dark:text-emerald-400">
                 <path d="M21.947 9.179a1.001 1.001 0 0 0-.868-.676l-5.701-.453-2.467-5.461a.998.998 0 0 0-1.822-.001L8.622 8.05l-5.701.453a1 1 0 0 0-.619 1.713l4.213 4.107-1.49 6.452a1 1 0 0 0 1.53 1.057L12 18.202l5.445 3.63a1.001 1.001 0 0 0 1.517-1.106l-1.829-6.4 4.536-4.082c.297-.268.406-.686.278-1.065z"/>
               </svg>
             </div>
             <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{date.getDate()}</span>
           </div>
         ) : (
-          date.getDate()
+          <span className={cn(isClickable && "hover:text-primary")}>
+            {date.getDate()}
+          </span>
         )}
       </div>
     );
   };
 
   return (
-    <Card className={cn("w-full overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-md font-medium">
-          {habit.name} 打卡记录
-        </CardTitle>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
-      
-      <CardContent>
-        <div className="mb-4 space-y-2">
-          <Tabs defaultValue={viewMode} onValueChange={(v) => setViewMode(v as any)}>
-            <TabsList className="grid grid-cols-4 w-full">
-              <TabsTrigger value="week">周</TabsTrigger>
-              <TabsTrigger value="month">月</TabsTrigger>
-              <TabsTrigger value="quarter">季度</TabsTrigger>
-              <TabsTrigger value="year">年</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          <div className="flex items-center justify-between">
-            <Button variant="outline" size="icon" onClick={goToPrevious}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium">{formatDateRange()}</span>
-            <Button variant="outline" size="icon" onClick={goToNext}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+    <>
+      <Card className={cn("w-full overflow-hidden", className)}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-md font-medium">
+            {habit.name} 打卡记录
+          </CardTitle>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
         
-        {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+        <CardContent>
+          <div className="mb-4 space-y-2">
+            <Tabs defaultValue={viewMode} onValueChange={(v) => setViewMode(v as any)}>
+              <TabsList className="grid grid-cols-4 w-full">
+                <TabsTrigger value="week">周</TabsTrigger>
+                <TabsTrigger value="month">月</TabsTrigger>
+                <TabsTrigger value="quarter">季度</TabsTrigger>
+                <TabsTrigger value="year">年</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            <div className="flex items-center justify-between">
+              <Button variant="outline" size="icon" onClick={goToPrevious}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium">{formatDateRange()}</span>
+              <Button variant="outline" size="icon" onClick={goToNext}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        ) : (
-          <div className="mt-2">
-            {viewMode === 'week' && renderWeekView()}
-            {viewMode === 'month' && renderMonthView()}
-            {viewMode === 'quarter' && renderQuarterView()}
-            {viewMode === 'year' && renderYearView()}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          
+          {isBackfillEnabled && (
+            <p className="text-xs text-muted-foreground mb-2">点击未完成的日期可以进行补打卡</p>
+          )}
+          
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="mt-2">
+              {viewMode === 'week' && renderWeekView()}
+              {viewMode === 'month' && renderMonthView()}
+              {viewMode === 'quarter' && renderQuarterView()}
+              {viewMode === 'year' && renderYearView()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 补打卡确认对话框 */}
+      <AlertDialog open={backfillDialogOpen} onOpenChange={setBackfillDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认补打卡</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedDate && (
+                <>
+                  你确定要为 {selectedDate.toLocaleDateString()} 的 "{habit.name}" 补打卡吗？
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBackfillLoading}>取消</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBackfill} 
+              disabled={isBackfillLoading}
+            >
+              {isBackfillLoading ? "处理中..." : "确认补打卡"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

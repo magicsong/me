@@ -11,7 +11,8 @@ import {
   getHabitStatsFromDB,
   updateHabitInDB,
   saveHabitDifficultyInDB,  // 添加此导入
-  getHabitDifficultyHistoryFromDB  // 添加此导入
+  getHabitDifficultyHistoryFromDB,  // 添加此导入
+  completeHabitOnDateInDB, // 添加此导入用于补打卡
 } from '@/lib/db';
 // 从新文件导入奖励相关函数
 import { 
@@ -183,4 +184,39 @@ export async function getHabitDifficultyHistory(habitId: string) {
   
   // 从数据库获取该习惯的难度评估历史
   return getHabitDifficultyHistoryFromDB(Number(habitId), userId);
+}
+
+// 新增：在特定日期补打卡的函数
+export async function completeHabitOnDate(habitId: string, date: string) {
+  // 检查环境变量是否允许补打卡
+  if (process.env.NEXT_PUBLIC_ALLOW_BACKFILL !== 'true') {
+    throw new Error('补打卡功能未启用');
+  }
+
+  const userId = await getCurrentUserId();
+  
+  // 解析日期
+  const targetDate = new Date(date);
+  // 确保日期有效
+  if (isNaN(targetDate.getTime())) {
+    throw new Error('无效的日期格式');
+  }
+  
+  // 获取当前习惯
+  const habits = await getHabitsFromDB(userId);
+  const habit = habits.find(h => h.id === habitId);
+  
+  if (!habit) {
+    throw new Error('习惯不存在');
+  }
+  
+  // 在特定日期完成习惯
+  await completeHabitOnDateInDB(Number(habitId), userId, targetDate);
+  
+  // 添加奖励
+  const rewardPoints = habit.rewardPoints || 10;
+  await updateUserRewardsInDB(userId, rewardPoints, habit.category);
+  
+  revalidatePath('/habits');
+  return { success: true };
 }
