@@ -224,26 +224,24 @@ export function TodoListContainer() {
             </Button>
           </div>
           
-          <Card className="bg-muted/30">
+          <Card className="bg-card shadow">
             <CardHeader className="pt-6">
               <TodoFilter onFilterChange={applyFilters} />
             </CardHeader>
-            {isFormOpen && (
-            <CardContent className="pt-6">
-                <TodoForm 
-                  onSubmit={editingTodo ? 
-                    (data) => handleUpdateTodo(editingTodo.id, data) : 
-                    handleCreateTodo
-                  }
-                  onCancel={() => { setIsFormOpen(false); setEditingTodo(null); }}
-                  initialData={editingTodo || undefined}
-                />
-              </CardContent>
-            )}
-          </Card>
-          
-          <Card className="bg-card shadow">
-            <CardContent className="pt-6">
+            <CardContent className="pt-0 space-y-6">
+              {isFormOpen && (
+                <div className="pt-4 pb-4 border-b">
+                  <TodoForm 
+                    onSubmit={editingTodo ? 
+                      (data) => handleUpdateTodo(editingTodo.id, data) : 
+                      handleCreateTodo
+                    }
+                    onCancel={() => { setIsFormOpen(false); setEditingTodo(null); }}
+                    initialData={editingTodo || undefined}
+                  />
+                </div>
+              )}
+              
               {isLoading ? (
                 <div className="py-20 text-center flex flex-col items-center justify-center">
                   <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>

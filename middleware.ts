@@ -21,10 +21,13 @@ export async function middleware(request: NextRequest) {
     url.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(url)
   }
-  
+  // 如果用户已登录且访问根路径，重定向到dashboard
+  if (isLoggedIn && pathname === '/') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
   // 如果用户已登录并尝试访问登录或注册页面，重定向到首页
   if (isLoggedIn && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return NextResponse.next()

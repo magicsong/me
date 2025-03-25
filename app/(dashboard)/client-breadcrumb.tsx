@@ -16,9 +16,9 @@ export function ClientBreadcrumb() {
   
   // 根据路径返回不同的面包屑内容
   let breadcrumbItems = {
-    link: '#',
-    name: 'Products',
-    page: 'All Products'
+    link: '/dashboard',
+    name: 'Dashboard',
+    page: '仪表盘'
   };
   
   if (pathname?.includes('/habits')) {
@@ -45,9 +45,9 @@ export function ClientBreadcrumb() {
       name: 'Pomodoro',
       page: '番茄钟'
     };
-  } else if (pathname?.includes('/todos')) {
+  } else if (pathname?.includes('/todolist')) {
     breadcrumbItems = {
-      link: '/todos',
+      link: '/todolist',
       name: 'Todos',
       page: '任务管理'
     };

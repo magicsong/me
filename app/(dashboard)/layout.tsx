@@ -66,7 +66,7 @@ function DesktopNav() {
           <span className="sr-only">Acme Inc</span>
         </Link>
 
-        <NavItem href="/dashboard" label="Dashboard">
+        <NavItem href="/" label="Dashboard">
           <Home className="h-5 w-5" />
         </NavItem>
         <NavItem href="/goals" label="Goals">
@@ -81,13 +81,10 @@ function DesktopNav() {
         <NavItem href="/pomodoro" label="Pomodoro">
           <Timer className="h-5 w-5" />
         </NavItem>
-        <NavItem href="/" label="Products">
+        <NavItem href="/products" label="Products">
           <Package className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="/customers" label="Customers">
-          <Users2 className="h-5 w-5" />
-        </NavItem>
         <NavItem href="#" label="Analytics">
           <LineChart className="h-5 w-5" />
         </NavItem>
@@ -129,7 +126,7 @@ function MobileNav() {
             <span className="sr-only">Acme Inc</span>
           </Link>
           <Link
-            href="/dashboard"
+            href="/"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Home className="h-5 w-5" />
@@ -171,7 +168,7 @@ function MobileNav() {
             Orders
           </Link>
           <Link
-            href="/"
+            href="/products"
             className="flex items-center gap-4 px-2.5 text-foreground"
           >
             <Package className="h-5 w-5" />
