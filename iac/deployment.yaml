@@ -35,6 +35,8 @@ spec:
           value: "production"
         - name: AUTH_TRUST_HOST
           value: "true"
+        - name: NEXT_PUBLIC_ALLOW_BACKFILL
+          value: "true"  
 
 ---
 apiVersion: v1
