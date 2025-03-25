@@ -106,7 +106,7 @@ export async function POST(request: Request) {
             maxTokens,
             model
         );
-
+        console.log('API调用结果:', response);
         // 保存调用结果到数据库
         await saveLLMRecordToDB(
             requestHash,

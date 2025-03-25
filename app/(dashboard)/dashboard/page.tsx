@@ -4,7 +4,8 @@ import { getHabits, getHabitStats } from '../habits/actions';
 import { UserProfileCard } from '@/components/user-profile-card';
 import { auth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DailyQuote } from '@/components/DailyQuote'; // 导入DailyQuote组件
+import { DailyQuote } from '@/components/DailyQuote'; 
+import { DailySummaryViewer } from './daily-summary-viewer'; // 导入总结查看器组件
 
 export default async function DashboardPage() {
   // 获取用户会话
@@ -86,6 +87,9 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* 添加日常总结查看器 */}
+      <DailySummaryViewer />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-3">

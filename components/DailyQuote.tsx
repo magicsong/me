@@ -18,13 +18,19 @@ export function DailyQuote({ model = process.env.OPENAI_MODEL}) {
   useEffect(() => {
     async function fetchQuote() {
       try {
+        const prompts =[
+          "请给我一句鼓舞人心的日常推荐语录，简短有力，不需要解释，如果有出处，就注明出处，如果没有就不要有其他的话",
+          "给我一句有深度的日常推荐语录不需要解释，如果有出处，就注明出处",
+          "给我一段风趣幽默的日常推荐语录，不需要解释，如果有出处，就注明出处",
+        ]
+        const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
         const response = await fetch("/api/llm", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            prompt: "请给我一句鼓舞人心的日常推荐语录，简短有力，不需要解释，如果有出处，就注明出处，如果没有就不要有其他的话",
+            prompt: randomPrompt,
             enableThinking: true,
             temperature: 0.8,
             model: model,

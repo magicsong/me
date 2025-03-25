@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar } from "drizzle-orm/pg-core"
+import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar, uniqueIndex } from "drizzle-orm/pg-core"
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
@@ -203,5 +203,23 @@ export const todo_pomodoro_relations = pgTable("todo_pomodoro_relations", {
 (table) => {
 	return {
 		pk: primaryKey({ columns: [table.todo_id, table.pomodoro_id] }),
+	}
+});
+
+// 添加每日总结表
+export const daily_summaries = pgTable("daily_summaries", {
+	id: serial("id").primaryKey().notNull(),
+	user_id: text("user_id").notNull(),
+	date: text("date").notNull(), // 格式 YYYY-MM-DD
+	content: jsonb("content").notNull(), // 存储整个总结内容
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+},
+(table) => {
+	return {
+		idx_daily_summaries_user_id: index("idx_daily_summaries_user_id").using("btree", table.user_id),
+		idx_daily_summaries_date: index("idx_daily_summaries_date").using("btree", table.date),
+		// 创建复合唯一索引，确保每个用户每天只有一条总结
+		unique_user_date: uniqueIndex("unique_user_date").on(table.user_id, table.date),
 	}
 });
