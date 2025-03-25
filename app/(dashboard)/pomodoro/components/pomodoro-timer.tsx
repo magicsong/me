@@ -424,7 +424,7 @@ export function PomodoroTimer({
                   <SelectValue placeholder="选择标签" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">无标签</SelectItem>
+                  <SelectItem value="all">无标签</SelectItem>
                   {tags.map((tag) => (
                     <SelectItem key={tag.id} value={tag.id}>
                       {tag.name}

@@ -8,7 +8,8 @@ import {
   Settings,
   ShoppingCart,
   Users2,
-  Timer
+  Timer,
+  CheckSquare
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -74,13 +75,12 @@ function DesktopNav() {
         <NavItem href="/habits" label="Habits">
           <CalendarCheck2 className="h-5 w-5" />
         </NavItem>
+        <NavItem href="/todolist" label="Todos">
+          <CheckSquare className="h-5 w-5" />
+        </NavItem>
         <NavItem href="/pomodoro" label="Pomodoro">
           <Timer className="h-5 w-5" />
         </NavItem>
-        <NavItem href="#" label="Orders">
-          <ShoppingCart className="h-5 w-5" />
-        </NavItem>
-
         <NavItem href="/" label="Products">
           <Package className="h-5 w-5" />
         </NavItem>
@@ -148,6 +148,13 @@ function MobileNav() {
           >
             <CalendarCheck2 className="h-5 w-5" />
             Habits
+          </Link>
+          <Link
+            href="/todolist"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <CheckSquare className="h-5 w-5" />
+            待办任务
           </Link>
           <Link
             href="/pomodoro"

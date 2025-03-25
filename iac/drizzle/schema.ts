@@ -156,3 +156,52 @@ export const pomodoro_tag_relations = pgTable("pomodoro_tag_relations", {
 		pk: primaryKey({ columns: [table.pomodoro_id, table.tag_id] }),
 	}
 });
+
+// Todo状态枚举
+export const todoStatus = pgEnum("todo_status", ['pending', 'in_progress', 'completed', 'archived'])
+
+// Todo优先级枚举
+export const todoPriority = pgEnum("todo_priority", ['low', 'medium', 'high', 'urgent'])
+
+// Todos表
+export const todos = pgTable("todos", {
+	id: serial("id").primaryKey().notNull(),
+	title: text("title").notNull(),
+	description: text("description"),
+	status: todoStatus("status").default('pending').notNull(),
+	priority: todoPriority("priority").default('medium').notNull(),
+	due_date: timestamp("due_date", { mode: 'string', withTimezone: true }),
+	user_id: text("user_id").notNull(),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	completed_at: timestamp("completed_at", { mode: 'string', withTimezone: true }),
+},
+(table) => {
+	return {
+		idx_todos_user_id: index("idx_todos_user_id").using("btree", table.user_id),
+		idx_todos_status: index("idx_todos_status").using("btree", table.status),
+		idx_todos_due_date: index("idx_todos_due_date").using("btree", table.due_date),
+	}
+});
+
+// Todo与标签的关联表
+export const todo_tag_relations = pgTable("todo_tag_relations", {
+	todo_id: integer("todo_id").notNull().references(() => todos.id, { onDelete: 'cascade' }),
+	tag_id: integer("tag_id").notNull().references(() => pomodoro_tags.id, { onDelete: 'cascade' }),
+},
+(table) => {
+	return {
+		pk: primaryKey({ columns: [table.todo_id, table.tag_id] }),
+	}
+});
+
+// Todo与番茄钟的关联表
+export const todo_pomodoro_relations = pgTable("todo_pomodoro_relations", {
+	todo_id: integer("todo_id").notNull().references(() => todos.id, { onDelete: 'cascade' }),
+	pomodoro_id: integer("pomodoro_id").notNull().references(() => pomodoros.id, { onDelete: 'cascade' }),
+},
+(table) => {
+	return {
+		pk: primaryKey({ columns: [table.todo_id, table.pomodoro_id] }),
+	}
+});

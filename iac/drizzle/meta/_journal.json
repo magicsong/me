@@ -50,6 +50,13 @@
       "when": 1742863447416,
       "tag": "0006_keen_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1742883079007,
+      "tag": "0007_magenta_brood",
+      "breakpoints": true
     }
   ]
 }

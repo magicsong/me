@@ -45,6 +45,18 @@ export function ClientBreadcrumb() {
       name: 'Pomodoro',
       page: '番茄钟'
     };
+  } else if (pathname?.includes('/todos')) {
+    breadcrumbItems = {
+      link: '/todos',
+      name: 'Todos',
+      page: '任务管理'
+    };
+  } else if (pathname?.includes('/goals')) {
+    breadcrumbItems = {
+      link: '/goals',
+      name: 'Goals',
+      page: '目标追踪'
+    };
   }
 
   return (
