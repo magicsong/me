@@ -34,7 +34,7 @@ export const products = pgTable('products', {
   status: statusEnum('status').notNull(),
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
   stock: integer('stock').notNull(),
-  availableAt: timestamp('available_at').notNull()
+  availableAt: timestamp('available_at', { withTimezone: true }).notNull()
 });
 
 // 习惯频率枚举
@@ -46,7 +46,7 @@ export const habits = pgTable('habits', {
   name: text('name').notNull(),
   description: text('description'),
   frequency: frequencyEnum('frequency').notNull().default('daily'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   userId: text('user_id'), // 如果系统支持多用户，这里可以关联到用户表
   category: text('category'), // 习惯类别
   rewardPoints: integer('reward_points').default(5) // 奖励积分
@@ -65,7 +65,7 @@ export const users = pgTable('users', {
   id: text('id').notNull().primaryKey(),
   name: text('name'),
   email: text('email').notNull(),
-  emailVerified: timestamp('email_verified', { mode: 'date' }),
+  emailVerified: timestamp('email_verified', { withTimezone: true }),
   image: text('image'),
 });
 
@@ -88,7 +88,7 @@ export const accounts = pgTable('accounts', {
 export const sessions = pgTable('sessions', {
   sessionToken: text('session_token').notNull().primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  expires: timestamp('expires', { mode: 'date' }).notNull(),
+  expires: timestamp('expires', { withTimezone: true }).notNull(),
 });
 
 export const habitTargets = pgTable('habit_targets', {
@@ -106,17 +106,17 @@ export const goals = pgTable('goals', {
   title: text('title').notNull(),
   description: text('description'),
   type: text('type').notNull(),
-  startDate: timestamp('start_date').notNull(),
-  endDate: timestamp('end_date').notNull(),
+  startDate: timestamp('start_date', { withTimezone: true }).notNull(),
+  endDate: timestamp('end_date', { withTimezone: true }).notNull(),
   status: text('status').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 })
 export const verificationTokens = pgTable('verification_tokens', {
   identifier: text('identifier').notNull(),
   token: text('token').notNull(),
-  expires: timestamp('expires', { mode: 'date' }).notNull(),
+  expires: timestamp('expires', { withTimezone: true }).notNull(),
 }, (vt) => ({
   compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
 }));
@@ -132,7 +132,7 @@ export const habitDifficulties = pgTable('habit_difficulties', {
   completedAt: date('completed_at').defaultNow().notNull(),
   difficulty: difficultyEnum('difficulty').notNull(),
   comment: text('comment'), // 文本评价
-  createdAt: timestamp('created_at').defaultNow().notNull()
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
 
 

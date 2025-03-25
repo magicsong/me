@@ -36,6 +36,20 @@
       "when": 1742796392504,
       "tag": "0004_cultured_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1742862603671,
+      "tag": "0005_noisy_purple_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1742863447416,
+      "tag": "0006_keen_rumiko_fujikawa",
+      "breakpoints": true
     }
   ]
 }

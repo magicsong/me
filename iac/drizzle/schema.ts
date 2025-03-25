@@ -1,5 +1,5 @@
-import { pgTable, pgEnum, serial, text, numeric, integer, timestamp, index, uniqueIndex, foreignKey, date, varchar, jsonb,primaryKey } from "drizzle-orm/pg-core"
-  import { sql } from "drizzle-orm"
+import { sql } from "drizzle-orm"
+import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar } from "drizzle-orm/pg-core"
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
@@ -13,7 +13,7 @@ export const products = pgTable("products", {
 	status: status("status").notNull(),
 	price: numeric("price", { precision: 10, scale:  2 }).notNull(),
 	stock: integer("stock").notNull(),
-	available_at: timestamp("available_at", { mode: 'string' }).notNull(),
+	available_at: timestamp("available_at", { mode: 'string', withTimezone: true }).notNull(),
 });
 
 export const habits = pgTable("habits", {
@@ -21,7 +21,7 @@ export const habits = pgTable("habits", {
 	name: text("name").notNull(),
 	description: text("description"),
 	frequency: frequency("frequency").default('daily').notNull(),
-	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	user_id: text("user_id"),
 	category: text("category"),
 	reward_points: integer("reward_points").default(1).notNull(),
@@ -31,7 +31,7 @@ export const habits = pgTable("habits", {
 export const habit_entries = pgTable("habit_entries", {
 	id: serial("id").primaryKey().notNull(),
 	habit_id: integer("habit_id").notNull().references(() => habits.id),
-	completed_at: date("completed_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+	completed_at: timestamp("completed_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	user_id: text("user_id"),
 },
 (table) => {
@@ -70,10 +70,10 @@ export const goals = pgTable("goals", {
 	title: text("title").notNull(),
 	description: text("description"),
 	type: text("type").notNull(),
-	start_date: timestamp("start_date", { mode: 'string' }).notNull(),
-	end_date: timestamp("end_date", { mode: 'string' }).notNull(),
+	start_date: timestamp("start_date", { mode: 'string', withTimezone: true }).notNull(),
+	end_date: timestamp("end_date", { mode: 'string', withTimezone: true }).notNull(),
 	user_id: text("user_id").notNull(),
-	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	status: text("status").default('in_progress').notNull(),
 });
 
@@ -82,10 +82,10 @@ export const habit_difficulties = pgTable("habit_difficulties", {
 	id: serial("id").primaryKey().notNull(),
 	habit_id: integer("habit_id").notNull().references(() => habits.id),
 	user_id: text("user_id").notNull(),
-	completed_at: date("completed_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+	completed_at: timestamp("completed_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	difficulty: difficulty("difficulty").notNull(),
 	comment: text("comment"),
-	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 },
 (table) => {
 	return {
@@ -102,7 +102,7 @@ export const llm_cache_records = pgTable("llm_cache_records", {
 	model: text("model").notNull(),
 	response_content: text("response_content").notNull(),
 	response_thinking: text("response_thinking"),
-	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	user_id: text("user_id"),
 },
 (table) => {
@@ -122,12 +122,12 @@ export const pomodoros = pgTable("pomodoros", {
 	description: text("description"),
 	duration: integer("duration").default(25).notNull(), // 默认25分钟
 	status: pomodoroStatus("status").default('running').notNull(),
-	start_time: timestamp("start_time", { mode: 'string' }).notNull(),
-	end_time: timestamp("end_time", { mode: 'string' }),
+	start_time: timestamp("start_time", { mode: 'string', withTimezone: true }).notNull(),
+	end_time: timestamp("end_time", { mode: 'string', withTimezone: true }),
 	user_id: text("user_id").notNull(),
 	habit_id: integer("habit_id").references(() => habits.id),
 	goal_id: integer("goal_id").references(() => goals.id),
-	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 },
 (table) => {
 	return {
@@ -143,7 +143,7 @@ export const pomodoro_tags = pgTable("pomodoro_tags", {
 	name: text("name").notNull(),
 	color: text("color").default('#FF5722').notNull(), // 默认番茄红色
 	user_id: text("user_id").notNull(),
-	created_at: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 });
 
 // 番茄钟与标签的关联表
