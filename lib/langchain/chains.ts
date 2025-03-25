@@ -3,34 +3,36 @@ import 'server-only';
 import { RunnableSequence } from "@langchain/core/runnables";
 import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { chatModel } from "./index";
-import { 
-  summaryFeedbackPrompt, 
-  tagSuggestionPrompt, 
-  dailyPlanningPrompt, 
-  habitSuggestionPrompt 
+import {
+  summaryFeedbackPrompt,
+  tagSuggestionPrompt,
+  dailyPlanningPrompt,
+  habitSuggestionPrompt
 } from "./prompts";
 import { auth } from "@/lib/auth";
 import { findLLMCachedResponse, saveLLMRecordToDB } from "@/lib/db/llm";
 import { createHash } from "crypto";
+import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
+import { load } from "@langchain/core/load";
 
-// 创建带缓存支持的链
-const createCachedChain = async (chainFunc: any, cacheKey: string, cacheTime: number = 60) => {
+// 创建带缓存支持的链（泛型版本）
+const createCachedChain = async <T>(chainFunc: () => Promise<T>, cacheKey: string, cacheTime: number = 60): Promise<T> => {
   // 生成缓存键
   const requestHash = createHash('md5').update(cacheKey).digest('hex');
-  
+
   // 检查缓存
   const cachedResult = await findLLMCachedResponse(requestHash, cacheTime);
   if (cachedResult) {
-    return JSON.parse(cachedResult.responseContent);
+    return load(cachedResult.responseContent);
   }
-  
+
   // 执行链
   const result = await chainFunc();
-  
+
   // 存储结果到缓存
   const session = await auth();
   const userId = session?.user?.id;
-  
+  console.log("langchain:", result);
   await saveLLMRecordToDB(
     requestHash,
     cacheKey,
@@ -39,22 +41,23 @@ const createCachedChain = async (chainFunc: any, cacheKey: string, cacheTime: nu
     undefined,
     userId
   );
-  
+
   return result;
 };
 
 // 生成总结反馈
-export async function generateSummaryFeedback(summaryContent: string) {
+export async function generateSummaryFeedback(summaryContent: string): Promise<string> {
   const chain = RunnableSequence.from([
     summaryFeedbackPrompt,
     chatModel,
   ]);
-  
-  return createCachedChain(
+  const result = await createCachedChain(
     () => chain.invoke({ summaryContent }),
     `summary-feedback:${summaryContent}`,
     240 // 缓存4小时
   );
+  // 返回消息的content字段
+  return String(result.content)
 }
 
 // 标签建议解析器
@@ -69,13 +72,13 @@ export async function generateTagSuggestions(title: string, description: string 
     chatModel,
     tagSuggestionParser,
   ]);
-  
+
   const result = await createCachedChain(
     () => chain.invoke({ title, description }),
     `tag-suggestion:${title}:${description}`,
     1440 // 缓存24小时
   );
-  
+
   // 解析标签（以防解析失败）
   try {
     if (typeof result === 'string') {
@@ -96,23 +99,23 @@ const dailyPlanningParser = StructuredOutputParser.fromNamesAndDescriptions({
 
 // 生成日程规划
 export async function generateDailyPlanning(todoItems: any[], habits: any[], preferences: string = "") {
-  const todoItemsStr = todoItems.map(item => 
+  const todoItemsStr = todoItems.map(item =>
     `- ${item.title}${item.priority ? ` (优先级: ${item.priority})` : ''}`
   ).join("\n");
-  
-  const habitsStr = habits.map(habit => 
+
+  const habitsStr = habits.map(habit =>
     `- ${habit.name}${habit.completedToday ? ' (今日已完成)' : ''}`
   ).join("\n");
-  
+
   const chain = RunnableSequence.from([
     dailyPlanningPrompt,
     chatModel,
     dailyPlanningParser,
   ]);
-  
+
   // 每天生成新的规划，所以添加日期到缓存键
   const today = new Date().toISOString().split('T')[0];
-  
+
   return createCachedChain(
     () => chain.invoke({ todoItems: todoItemsStr, habits: habitsStr, preferences }),
     `daily-planning:${today}:${todoItems.length}:${habits.length}`,
@@ -128,23 +131,23 @@ const habitSuggestionParser = StructuredOutputParser.fromNamesAndDescriptions({
 
 // 生成习惯建议
 export async function generateHabitSuggestions(userHabits: any[], completionStats: any) {
-  const habitsStr = userHabits.map(habit => 
+  const habitsStr = userHabits.map(habit =>
     `- ${habit.name} (完成率: ${habit.completionRate || '未知'}, 连续天数: ${habit.streak || 0})`
   ).join("\n");
-  
+
   const statsStr = `总体完成率: ${completionStats.overallCompletionRate || 0}
 最佳习惯: ${completionStats.bestHabit?.name || '无'}
 需要加强: ${completionStats.worstHabit?.name || '无'}`;
-  
+
   const chain = RunnableSequence.from([
     habitSuggestionPrompt,
     chatModel,
     habitSuggestionParser,
   ]);
-  
+
   // 每周更新一次习惯建议
   const weekNumber = getWeekNumber(new Date());
-  
+
   return createCachedChain(
     () => chain.invoke({ userHabits: habitsStr, completionStats: statsStr }),
     `habit-suggestion:${weekNumber}:${userHabits.length}`,

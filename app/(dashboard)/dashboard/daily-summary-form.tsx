@@ -15,8 +15,6 @@ import {
   Moon, CalendarIcon, Sparkles
 } from 'lucide-react';
 import { fetchDailySummary } from './actions';
-// 移除对服务端代码的直接导入
-// import { generateSummaryFeedback } from '@/lib/langchain/chains';
 import { useToast } from '@/components/hooks/use-toast';
 
 type DailySummaryFormProps = {
@@ -106,7 +104,9 @@ export function DailySummaryForm({
         
         if (result.success && result.data) {
           const summaryData = result.data.content;
-          
+          if (result.data.ai_summary){
+            summaryData.AiSummary= result.data.ai_summary;
+          }
           // 填充表单数据
           if (summaryData.completionScore) setCompletionScore(summaryData.completionScore);
           if (summaryData.goodThings?.length) setGoodThings(

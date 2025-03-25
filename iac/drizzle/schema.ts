@@ -214,6 +214,8 @@ export const daily_summaries = pgTable("daily_summaries", {
 	content: jsonb("content").notNull(), // 存储整个总结内容
 	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	ai_summary: text("ai_summary"), // AI生成的总结
+	ai_feedback_actions: jsonb("ai_feedback_actions"), // AI反馈行动
 },
 (table) => {
 	return {

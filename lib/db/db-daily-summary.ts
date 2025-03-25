@@ -118,3 +118,23 @@ export async function deleteDailySummary(date: string) {
     ))
     .returning();
 }
+
+// 更新AI总结
+export async function updateAIDailySummary(date: string, content: any) {
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new Error("未授权：需要用户登录");
+    }
+    const userId = session.user.id;
+  
+  return await db.update(daily_summaries)
+    .set({
+      ai_summary: content,
+      updated_at: new Date().toISOString()
+    })
+    .where(and(
+      eq(daily_summaries.user_id, userId),
+      eq(daily_summaries.date, date)
+    ))
+    .returning();
+}

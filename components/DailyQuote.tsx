@@ -9,7 +9,7 @@ interface QuoteResponse {
   thinking?: string;
 }
 
-export function DailyQuote({ model = process.env.OPENAI_MODEL}) {
+export function DailyQuote({ model = process.env.OPENAI_MODEL }) {
   const [quote, setQuote] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [thinking, setThinking] = useState<string>("");
@@ -18,7 +18,7 @@ export function DailyQuote({ model = process.env.OPENAI_MODEL}) {
   useEffect(() => {
     async function fetchQuote() {
       try {
-        const prompts =[
+        const prompts = [
           "请给我一句鼓舞人心的日常推荐语录，简短有力，不需要解释，如果有出处，就注明出处，如果没有就不要有其他的话",
           "给我一句有深度的日常推荐语录不需要解释，如果有出处，就注明出处",
           "给我一段风趣幽默的日常推荐语录，不需要解释，如果有出处，就注明出处",
@@ -70,18 +70,24 @@ export function DailyQuote({ model = process.env.OPENAI_MODEL}) {
           <div className="space-y-3">
             <div className="flex items-start">
               <Quote className="h-5 w-5 mr-2 text-blue-500 mt-1 flex-shrink-0" />
-              <p className="text-gray-800 font-medium leading-relaxed">{quote}</p>
+              <div className="text-gray-800 font-medium leading-relaxed">
+                {quote.split('\n').map((line, index) => (
+                  <p key={index} className={index > 0 ? "mt-2" : ""}>
+                    {line}
+                  </p>
+                ))}
+              </div>
             </div>
-            
+
             {thinking && (
               <div className="mt-2">
-                <button 
+                <button
                   onClick={() => setShowThinking(!showThinking)}
                   className="text-xs text-blue-600 hover:text-blue-800 underline"
                 >
                   {showThinking ? "隐藏思考过程" : "查看思考过程"}
                 </button>
-                
+
                 {showThinking && (
                   <div className="mt-2 p-2 bg-gray-50 rounded-md border border-gray-200 text-xs text-gray-600">
                     <p className="font-mono">{thinking}</p>

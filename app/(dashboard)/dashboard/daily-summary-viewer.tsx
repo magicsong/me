@@ -48,7 +48,13 @@ type SummaryData = {
   energyLevel: string;
   sleepQuality: string;
   tomorrowGoals: string;
+  aiSummary?: string; // 添加AI总结字段
 };
+interface Result {
+  success: boolean
+  aiSummary: string
+  error: string 
+}
 
 export function DailySummaryViewer() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -57,6 +63,8 @@ export function DailySummaryViewer() {
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
 
   // 判断日期类型
   const dateType = isToday(selectedDate) 
@@ -77,6 +85,7 @@ export function DailySummaryViewer() {
         
         if (result.success && result.data) {
           setSummaryData(result.data.content);
+          setAiSummary(result.data.ai_summary);
         } else {
           setSummaryData(null);
           if (result.message) {
@@ -165,6 +174,57 @@ export function DailySummaryViewer() {
       case 'average': return { label: '一般', color: 'bg-amber-100 text-amber-800' };
       case 'poor': return { label: '较差', color: 'bg-red-100 text-red-800' };
       default: return { label: '未知', color: 'bg-gray-100 text-gray-800' };
+    }
+  };
+
+  // 生成AI总结
+  const generateAISummary = async () => {
+    if (!summaryData) return;
+    
+    setIsGeneratingAI(true);
+    try {
+      // 准备当前表单数据作为上下文
+      const context = {
+        date: summaryData.date,
+        completedTasks: summaryData.completedTasks,
+        goodThings: summaryData.goodThings,
+        learnings: summaryData.learnings,
+        challenges: summaryData.challenges,
+        improvements: summaryData.improvements,
+        mood: summaryData.mood,
+        energyLevel: summaryData.energyLevel,
+        sleepQuality: summaryData.sleepQuality,
+        tomorrowGoals: summaryData.tomorrowGoals,
+      };
+      
+      // 通过API调用生成AI总结
+      const response = await fetch('/api/ai/generate-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ context, dateStr: format(selectedDate, 'yyyy-MM-dd') }),
+      });
+    
+      if (!response.ok) {
+        throw new Error('AI请求失败');
+      }
+  
+      const result = await response.json() as Result;
+      if (!result.success) {
+        throw new Error(result.error || '生成AI总结失败');
+      }
+
+      // 重新加载数据以获取更新后的总结
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const refreshResult = await fetchDailySummary(dateStr);
+      if (refreshResult.success && refreshResult.data) {
+        setSummaryData(refreshResult.data.content);
+      }
+    } catch (error) {
+      console.error('生成AI总结失败:', error);
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -282,7 +342,38 @@ export function DailySummaryViewer() {
                 </div>
                 
                 {/* 内容摘要 */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* AI总结卡片 */}
+                  <div className={`${aiSummary ? 'bg-blue-50' : 'bg-muted/30'} rounded-lg p-3 hover:bg-blue-100/50 transition-colors col-span-full mb-1`}>
+                    <div className="flex items-center justify-between text-sm font-medium mb-1.5">
+                      <div className="flex items-center">
+                        <Lightbulb className="h-3.5 w-3.5 mr-1.5 text-blue-600" />
+                        AI 一句话总结
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={generateAISummary}
+                        disabled={isGeneratingAI}
+                        className="h-7 text-xs px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                      >
+                        {isGeneratingAI ? 
+                          <span className="flex items-center">
+                            <span className="mr-1 h-3 w-3 border-2 border-blue-600 rounded-full border-t-transparent animate-spin"></span>
+                            生成中...
+                          </span> : 
+                          aiSummary ? "重新生成" : "生成总结"
+                        }
+                      </Button>
+                    </div>
+                    <div className="text-sm">
+                      {aiSummary ? 
+                        <p className="text-blue-800">{aiSummary}</p> :
+                        <p className="text-muted-foreground italic">AI可以帮你总结这一天的亮点和改进点，点击"生成总结"试试看</p>
+                      }
+                    </div>
+                  </div>
+                  
                   {/* 三件好事 */}
                   {summaryData.goodThings?.filter(Boolean).length > 0 && (
                     <div className="bg-muted/30 rounded-lg p-3 hover:bg-muted/50 transition-colors">
@@ -370,6 +461,35 @@ export function DailySummaryViewer() {
           
           {summaryData && (
             <div className="space-y-6 py-2">
+              {/* AI总结 */}
+              <div className="space-y-3">
+                <h3 className="text-md font-medium flex items-center gap-1.5">
+                  <Lightbulb className="h-4 w-4 text-blue-600" /> AI 总结
+                </h3>
+                <div className="relative bg-blue-50 p-4 rounded-md">
+                  {summaryData.aiSummary ? (
+                    <p className="text-blue-800">{summaryData.aiSummary}</p>
+                  ) : (
+                    <p className="text-muted-foreground italic">还没有AI总结，可以点击生成按钮创建</p>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={generateAISummary}
+                    disabled={isGeneratingAI}
+                    className="absolute top-2 right-2 h-7 text-xs px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-200"
+                  >
+                    {isGeneratingAI ? 
+                      <span className="flex items-center">
+                        <span className="mr-1 h-3 w-3 border-2 border-blue-600 rounded-full border-t-transparent animate-spin"></span>
+                        生成中...
+                      </span> : 
+                      summaryData.aiSummary ? "重新生成" : "生成总结"
+                    }
+                  </Button>
+                </div>
+              </div>
+              
               {/* 完成情况 */}
               <div className="space-y-3">
                 <h3 className="text-md font-medium flex items-center gap-1.5">
