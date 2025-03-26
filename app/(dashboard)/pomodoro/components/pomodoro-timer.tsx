@@ -9,6 +9,7 @@ import { useToast } from '@/components/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, Pause, RotateCcw, Check } from 'lucide-react';
 import { updatePomodoroStatus } from '@/lib/db/pomodoro';
+import { useSearchParams } from 'next/navigation';
 
 // 预设时间选项（分钟）
 const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
@@ -26,6 +27,7 @@ export function PomodoroTimer({
   onPomodoroChange
 }: PomodoroTimerProps) {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [duration, setDuration] = useState(25);
@@ -37,6 +39,8 @@ export function PomodoroTimer({
   const [selectedTag, setSelectedTag] = useState('');
   const [tags, setTags] = useState<any[]>([]);
   const [pomodoroId, setPomodoroId] = useState<number | null>(null);
+  const [relatedTodoId, setRelatedTodoId] = useState<string | null>(null);
+  const [isLoadingTodo, setIsLoadingTodo] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -89,6 +93,51 @@ export function PomodoroTimer({
       }
     }
   }, [activePomodoro]);
+
+  // 获取待办事项详情
+  const fetchTodoDetails = useCallback(async (todoId: string) => {
+    try {
+      setIsLoadingTodo(true);
+      const response = await fetch(`/api/todolist/todos/${todoId}`);
+      
+      if (!response.ok) {
+        throw new Error('获取待办事项失败');
+      }
+      
+      const todoData = await response.json();
+      return todoData;
+    } catch (error) {
+      console.error('获取待办事项详情失败:', error);
+      toast({
+        title: "错误",
+        description: "无法加载待办事项信息",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoadingTodo(false);
+    }
+  }, [toast]);
+
+  // 从URL参数获取todo信息
+  useEffect(() => {
+    const todoId = searchParams.get('todoId');
+    
+    if (todoId) {
+      setRelatedTodoId(todoId);
+      
+      // 从API获取完整的待办事项信息
+      (async () => {
+        const todoDetails = await fetchTodoDetails(todoId);
+        if (todoDetails) {
+          setTitle(todoDetails.title || '');
+          if (todoDetails.description) {
+            setDescription(todoDetails.description);
+          }
+        }
+      })();
+    }
+  }, [searchParams, fetchTodoDetails]);
 
   // 处理计时器
   useEffect(() => {
@@ -255,7 +304,8 @@ export function PomodoroTimer({
             title,
             description,
             duration: durationInMinutes,
-            tagIds: selectedTag ? [selectedTag] : []
+            tagIds: selectedTag ? [selectedTag] : [],
+            todoId: relatedTodoId  // 添加关联的todoId
           }),
         });
 
@@ -275,6 +325,7 @@ export function PomodoroTimer({
             description,
             duration: durationInMinutes,
             tagId: selectedTag,
+            todoId: relatedTodoId,
             startTime,
             endTime,
           });
@@ -305,7 +356,7 @@ export function PomodoroTimer({
         variant: "destructive",
       });
     }
-  }, [title, description, duration, selectedTag, onPomodoroChange, toast]);
+  }, [title, description, duration, selectedTag, relatedTodoId, onPomodoroChange, toast]);
 
   // 暂停/继续番茄钟
   const togglePause = useCallback(async () => {
@@ -358,13 +409,15 @@ export function PomodoroTimer({
       {!isRunning && !isCompleted && !isFinished && (
         <div className="grid gap-4">
           <div>
-            <Label htmlFor="title">标题</Label>
+            <Label htmlFor="title">
+              标题 {relatedTodoId ? '(关联待办事项)' : ''} {isLoadingTodo && '加载中...'}
+            </Label>
             <Input
               id="title"
-              placeholder="输入番茄钟标题"
+              placeholder={isLoadingTodo ? "正在加载待办事项..." : "输入番茄钟标题"}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              disabled={isRunning}
+              disabled={isRunning || isLoadingTodo}
             />
           </div>
 

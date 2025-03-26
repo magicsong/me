@@ -119,7 +119,7 @@ export async function getTodo(id: number) {
     .from(todos)
     .where(and(eq(todos.id, id), eq(todos.user_id, userId)));
   
-  return result;
+  return {...result.todo, tags: result.tags};
 }
 
 // 更新待办事项

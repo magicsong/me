@@ -16,11 +16,12 @@ import {
 } from 'lucide-react';
 import { fetchDailySummary } from './actions';
 import { useToast } from '@/components/hooks/use-toast';
+import { useRouter } from 'next/navigation'; // 导入路由器用于刷新页面
 
 type DailySummaryFormProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<{ success: boolean, error?: string }>;
   completedTasks: string[];
   totalTasks: number;
   summaryDate: 'today' | 'yesterday';
@@ -47,8 +48,10 @@ export function DailySummaryForm({
   const [tomorrowGoals, setTomorrowGoals] = useState('');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false); // 添加提交状态跟踪
   const { toast } = useToast();
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const router = useRouter(); // 获取路由实例用于刷新
 
   // 更新三件好事中的一项
   const updateGoodThing = (index: number, value: string) => {
@@ -155,7 +158,9 @@ export function DailySummaryForm({
   };
 
   // 处理表单提交
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    
     const formData = {
       date: getDateString(),
       dateType: summaryDate,
@@ -172,7 +177,38 @@ export function DailySummaryForm({
       tomorrowGoals
     };
     
-    onSubmit(formData);
+    try {
+      // 调用父组件提供的onSubmit函数并等待结果
+      const result = await onSubmit(formData);
+      
+      if (result.success) {
+        toast({
+          title: "保存成功",
+          description: "你的日常总结已保存",
+        });
+        
+        // 关闭表单
+        onClose();
+        
+        // 刷新页面数据以显示最新内容
+        router.refresh();
+      } else {
+        toast({
+          title: "保存失败",
+          description: result.error || "无法保存总结，请重试",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("保存总结出错:", error);
+      toast({
+        title: "发生错误",
+        description: "保存总结时出现问题",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleTaskToggle = (task: string) => {
@@ -523,7 +559,12 @@ export function DailySummaryForm({
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button onClick={handleSubmit} disabled={loading}>保存总结</Button>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading || submitting}
+          >
+            {submitting ? "保存中..." : "保存总结"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

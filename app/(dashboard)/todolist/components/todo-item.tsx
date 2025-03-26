@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Edit, Trash, Clock, PlayCircle } from 'lucide-react';
 import { formatDistance } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 
 interface TodoItemProps {
   todo: Todo;
@@ -16,7 +17,7 @@ interface TodoItemProps {
   onEdit: () => void;
   onDelete: () => void;
   onToggleStatus: (status: 'pending' | 'in_progress' | 'completed' | 'archived') => void;
-  onStartPomodoro: () => void;
+  onStartPomodoro: (todo: Todo) => void;
 }
 
 // 优先级映射
@@ -36,12 +37,21 @@ const statusMap = {
 };
 
 export function TodoItem({ todo, tags, onEdit, onDelete, onToggleStatus, onStartPomodoro }: TodoItemProps) {
+  const router = useRouter();
   const isCompleted = todo.status === 'completed';
   const dueDate = todo.due_date ? new Date(todo.due_date) : null;
   const isOverdue = dueDate && dueDate < new Date() && !isCompleted;
   
   const handleToggle = () => {
     onToggleStatus(isCompleted ? 'pending' : 'completed');
+  };
+
+  const handleStartPomodoro = () => {
+    // 传递todo给父组件处理
+    onStartPomodoro(todo);
+    
+    // 直接导航到pomodoro页面，可以通过URL参数传递todo的ID
+    router.push(`/pomodoro?todoId=${todo.id}&todoTitle=${encodeURIComponent(todo.title)}`);
   };
 
   return (
@@ -93,7 +103,7 @@ export function TodoItem({ todo, tags, onEdit, onDelete, onToggleStatus, onStart
         
         <div className="flex justify-between w-full mt-2">
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onStartPomodoro}>
+            <Button size="sm" variant="outline" onClick={handleStartPomodoro}>
               <PlayCircle className="mr-1 h-4 w-4" />
               开始专注
             </Button>

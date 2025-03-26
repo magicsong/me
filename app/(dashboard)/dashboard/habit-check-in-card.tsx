@@ -359,19 +359,26 @@ export function HabitCheckInCard({
         // 显示成功通知
         setToast("📝 总结已保存！");
         setSummaryDialogOpen(false);
+        
+        // 刷新页面数据
+        router.refresh();
+        
+        // 返回成功结果
+        return { success: true };
       } else {
         // 显示错误通知
         setToast("❌ 保存失败: " + (result.error || "未知错误"));
+        
+        // 返回错误结果
+        return { success: false, error: result.error || "未知错误" };
       }
     } catch (error) {
       console.error('保存总结失败:', error);
       setToast("❌ 保存失败，请重试");
+      
+      // 返回错误结果
+      return { success: false, error: "保存过程中发生错误" };
     }
-    
-    // 3秒后清除通知
-    setTimeout(() => {
-      setToast(null);
-    }, 3000);
   }
   
   // 打开总结对话框

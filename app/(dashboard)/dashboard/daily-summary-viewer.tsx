@@ -132,12 +132,39 @@ export function DailySummaryViewer() {
 
   // 提交表单处理函数
   const handleSubmitSummary = async (data: any) => {
-    setIsFormOpen(false);
-    // 重新加载数据
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const result = await fetchDailySummary(dateStr);
-    if (result.success && result.data) {
-      setSummaryData(result.data.content);
+    try {
+      // 准备API调用参数
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      
+      // 调用API保存数据
+      const response = await fetch('/api/daily-summaries/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dateStr,
+          content: data
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // 成功保存后重新加载数据
+        const refreshResult = await fetchDailySummary(dateStr);
+        if (refreshResult.success && refreshResult.data) {
+          setSummaryData(refreshResult.data.content);
+          setAiSummary(refreshResult.data.ai_summary);
+        }
+        
+        // 关闭表单
+        setIsFormOpen(false);
+        return { success: true };
+      } else {
+        return { success: false, error: result.error || "保存失败" };
+      }
+    } catch (error) {
+      console.error("保存总结出错:", error);
+      return { success: false, error: "无法连接服务器" };
     }
   };
 
