@@ -23,7 +23,10 @@ import { Todo } from './todolist-container';
 import { MultiSelect } from './multi-select';
 
 interface TodoFormProps {
-  onSubmit: (data: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>) => void;
+  onSubmit: (
+    data: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>,
+    tagIds: number[]
+  ) => void;
   onCancel: () => void;
   initialData?: Todo;
 }
@@ -43,11 +46,13 @@ export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
   );
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(true);
 
   // 获取所有可用标签
   useEffect(() => {
     const fetchTags = async () => {
       try {
+        setIsLoadingTags(true);
         const response = await fetch('/api/todolist/tags');
         if (response.ok) {
           const tags = await response.json();
@@ -58,31 +63,52 @@ export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
         }
       } catch (error) {
         console.error('获取标签失败:', error);
-      }
-    };
-
-    // 获取当前todo关联的标签
-    const fetchTodoTags = async () => {
-      if (initialData) {
-        try {
-          const response = await fetch(`/api/todolist/todos/${initialData.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            const todoTags = data.tags.map((tag: any) => ({ 
-              value: tag.id.toString(), 
-              label: tag.name 
-            }));
-            setSelectedTags(todoTags);
-          }
-        } catch (error) {
-          console.error('获取待办事项标签失败:', error);
-        }
+      } finally {
+        setIsLoadingTags(false);
       }
     };
 
     fetchTags();
+  }, []);
+
+  // 获取当前todo关联的标签
+  useEffect(() => {
+    const fetchTodoTags = async () => {
+      if (initialData) {
+        try {
+          setIsLoadingTags(true);
+          const response = await fetch(`/api/todolist/todos/${initialData.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.tags && Array.isArray(data.tags)) {
+              const todoTags = data.tags.map((tag: any) => ({ 
+                value: tag.id.toString(), 
+                label: tag.name 
+              }));
+              setSelectedTags(todoTags);
+            }
+          }
+        } catch (error) {
+          console.error('获取待办事项标签失败:', error);
+        } finally {
+          setIsLoadingTags(false);
+        }
+      }
+    };
+
     fetchTodoTags();
   }, [initialData]);
+
+  // 添加一个函数来处理标签值的变化
+  const handleTagValueChange = (values: string[]) => {
+    // 将选中的标签值转换回标签对象
+    const selectedTagObjects = values.map(value => {
+      const tag = availableTags.find(tag => tag.value === value);
+      return tag || { value, label: value };
+    });
+    console.log('选择的标签对象:', selectedTagObjects);
+    setSelectedTags(selectedTagObjects);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,33 +122,17 @@ export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
       due_date: dueDate?.toISOString(),
     };
 
-    // 提交表单数据
-    onSubmit(todoData);
+    // 获取选择的标签IDs
+    const tagIds = selectedTags.map(tag => parseInt(tag.value));
+    
+    console.log('提交的标签:', selectedTags, '标签ID:', tagIds);
 
-    // 如果是编辑现有todo，更新标签
-    if (initialData) {
-      updateTodoTags(initialData.id);
-    }
+    // 提交表单数据和标签ID
+    onSubmit(todoData, tagIds);
   };
 
-  // 更新标签关联
-  const updateTodoTags = async (todoId: number) => {
-    try {
-      // 获取已选标签ID
-      const tagIds = selectedTags.map(tag => parseInt(tag.value));
-      
-      // 发送请求更新标签关联
-      await fetch(`/api/todolist/todos/${todoId}/tags`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tagIds }),
-      });
-    } catch (error) {
-      console.error('更新标签关联失败:', error);
-    }
-  };
+  // 将标签对象数组转换为值数组，用于 MultiSelect
+  const selectedTagValues = selectedTags.map(tag => tag.value);
 
   return (
     <Card className="w-full">
@@ -215,10 +225,14 @@ export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
           <div className="space-y-2">
             <Label htmlFor="tags">标签</Label>
             <MultiSelect 
-              options={availableTags}
-              selected={selectedTags}
-              onChange={setSelectedTags}
-              placeholder="选择标签"
+              options={availableTags.map(tag => ({
+                value: tag.value,
+                label: tag.label,
+              }))}
+              defaultValue={selectedTagValues}
+              onValueChange={handleTagValueChange}
+              placeholder={isLoadingTags ? "加载标签中..." : "选择标签"}
+              className="border-input"
             />
           </div>
         </CardContent>

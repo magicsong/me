@@ -86,8 +86,9 @@ export function TodoListContainer() {
     fetchTodos();
   }, [filters]);
 
-  const handleCreateTodo = async (todo: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>) => {
+  const handleCreateTodo = async (todo: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>, tagIds: number[]) => {
     try {
+      setIsLoading(true);
       const response = await fetch('/api/todolist/todos', {
         method: 'POST',
         headers: {
@@ -98,6 +99,32 @@ export function TodoListContainer() {
       
       if (!response.ok) {
         throw new Error('创建待办事项失败');
+      }
+      
+      // 获取新创建的待办事项ID
+      const newTodo = await response.json();
+      
+      // 确保有待办事项ID才进行标签关联
+      if (newTodo && newTodo.id) {
+        // 如果有选择标签，则关联标签
+        if (tagIds && tagIds.length > 0) {
+          const tagResponse = await fetch(`/api/todolist/todos/${newTodo.id}/tags`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ tagIds }),
+          });
+          
+          if (!tagResponse.ok) {
+            console.error('标签关联失败');
+            toast({
+              title: "警告",
+              description: "待办事项已创建，但标签关联失败",
+              variant: "warning",
+            });
+          }
+        }
       }
       
       await fetchTodos();
@@ -113,11 +140,14 @@ export function TodoListContainer() {
         description: "创建待办事项失败",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleUpdateTodo = async (todoId: number, todoData: Partial<Todo>) => {
+  const handleUpdateTodo = async (todoId: number, todoData: Partial<Todo>, tagIds?: number[]) => {
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/todolist/todos/${todoId}`, {
         method: 'PATCH',
         headers: {
@@ -128,6 +158,26 @@ export function TodoListContainer() {
       
       if (!response.ok) {
         throw new Error('更新待办事项失败');
+      }
+      
+      // 如果提供了标签IDs，则更新标签关联
+      if (tagIds !== undefined) {
+        const tagResponse = await fetch(`/api/todolist/todos/${todoId}/tags`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ tagIds }),
+        });
+        
+        if (!tagResponse.ok) {
+          console.error('标签关联更新失败');
+          toast({
+            title: "警告",
+            description: "待办事项已更新，但标签关联失败",
+            variant: "warning",
+          });
+        }
       }
       
       await fetchTodos();
@@ -144,6 +194,8 @@ export function TodoListContainer() {
         description: "更新待办事项失败",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -233,7 +285,7 @@ export function TodoListContainer() {
                 <div className="pt-4 pb-4 border-b">
                   <TodoForm 
                     onSubmit={editingTodo ? 
-                      (data) => handleUpdateTodo(editingTodo.id, data) : 
+                      (data, tagIds) => handleUpdateTodo(editingTodo.id, data, tagIds) : 
                       handleCreateTodo
                     }
                     onCancel={() => { setIsFormOpen(false); setEditingTodo(null); }}

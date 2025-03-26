@@ -34,11 +34,21 @@ interface TodoTagManagerProps {
   onTagsChange?: () => void;
 }
 
+// 生成随机颜色
+function generateRandomColor(): string {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
 export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
   const { toast } = useToast();
   const [tags, setTags] = useState<TodoTag[]>([]);
   const [newTagName, setNewTagName] = useState('');
-  const [newTagColor, setNewTagColor] = useState('#3B82F6'); // 默认蓝色
+  const [newTagColor, setNewTagColor] = useState(generateRandomColor()); // 使用随机颜色
   const [editingTagId, setEditingTagId] = useState<number | null>(null);
   const [editedTagName, setEditedTagName] = useState('');
   const [editedTagColor, setEditedTagColor] = useState('');
@@ -84,6 +94,22 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
       return;
     }
 
+    // 检查是否存在相同的标签
+    const trimmedName = newTagName.trim();
+    const isDuplicate = tags.some(tag => 
+      tag.name.toLowerCase() === trimmedName.toLowerCase() && 
+      tag.color === newTagColor
+    );
+
+    if (isDuplicate) {
+      toast({
+        title: "错误",
+        description: "已存在相同的标签",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const response = await fetch('/api/todolist/tags', {
         method: 'POST',
@@ -91,7 +117,7 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: newTagName.trim(),
+          name: trimmedName,
           color: newTagColor,
         }),
       });
@@ -102,7 +128,7 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
       
       await fetchTags();
       setNewTagName('');
-      setNewTagColor('#3B82F6');
+      setNewTagColor(generateRandomColor()); // 重置为新的随机颜色
       
       toast({
         title: "成功",
@@ -128,6 +154,23 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
       toast({
         title: "错误",
         description: "标签名称不能为空",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // 检查是否与现有标签重复
+    const trimmedName = editedTagName.trim();
+    const isDuplicate = tags.some(tag => 
+      tag.id !== id && // 排除自身
+      tag.name.toLowerCase() === trimmedName.toLowerCase() && 
+      tag.color === editedTagColor
+    );
+    
+    if (isDuplicate) {
+      toast({
+        title: "错误",
+        description: "已存在相同的标签",
         variant: "destructive",
       });
       return;
