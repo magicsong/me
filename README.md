@@ -1,64 +1,56 @@
-<div align="center"><strong>Next.js 15 Admin Dashboard Template</strong></div>
-<div align="center">Built with the Next.js App Router</div>
-<br />
-<div align="center">
-<a href="https://next-admin-dash.vercel.app/">Demo</a>
-<span> · </span>
-<a href="https://vercel.com/templates/next.js/admin-dashboard-tailwind-postgres-react-nextjs">Clone & Deploy</a>
-<span>
-</div>
+```markdown
+# me : 基于《认知觉醒》的自我管理系统
 
-## Overview
+[![GitHub stars](https://img.shields.io/github/stars/magicsong/me?style=social)](https://github.com/magicsong/me/stargazers)
+[![认知觉醒](https://img.shields.io/badge/理论支撑-《认知觉醒》-orange)](https://book.douban.com/subject/35193035/)
 
-This is a starter template using the following stack:
+> "真正的成长不在于懂得多少道理，而在于改变多少" —— 周岭《认知觉醒》
 
-- Framework - [Next.js (App Router)](https://nextjs.org)
-- Language - [TypeScript](https://www.typescriptlang.org)
-- Auth - [Auth.js](https://authjs.dev)
-- Database - [Postgres](https://vercel.com/postgres)
-- Deployment - [Vercel](https://vercel.com/docs/concepts/next.js/overview)
-- Styling - [Tailwind CSS](https://tailwindcss.com)
-- Components - [Shadcn UI](https://ui.shadcn.com/)
-- Analytics - [Vercel Analytics](https://vercel.com/analytics)
-- Formatting - [Prettier](https://prettier.io)
+## 🌟 项目缘起
+在深度实践《认知觉醒》的过程中，我发现：
+- 90%的成长困境源于「道理都懂但做不到」
+- 「元认知」需要可视化工具才能持续激活
+- 本能脑/情绪脑/理智脑的博弈需要数字结界
 
-This template uses the new Next.js App Router. This includes support for enhanced layouts, colocation of components, tests, and styles, component-level data fetching, and more.
+于是将书中7大核心概念（元认知、拉伸区、心智带宽...）编译成可执行的数字工具，打造认知进化的「行为编译器」
 
-## Getting Started
+## 🧠 认知工程架构
 
-During the deployment, Vercel will prompt you to create a new Postgres database. This will add the necessary environment variables to your project.
+## 🔥 核心功能
+### 🎯 认知增强套件
+| 模块       | 认知原理                 | 技术实现                          |
+|------------|--------------------------|-----------------------------------|
+| 心智扫描仪 | 晨间心智带宽优化         | 语音情绪识别+资源分配算法         |
+| 元认知沙盒 | 第三方视角自我观察       | 全天候行为日志+异常模式检测        |
+| 认知折叠   | 深度学习->行动转化       | 笔记转代码注释+知识图谱构建        |
 
-Inside the Vercel Postgres dashboard, create a table based on the schema defined in this repository.
+### 🛠️ 觉醒工具箱
+- **番茄钟Pro**  
+  动态调整专注时长（20-50min），通过摄像头微表情分析专注质量
+- **熵减规划法**  
+  自动将任务标注为「舒适区/拉伸区/困难区」三色矩阵
+- **多巴胺协议**  
+  成就系统根据《掌控习惯》设计渐进式奖励算法
 
-```
-CREATE TYPE status AS ENUM ('active', 'inactive', 'archived');
-
-CREATE TABLE products (
-  id SERIAL PRIMARY KEY,
-  image_url TEXT NOT NULL,
-  name TEXT NOT NULL,
-  status status NOT NULL,
-  price NUMERIC(10, 2) NOT NULL,
-  stock INTEGER NOT NULL,
-  available_at TIMESTAMP NOT NULL
-);
-```
-
-Then, uncomment `app/api/seed.ts` and hit `http://localhost:3000/api/seed` to seed the database with products.
-
-Next, copy the `.env.example` file to `.env` and update the values. Follow the instructions in the `.env.example` file to set up your GitHub OAuth application.
-
+## 🚀 快速开始
 ```bash
-npm i -g vercel
-vercel link
-vercel env pull
-```
+# 项目使用方式
+git clone https://github.com/magicsong/me.git
+cd me && pnpm install
 
-Finally, run the following commands to start the development server:
 
-```
-pnpm install
-pnpm dev
-```
+## 🌱 共建计划
+我们正在构建：
 
-You should now be able to access the application at http://localhost:3000.
+**贡献指南**  
+1. Fork本仓库，在develop分支开发
+2. 所有功能模块需包含《认知觉醒》原理注释
+3. 提交信息请用「认知标签」如：[元认知][拉伸区]
+
+## 📮 加入觉醒运动
+你的每一行代码都在：
+- 🔄 构建对抗本能脑的数字结界
+- 📊 将模糊认知转化为精确算法
+
+**让我们用代码重写DNA，开启认知2.0纪元！**
+```
