@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm"
+import { relations, sql } from "drizzle-orm"
 import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar, uniqueIndex } from "drizzle-orm/pg-core"
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly'])
@@ -225,3 +225,55 @@ export const daily_summaries = pgTable("daily_summaries", {
 		unique_user_date: uniqueIndex("unique_user_date").on(table.user_id, table.date),
 	}
 });
+
+// 笔记表
+export const notes = pgTable("notes", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  category: varchar("category", { length: 100 }),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at",{ mode: 'string', withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at",{ mode: 'string', withTimezone: true }).defaultNow(),
+});
+
+// 标签表
+export const tags = pgTable("tags", {
+	id: serial("id").primaryKey(),
+	name: varchar("name", { length: 100 }).notNull(),
+	userId: varchar("user_id", { length: 255 }).notNull(),
+  }, (table) => {
+	return {
+		nameUserIdIdx: uniqueIndex("nameUserIdIdx").on(table.name, table.userId),
+	};
+  });
+  
+  // 笔记-标签关联表
+  export const notesTags = pgTable("notes_tags", {
+	noteId: serial("note_id").references(() => notes.id).notNull(),
+	tagId: serial("tag_id").references(() => tags.id).notNull(),
+  }, (table) => {
+	return {
+	  pk: primaryKey({ columns: [table.noteId, table.tagId] }),
+	};
+  });
+  
+  // 定义关系
+  export const notesRelations = relations(notes, ({ many }) => ({
+	tags: many(notesTags),
+  }));
+  
+  export const tagsRelations = relations(tags, ({ many }) => ({
+	notes: many(notesTags),
+  }));
+  
+  export const notesTagsRelations = relations(notesTags, ({ one }) => ({
+	note: one(notes, {
+	  fields: [notesTags.noteId],
+	  references: [notes.id],
+	}),
+	tag: one(tags, {
+	  fields: [notesTags.tagId],
+	  references: [tags.id],
+	}),
+  }));

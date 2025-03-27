@@ -71,6 +71,13 @@
       "when": 1742914705111,
       "tag": "0009_small_speed_demon",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1743077314960,
+      "tag": "0010_conscious_omega_red",
+      "breakpoints": true
     }
   ]
 }

@@ -9,7 +9,8 @@ import {
   ShoppingCart,
   Users2,
   Timer,
-  CheckSquare
+  CheckSquare,
+  FileText
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -27,6 +28,7 @@ import { NavItem } from './nav-item';
 import Providers from './providers';
 import { SearchInput } from './search';
 import { User } from './user';
+import FloatingNoteButton from '@/components/notes/FloatingNoteButton';
 
 export default function DashboardLayout({
   children
@@ -48,6 +50,7 @@ export default function DashboardLayout({
             {children}
           </main>
         </div>
+        <FloatingNoteButton />
         <Analytics />
       </main>
     </Providers>
@@ -81,12 +84,8 @@ function DesktopNav() {
         <NavItem href="/pomodoro" label="Pomodoro">
           <Timer className="h-5 w-5" />
         </NavItem>
-        <NavItem href="/products" label="Products">
-          <Package className="h-5 w-5" />
-        </NavItem>
-
-        <NavItem href="#" label="Analytics">
-          <LineChart className="h-5 w-5" />
+        <NavItem href="/note" label="Notes">
+          <FileText className="h-5 w-5" />
         </NavItem>
       </nav>
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
@@ -161,25 +160,11 @@ function MobileNav() {
             番茄钟
           </Link>
           <Link
-            href="#"
+            href="/note"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
-            <ShoppingCart className="h-5 w-5" />
-            Orders
-          </Link>
-          <Link
-            href="/products"
-            className="flex items-center gap-4 px-2.5 text-foreground"
-          >
-            <Package className="h-5 w-5" />
-            Products
-          </Link>
-          <Link
-            href="/customers"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <Users2 className="h-5 w-5" />
-            Customers
+            <FileText className="h-5 w-5" />
+            笔记
           </Link>
           <Link
             href="#"

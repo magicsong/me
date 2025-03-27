@@ -73,6 +73,26 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* 移除所有元素的默认聚焦轮廓 */
+  *:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  /* 移除TipTap编辑器的聚焦边框 */
+  .ProseMirror:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: inherit !important;
+  }
+  
+  /* 移除输入框的聚焦样式 */
+  input:focus, textarea:focus, select:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: inherit !important;
+  }
 }
 
 /* Chrome, Safari, Edge, Opera */
@@ -89,4 +109,64 @@ input[type='search']::-moz-search-cancel-button {
 /* Microsoft Edge */
 input[type='search']::-ms-clear {
   display: none;
+}
+
+/* TipTap Editor Styles */
+.ProseMirror p {
+  margin: 0.5em 0;
+}
+
+.ProseMirror h1 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 1em 0 0.5em;
+}
+
+.ProseMirror h2 {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin: 1em 0 0.5em;
+}
+
+.ProseMirror ul, .ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #ddd;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 1em;
+  color: #666;
+}
+
+.ProseMirror pre {
+  background: #0d0d0d;
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 0.25rem;
+  font-family: monospace;
+  margin: 0.5em 0;
+  overflow-x: auto;
+}
+
+.ProseMirror code {
+  background-color: rgba(97, 97, 97, 0.1);
+  border-radius: 0.25em;
+  padding: 0.2em 0.4em;
+  font-family: monospace;
+}
+
+.ProseMirror a {
+  color: #0d6efd;
+  text-decoration: underline;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #aaa;
+  pointer-events: none;
+  height: 0;
 }
