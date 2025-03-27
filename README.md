@@ -1,4 +1,3 @@
-```markdown
 # me : 基于《认知觉醒》的自我管理系统
 
 [![GitHub stars](https://img.shields.io/github/stars/magicsong/me?style=social)](https://github.com/magicsong/me/stargazers)
@@ -32,6 +31,10 @@
 - **多巴胺协议**  
   成就系统根据《掌控习惯》设计渐进式奖励算法
 
+### 一些功能展示
+> 个人每日总结AI我觉得最惊艳，如果用最真实的每日总结，效果极好，总能在你意想不到的地方提醒
+1. AI智能目标规划
+  ![](./docs/img/ai_todo.jpg)
 ## 🚀 快速开始
 ```bash
 # 项目使用方式
@@ -53,4 +56,3 @@ cd me && pnpm install
 - 📊 将模糊认知转化为精确算法
 
 **让我们用代码重写DNA，开启认知2.0纪元！**
-```

@@ -6,10 +6,11 @@ import { TodoForm } from './todo-form';
 import { TodoFilter } from './todo-filter';
 import { useToast } from '@/components/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Plus, ListTodo, Tag, ClipboardList, AlertCircle } from 'lucide-react';
+import { Plus, ListTodo, Tag, ClipboardList, AlertCircle, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TodoTagManager } from './todo-tag-manager';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { TodoAutoPlan } from './todo-auto-plan';
 
 // 定义待办事项类型
 export interface Todo {
@@ -50,6 +51,9 @@ export function TodoListContainer() {
     search: '',
     tagId: 0,
   });
+  // 添加自动规划相关状态
+  const [isAutoPlanOpen, setIsAutoPlanOpen] = useState(false);
+  const [availableTags, setAvailableTags] = useState<TodoTag[]>([]);
 
   const fetchTodos = async () => {
     try {
@@ -82,8 +86,29 @@ export function TodoListContainer() {
     }
   };
 
+  // 添加获取所有标签的方法
+  const fetchAllTags = async () => {
+    try {
+      const response = await fetch('/api/todolist/tags');
+      if (!response.ok) {
+        throw new Error('获取标签失败');
+      }
+      const data = await response.json();
+      setAvailableTags(data);
+    } catch (error) {
+      console.error('获取标签失败:', error);
+      toast({
+        title: "错误",
+        description: "获取标签失败",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 修改useEffect，初始化时获取标签
   useEffect(() => {
     fetchTodos();
+    fetchAllTags();
   }, [filters]);
 
   const handleCreateTodo = async (todo: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>, tagIds: number[]) => {
@@ -251,6 +276,105 @@ export function TodoListContainer() {
     }
   };
 
+  // 添加批量创建待办事项功能
+  const handleBatchCreateTodos = async (
+    todos: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>[],
+    tagNamesArray: string[][]
+  ) => {
+    try {
+      setIsLoading(true);
+      
+      // 存储创建的待办事项和对应的标签
+      const createdTodos = [];
+      
+      // 逐个创建待办事项
+      for (let i = 0; i < todos.length; i++) {
+        const todo = todos[i];
+        const tagNames = tagNamesArray[i];
+        
+        // 创建待办事项
+        const todoResponse = await fetch('/api/todolist/todos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(todo),
+        });
+        
+        if (!todoResponse.ok) {
+          throw new Error(`创建第 ${i+1} 个待办事项失败`);
+        }
+        
+        const newTodo = await todoResponse.json();
+        createdTodos.push(newTodo);
+        
+        // 处理标签（如果有）
+        if (tagNames && tagNames.length > 0) {
+          // 为每个新标签名创建标签
+          const tagIds = [];
+          
+          for (const tagName of tagNames) {
+            // 检查标签是否已存在
+            const existingTag = availableTags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+            
+            if (existingTag) {
+              tagIds.push(existingTag.id);
+            } else {
+              // 创建新标签
+              const tagResponse = await fetch('/api/todolist/tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: tagName, color: generateRandomColor() }),
+              });
+              
+              if (tagResponse.ok) {
+                const newTag = await tagResponse.json();
+                tagIds.push(newTag.id);
+              }
+            }
+          }
+          
+          // 关联标签到待办事项
+          if (tagIds.length > 0) {
+            await fetch(`/api/todolist/todos/${newTodo.id}/tags`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tagIds }),
+            });
+          }
+        }
+      }
+      
+      // 刷新待办事项列表
+      await fetchTodos();
+      // 刷新标签列表
+      await fetchAllTags();
+      // 关闭自动规划界面
+      setIsAutoPlanOpen(false);
+      
+      toast({
+        title: "成功",
+        description: `成功创建了 ${createdTodos.length} 个待办事项`,
+      });
+    } catch (error) {
+      console.error('批量创建待办事项失败:', error);
+      toast({
+        title: "错误",
+        description: "批量创建待办事项失败",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 生成随机颜色
+  const generateRandomColor = () => {
+    const colors = [
+      'red', 'blue', 'green', 'yellow', 'purple', 
+      'pink', 'orange', 'cyan', 'teal', 'indigo'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
   return (
     <div className="space-y-8">
       <Tabs defaultValue="list" className="w-full">
@@ -271,9 +395,17 @@ export function TodoListContainer() {
               <ClipboardList className="h-6 w-6" />
               我的待办事项
             </h2>
-            <Button onClick={() => { setIsFormOpen(true); setEditingTodo(null); }}>
-              <Plus className="mr-2 h-4 w-4" /> 添加待办事项
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => { setIsAutoPlanOpen(true); setIsFormOpen(false); setEditingTodo(null); }}
+                variant="outline"
+              >
+                <Sparkles className="mr-2 h-4 w-4" /> AI自动规划
+              </Button>
+              <Button onClick={() => { setIsFormOpen(true); setIsAutoPlanOpen(false); setEditingTodo(null); }}>
+                <Plus className="mr-2 h-4 w-4" /> 添加待办事项
+              </Button>
+            </div>
           </div>
           
           <Card className="bg-card shadow">
@@ -281,6 +413,16 @@ export function TodoListContainer() {
               <TodoFilter onFilterChange={applyFilters} />
             </CardHeader>
             <CardContent className="pt-0 space-y-6">
+              {isAutoPlanOpen && (
+                <div className="pt-4 pb-4 border-b">
+                  <TodoAutoPlan 
+                    onCreateTodos={handleBatchCreateTodos}
+                    onCancel={() => setIsAutoPlanOpen(false)}
+                    availableTags={availableTags}
+                  />
+                </div>
+              )}
+            
               {isFormOpen && (
                 <div className="pt-4 pb-4 border-b">
                   <TodoForm 

@@ -1,19 +1,21 @@
 import 'server-only';
 
-import { RunnableSequence } from "@langchain/core/runnables";
+import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
 import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { chatModel } from "./index";
 import {
   summaryFeedbackPrompt,
   tagSuggestionPrompt,
   dailyPlanningPrompt,
-  habitSuggestionPrompt
+  habitSuggestionPrompt,
+  toDoAutoPlanPrompt
 } from "./prompts";
 import { auth } from "@/lib/auth";
 import { findLLMCachedResponse, saveLLMRecordToDB } from "@/lib/db/llm";
 import { createHash } from "crypto";
-import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
+import { AIMessage, AIMessageChunk, HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { load } from "@langchain/core/load";
+import { getCurrentDateString } from '../utils';
 
 // 创建带缓存支持的链（泛型版本）
 const createCachedChain = async <T>(chainFunc: () => Promise<T>, cacheKey: string, cacheTime: number = 60): Promise<T> => {
@@ -153,6 +155,59 @@ export async function generateHabitSuggestions(userHabits: any[], completionStat
     `habit-suggestion:${weekNumber}:${userHabits.length}`,
     10080 // 缓存7天
   );
+}
+
+// 生成ToDo项计划的chain
+export async function generateTodoItemsPlan(prompt: string): Promise<any[]> {
+  try {
+    // 提取任务描述和示例输出
+    const descriptionMatch = prompt.match(/任务描述：([\s\S]*?)(?=请将结果格式化为可解析的JSON数组)/);
+    const exampleMatch = prompt.match(/示例输出格式：([\s\S]*?)(?=请根据任务的逻辑顺序)/);
+
+    // 解析当前时间信息
+    const currentTimeStr = getCurrentDateString()
+    const description = descriptionMatch ? descriptionMatch[1].trim() : prompt;
+    const EXAMPLE_OUTPUT = exampleMatch ? exampleMatch[1].trim() : '';
+
+    // 创建一个专门用于解析Todo项目的解析器
+    const todoItemsParser = RunnableLambda.from(
+      (text: AIMessage) => {
+        const content = text.content.toString();
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]) as any[];
+        }
+
+        try {
+          return JSON.parse(content) as any[];
+        } catch (e) {
+          console.error("无法解析LLM响应为JSON", content);
+          throw new Error("生成的任务计划格式不正确");
+        }
+      }
+    );
+
+    // 使用RunnableSequence创建处理链
+    const chain = RunnableSequence.from([
+      toDoAutoPlanPrompt,
+      chatModel,
+      todoItemsParser,
+    ]);
+
+    // 创建缓存键 - 使用描述的哈希值和日期
+    const today = new Date().toISOString().split('T')[0];
+    const cacheKey = `todo-autoplan:${today}:${description}`;
+
+    // 使用createCachedChain进行缓存处理
+    return createCachedChain(
+      () => chain.invoke({ description: description, currentTime: currentTimeStr, EXAMPLE_OUTPUT: EXAMPLE_OUTPUT }),
+      cacheKey,
+      360 // 缓存6小时
+    );
+  } catch (error) {
+    console.error("生成待办事项计划失败:", error);
+    throw error;
+  }
 }
 
 // 辅助函数：获取当前是一年中的第几周

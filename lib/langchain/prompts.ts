@@ -71,3 +71,26 @@ export const habitSuggestionPrompt = PromptTemplate.fromTemplate(`
 
 建议应当简洁、实用且具体。不超过150字。
 `);
+
+
+export const toDoAutoPlanPrompt = PromptTemplate.fromTemplate(`
+你是一个待办事项自动生成助手。请根据用户的描述生成一系列待办事项。
+当前时间：{currentTime}
+
+请根据以下任务描述，将其拆分为具体的待办事项列表，确保每个任务明确、可执行、颗粒度适中。
+
+任务描述：{description}
+
+请将结果格式化为可解析的JSON数组，每个待办事项包含以下字段：
+- title: 待办事项标题（简洁明了）
+- description: 详细描述（包含具体要做什么）
+- priority: 优先级（"low", "medium", "high", "urgent"四选一）
+- status: 状态（设为"pending"）
+- estimatedDuration: 预估完成时间（分钟）
+- suggestedTags: 建议的标签数组（字符串数组）
+
+示例输出格式：
+{EXAMPLE_OUTPUT}
+
+请根据任务的逻辑顺序和依赖关系进行排序，并只返回JSON数组，不要包含其他解释文字。
+`);
