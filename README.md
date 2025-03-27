@@ -40,10 +40,12 @@
 # 项目使用方式
 git clone https://github.com/magicsong/me.git
 cd me && pnpm install
-
+```
 
 ## 🌱 共建计划
-我们正在构建：
+
+这个项目目前90%的代码是用AI写的，本人是一个后端工程师，基本没用过前端。是否觉得神奇？！
+> 用AI在AI平台上打造我的AI来帮助我
 
 **贡献指南**  
 1. Fork本仓库，在develop分支开发
