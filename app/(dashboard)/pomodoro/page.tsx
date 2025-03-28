@@ -1,27 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { PomodoroTimer } from './components/pomodoro-timer';
 import { PomodoroList } from './components/pomodoro-list';
 import { PomodoroTagManager } from './components/pomodoro-tag-manager';
 import { PomodoroStats } from './components/pomodoro-stats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { usePomodoro } from '../../contexts/pomodoro-context';
 
 export default function PomodoroPage() {
-  const [activePomodoro, setActivePomodoro] = useState(null);
+  const { activePomodoro, setActivePomodoro } = usePomodoro();
 
   return (
     <div className="flex flex-col h-screen">
       {/* 统计信息放在顶部 */}
       <header className="p-4 border-b">
-        <Card className="shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-2">
-              <h1 className="text-xl font-bold">番茄钟</h1>
-            </div>
-            <PomodoroStats />
-          </CardContent>
-        </Card>
+        
       </header>
 
       {/* 主体内容改为两列布局 */}
@@ -53,6 +47,14 @@ export default function PomodoroPage() {
         
         {/* 右侧：历史记录，添加滚动能力 */}
         <div className="w-1/2">
+        <Card className="shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h1 className="text-xl font-bold">统计数据</h1>
+            </div>
+            <PomodoroStats />
+          </CardContent>
+        </Card>
           <Card className="h-full">
             <CardHeader>
               <CardTitle>历史记录</CardTitle>

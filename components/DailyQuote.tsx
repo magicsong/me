@@ -1,100 +1,98 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Quote } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Quote, ChevronDown, ChevronUp } from 'lucide-react';
 
-interface QuoteResponse {
-  content: string;
-  thinking?: string;
+// 假设从API获取每日格言
+async function fetchQuote() {
+  // 这里应该是实际获取格言的逻辑
+  // 临时使用示例数据
+  return {
+    content: "生活中最重要的不是我们身处何地，而是我们朝什么方向前进。有时候，最简单的习惯改变可以带来最深远的影响。每一天的小进步，累积起来就是巨大的成就。坚持下去，你会看到自己的潜力有多大。记住，成功不在于做了多少事，而在于每天都在朝着目标前进，不断成长和学习。",
+    author: "奥利弗·温德尔·霍姆斯",
+  };
 }
 
-export function DailyQuote({ model = process.env.OPENAI_MODEL }) {
-  const [quote, setQuote] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [thinking, setThinking] = useState<string>("");
-  const [showThinking, setShowThinking] = useState<boolean>(false);
-
+export function DailyQuote() {
+  const [quote, setQuote] = useState({ content: "", author: "" });
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  
   useEffect(() => {
-    async function fetchQuote() {
+    const getQuote = async () => {
       try {
-        const prompts = [
-          "请给我一句鼓舞人心的日常推荐语录，简短有力，不需要解释，如果有出处，就注明出处，如果没有就不要有其他的话",
-          "给我一句有深度的日常推荐语录不需要解释，如果有出处，就注明出处",
-          "给我一段风趣幽默的日常推荐语录，不需要解释，如果有出处，就注明出处",
-        ]
-        const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-        const response = await fetch("/api/llm", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: randomPrompt,
-            enableThinking: true,
-            temperature: 0.8,
-            model: model,
-            cacheTimeMinutes: 60,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("获取推荐语录失败");
-        }
-
-        const data: QuoteResponse = await response.json();
-        setQuote(data.content);
-        if (data.thinking) {
-          setThinking(data.thinking);
-        }
+        const fetchedQuote = await fetchQuote();
+        setQuote(fetchedQuote);
       } catch (error) {
-        console.error("获取推荐语录错误:", error);
-        setQuote("今天的挑战是明天的机遇。");
+        console.error("获取每日格言失败:", error);
+        setQuote({
+          content: "今天是新的一天，充满无限可能。",
+          author: "未知"
+        });
       } finally {
         setLoading(false);
       }
-    }
-
-    fetchQuote();
-  }, [model]);
-
+    };
+    
+    getQuote();
+  }, []);
+  
   return (
-    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 shadow-sm hover:shadow-md transition-shadow duration-300">
-      <CardContent className="pt-6 pb-4">
+    <Card className="h-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Quote className="h-4 w-4 text-primary" />
+          每日格言
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         {loading ? (
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="h-4 bg-slate-200 rounded w-3/4 mb-2.5"></div>
-            <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+          <div className="flex items-center justify-center h-16">
+            <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex items-start">
-              <Quote className="h-5 w-5 mr-2 text-blue-500 mt-1 flex-shrink-0" />
-              <div className="text-gray-800 font-medium leading-relaxed">
-                {quote.split('\n').map((line, index) => (
-                  <p key={index} className={index > 0 ? "mt-2" : ""}>
-                    {line}
-                  </p>
-                ))}
-              </div>
+          <div>
+            <div 
+              className={`relative overflow-hidden transition-all duration-200 ${
+                expanded ? "max-h-full" : "max-h-20"
+              }`}
+            >
+              <blockquote className="italic text-sm text-gray-600">
+                "{quote.content}"
+              </blockquote>
+              {!expanded && quote.content.length > 100 && (
+                <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent"></div>
+              )}
             </div>
-
-            {thinking && (
-              <div className="mt-2">
-                <button
-                  onClick={() => setShowThinking(!showThinking)}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  {showThinking ? "隐藏思考过程" : "查看思考过程"}
-                </button>
-
-                {showThinking && (
-                  <div className="mt-2 p-2 bg-gray-50 rounded-md border border-gray-200 text-xs text-gray-600">
-                    <p className="font-mono">{thinking}</p>
-                  </div>
-                )}
+            
+            <div className="mt-2 flex justify-between items-center">
+              <div className="text-xs text-muted-foreground">
+                — {quote.author}
               </div>
-            )}
+              
+              {quote.content.length > 100 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setExpanded(!expanded)} 
+                  className="h-6 px-2 text-xs text-primary"
+                >
+                  {expanded ? (
+                    <div className="flex items-center gap-1">
+                      <span>收起</span>
+                      <ChevronUp className="h-3 w-3" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span>展开</span>
+                      <ChevronDown className="h-3 w-3" />
+                    </div>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

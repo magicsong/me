@@ -5,7 +5,7 @@ import { UserProfileCard } from '@/components/user-profile-card';
 import { auth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DailyQuote } from '@/components/DailyQuote'; 
-import { DailySummaryViewer } from './daily-summary-viewer'; // 导入总结查看器组件
+import { DailySummaryViewer } from './daily-summary-viewer';
 
 export default async function DashboardPage() {
   // 获取用户会话
@@ -22,18 +22,23 @@ export default async function DashboardPage() {
   
   return (
     <>
-      {/* 用户信息展示 */}
-      {user && (
-        <UserProfileCard 
-          name={user.name || "习惯养成者"}
-          email={user.email || ""}
-          image={user.image}
-        />
-      )}
-      
-      {/* 每日推荐语录 */}
-      <div className="mb-6">
-        <DailyQuote />
+      {/* 用户信息和每日格言放在同一行 */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        {/* 用户信息部分 */}
+        <div className="md:w-1/3">
+          {user && (
+            <UserProfileCard 
+              name={user.name || "习惯养成者"}
+              email={user.email || ""}
+              image={user.image}
+            />
+          )}
+        </div>
+        
+        {/* 每日推荐语录部分 */}
+        <div className="md:w-2/3">
+          <DailyQuote />
+        </div>
       </div>
       
       <div className="flex items-center justify-between mb-4">
@@ -42,6 +47,9 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-semibold">今日概览</h1>
         </div>
       </div>
+      
+      {/* 添加日常总结查看器 */}
+      <DailySummaryViewer />
       
       {/* 习惯完成概览卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -87,9 +95,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      
-      {/* 添加日常总结查看器 */}
-      <DailySummaryViewer />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-3">
