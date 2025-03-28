@@ -2,12 +2,15 @@
 ## 项目架构
 项目采用 Next.js + Typescript 框架，架构分为以下几个核心部分：
 1. 核心层 (core)
+```
   /lib/
   ├─ db/              # 数据库操作核心，使用drizzle ORM
   ├─ langchain/       # AI 模型集成
   ├─ utils/           # 工具函数
   └─ auth/            # 认证服务
+```
 2. 功能模块层
+```
 /app/
   ├─ (dashboard)/     # 用户仪表盘
   │   ├─ dashboard/   # 总览
@@ -21,6 +24,7 @@
   │   ├─ ai/          # AI功能API
   │   └─ pomodoro/    # 番茄钟API
   └─ [...]/           # 其他页面
+```
 3. 组件层
 ```
 /components/
@@ -28,7 +32,7 @@
   ├─ hooks/           # 自定义钩子
   └─ notes/           # 笔记组件，高频重要组件放这里
 ```
-4. 其他
+1. 其他
 drizzle的schema文件位于./iac/drizzle/schema
 
 ## 🔄 数据流转架构
@@ -61,7 +65,7 @@ UI组件
 5. 添加测试：确保修复后的功能正常
 
 ## 🔍 特殊注意事项
-AI集成：使用lib/langchain/chains.ts添加新的AI链
-缓存机制：AI请求必须使用createCachedChain确保性能，
-状态管理：前端组件使用React状态钩子，避免全局状态库
-异常处理：按照规范捕获并处理错误
+1. AI集成：使用lib/langchain/chains.ts添加新的AI链
+2. 缓存机制：AI请求必须使用createCachedChain确保性能，节省成本
+3. 状态管理：前端组件使用React状态钩子，避免全局状态库
+4. 异常处理：按照规范捕获并处理错误
