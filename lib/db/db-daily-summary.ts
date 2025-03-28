@@ -139,3 +139,47 @@ export async function updateAIDailySummary(date: string, content: any, summaryTy
     ))
     .returning();
 }
+
+/**
+ * 获取最近一周的数据，包括前六天的AI总结和最后一天的详细数据
+ */
+export async function getWeeklySummary(dateStr: string, userId: string) {
+  const targetDate = new Date(dateStr);
+  const startDate = format(subDays(targetDate, 6), 'yyyy-MM-dd');
+  
+  // 获取最后一天的详细数据
+  const lastDaySummary = await getDailySummary(dateStr, userId);
+  
+  // 获取前六天的AI总结
+  const previousDaysSummaries = await db.dailySummary.findMany({
+    where: {
+      date: {
+        gte: startDate,
+        lt: dateStr
+      },
+      userId
+    },
+    select: {
+      date: true,
+      aiSummary: true
+    },
+    orderBy: {
+      date: 'asc'
+    }
+  });
+
+  // 合并数据，创建周总结上下文
+  return createWeeklySummaryContext(previousDaysSummaries, lastDaySummary);
+}
+
+/**
+ * 创建周总结上下文
+ */
+function createWeeklySummaryContext(previousSummaries: any[], lastDaySummary: any) {
+  const weeklyContext = {
+    previousDaysSummaries: previousSummaries.map(s => `${s.date}: ${s.aiSummary}`).join('\n'),
+    ...lastDaySummary
+  };
+  
+  return weeklyContext;
+}
