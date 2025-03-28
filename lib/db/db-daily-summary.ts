@@ -1,18 +1,15 @@
 import { db } from '@/lib/db';
 import { daily_summaries } from '@../../iac/drizzle/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, gte } from 'drizzle-orm';
 import { auth } from '../auth';
+import { getCurrentUserId } from '../utils';
+import { subDays,format } from 'date-fns';
 
 /**
  * 创建或更新每日总结
  */
 export async function createOrUpdateDailySummary(date: string, content: any) {
-    const session = await auth();
-    if (!session?.user?.id) {
-      throw new Error("未授权：需要用户登录");
-    }
-    const userId = session.user.id;
-  
+    const userId = await getCurrentUserId();
   // 检查是否已存在该日期的总结
   const existingSummary = await db.select()
     .from(daily_summaries)
@@ -47,11 +44,7 @@ export async function createOrUpdateDailySummary(date: string, content: any) {
  * 获取特定日期的每日总结
  */
 export async function getDailySummary(date: string) {
-    const session = await auth();
-    if (!session?.user?.id) {
-      throw new Error("未授权：需要用户登录");
-    }
-    const userId = session.user.id;
+  const userId = await getCurrentUserId();
   
   const summary = await db.select()
     .from(daily_summaries)
@@ -68,11 +61,7 @@ export async function getDailySummary(date: string) {
  * 检查特定日期是否已有总结
  */
 export async function checkDailySummaryExists(date: string) {
-    const session = await auth();
-    if (!session?.user?.id) {
-      throw new Error("未授权：需要用户登录");
-    }
-    const userId = session.user.id;
+    const userId = await getCurrentUserId();
   
   const count = await db.select({ count: sql`count(*)` })
     .from(daily_summaries)
@@ -88,11 +77,7 @@ export async function checkDailySummaryExists(date: string) {
  * 获取最近的总结列表
  */
 export async function getRecentDailySummaries(limit = 5) {
-    const session = await auth();
-    if (!session?.user?.id) {
-        throw new Error("未授权：需要用户登录");
-    }
-    const userId = session.user.id;
+  const userId = await getCurrentUserId();
   
   return await db.select()
     .from(daily_summaries)
@@ -143,31 +128,23 @@ export async function updateAIDailySummary(date: string, content: any, summaryTy
 /**
  * 获取最近一周的数据，包括前六天的AI总结和最后一天的详细数据
  */
-export async function getWeeklySummary(dateStr: string, userId: string) {
+export async function getWeeklySummary(dateStr: string) {
+  const userId = await getCurrentUserId();
   const targetDate = new Date(dateStr);
   const startDate = format(subDays(targetDate, 6), 'yyyy-MM-dd');
   
   // 获取最后一天的详细数据
-  const lastDaySummary = await getDailySummary(dateStr, userId);
+  const lastDaySummary = await getDailySummary(dateStr);
   
   // 获取前六天的AI总结
-  const previousDaysSummaries = await db.dailySummary.findMany({
-    where: {
-      date: {
-        gte: startDate,
-        lt: dateStr
-      },
-      userId
-    },
-    select: {
-      date: true,
-      aiSummary: true
-    },
-    orderBy: {
-      date: 'asc'
-    }
-  });
-
+  const previousDaysSummaries = await db.select()
+    .from(daily_summaries)
+    .where(and(
+      eq(daily_summaries.user_id, userId),
+      gte(daily_summaries.date, startDate),
+      desc(daily_summaries.date)
+    ))
+    .limit(6);
   // 合并数据，创建周总结上下文
   return createWeeklySummaryContext(previousDaysSummaries, lastDaySummary);
 }

@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import {auth} from './auth'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -24,4 +25,13 @@ export function getCurrentDateString() {
 
   const formattedDate = `${year}-${month}-${day}`;
   return formattedDate
+}
+
+
+export async function getCurrentUserId() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("未授权：需要用户登录");
+  }
+  return session.user.id;
 }
