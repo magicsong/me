@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from "@/lib/auth";
-import { createOrUpdateDailySummary, updateAIDailySummary } from '@/lib/db/db-daily-summary';
-import { generateSummaryFeedback } from '@/lib/langchain/chains';
+import { updateAIDailySummary } from '@/lib/db/db-daily-summary';
+import { generateAISummary } from '@/lib/langchain/ai-summary-generator';
 
 // 用于生成一句话总结的API
 export async function POST(request: NextRequest) {
@@ -13,35 +13,18 @@ export async function POST(request: NextRequest) {
         }
 
         // 解析请求内容
-        const { context, dateStr } = await request.json();
+        const { dateStr, summaryType = 'daily' } = await request.json();
 
-        if (!context || !dateStr) {
+        if (!dateStr) {
             return NextResponse.json({ error: '缺少必要的参数' }, { status: 400 });
         }
 
-        // 准备AI提示内容
-        const prompt = `
-    以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
-    完成任务: ${context.completedTasks ? context.completedTasks.join(', ') : '无'}
-    三件好事: ${context.goodThings ? context.goodThings.filter(Boolean).join(', ') : '无'}
-    今日收获: ${context.learnings || '无'}
-    挑战: ${context.challenges || '无'}
-    改进点: ${context.improvements || '无'}
-    心情: ${context.mood || '无'}
-    精力水平: ${context.energyLevel || '无'}
-    睡眠质量: ${context.sleepQuality || '无'}
-    明日目标: ${context.tomorrowGoals || '无'}
-    
-    请根据以上信息，用一句话总结我这一天的情况，包括亮点和改进空间，不超过50个字。
-    使用客观但鼓励的语气，直接给出总结，不需要"你的总结是"这样的开头。
-    `;
-
-        // 调用AI生成总结
-        const aiSummary = await generateSummaryFeedback(prompt);
+        // 调用AI生成总结，内部会自动从数据库获取需要的数据
+        const aiSummary = await generateAISummary(dateStr, session.user.id, summaryType);
 
         // 将生成的总结保存到数据库
         try {
-            await updateAIDailySummary(dateStr, aiSummary);
+            await updateAIDailySummary(dateStr, aiSummary, summaryType);
         } catch (dbError) {
             console.error('数据库操作失败:', dbError);
             return NextResponse.json(

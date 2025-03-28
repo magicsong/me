@@ -5,6 +5,8 @@ export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
 // 添加难度级别枚举
 export const difficulty = pgEnum("difficulty", ['easy', 'medium', 'hard'])
+// 添加总结类型枚举
+export const summaryType = pgEnum("summary_type", ['daily', 'three_day', 'weekly'])
 
 export const products = pgTable("products", {
 	id: serial("id").primaryKey().notNull(),
@@ -216,6 +218,7 @@ export const daily_summaries = pgTable("daily_summaries", {
 	updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	ai_summary: text("ai_summary"), // AI生成的总结
 	ai_feedback_actions: jsonb("ai_feedback_actions"), // AI反馈行动
+	summary_type: summaryType("summary_type").default('daily'), // 总结类型：日常、三天、周总结
 },
 (table) => {
 	return {

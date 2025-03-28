@@ -120,7 +120,7 @@ export async function deleteDailySummary(date: string) {
 }
 
 // 更新AI总结
-export async function updateAIDailySummary(date: string, content: any) {
+export async function updateAIDailySummary(date: string, content: any, summaryType: string = 'daily') {
     const session = await auth();
     if (!session?.user?.id) {
       throw new Error("未授权：需要用户登录");
@@ -130,6 +130,7 @@ export async function updateAIDailySummary(date: string, content: any) {
   return await db.update(daily_summaries)
     .set({
       ai_summary: content,
+      summary_type: summaryType,  // 添加总结类型
       updated_at: new Date().toISOString()
     })
     .where(and(
