@@ -1,7 +1,9 @@
+import { DailySummaryContext, ThreeDaySummaryContext, WeeklySummaryContext } from './types';
+
 /**
  * 生成每日总结的提示模板
  */
-export function getDailySummaryPrompt(dateStr: string, context: any): string {
+export function getDailySummaryPrompt(dateStr: string, context: DailySummaryContext): string {
   return `
     以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
     完成任务: ${context.completedTasks ? context.completedTasks.join(', ') : '无'}
@@ -22,17 +24,17 @@ export function getDailySummaryPrompt(dateStr: string, context: any): string {
 /**
  * 生成三天总结的提示模板，展示每天的数据以便观察趋势
  */
-export function getThreeDaySummaryPrompt(dateStr: string, context: any): string {
+export function getThreeDaySummaryPrompt(dateStr: string, context: ThreeDaySummaryContext): string {
   const { dailySummaries, startDate, endDate } = context;
   
   if (!dailySummaries || dailySummaries.length === 0) {
-    return `请根据空数据生成三天总结。日期范围: ${startDate} 到 ${endDate}`;
+    return `请根据空数据生成三天总结。日期范围: ${startDate || '未知'} 到 ${endDate || '未知'}`;
   }
 
   // 构建每日数据的字符串表示
   let dailyDataString = '';
   
-  dailySummaries.forEach((summary: any, index: number) => {
+  dailySummaries.forEach((summary, index) => {
     dailyDataString += `
     === 第${index + 1}天 (${summary.date}) ===
     完成任务: ${summary.completedTasks ? summary.completedTasks.join(', ') : '无'}
@@ -60,18 +62,18 @@ export function getThreeDaySummaryPrompt(dateStr: string, context: any): string 
 /**
  * 生成周总结的提示模板
  */
-export function getWeeklySummaryPrompt(dateStr: string, context: any): string {
+export function getWeeklySummaryPrompt(dateStr: string, context: WeeklySummaryContext): string {
   return `
-    以下是我本周(${dateStr})的日常总结：
+    以下是我本周(${context.startDate} 到 ${context.endDate})的日常总结：
     
     完成任务: ${context.completedTasks ? context.completedTasks.join(', ') : '无'}
     好事集锦: ${context.goodThings ? context.goodThings.filter(Boolean).join(', ') : '无'}
     一周收获: ${context.learnings || '无'}
     主要挑战: ${context.challenges || '无'}
     待改进方面: ${context.improvements || '无'}
-    心情波动: ${context.mood || '无'}
-    精力状态: ${context.energyLevel || '无'}
-    睡眠情况: ${context.sleepQuality || '无'}
+    心情波动: ${context.mood ? context.mood.join(', ') : '无'}
+    精力状态: ${context.energyLevel ? context.energyLevel.join(', ') : '无'}
+    睡眠情况: ${context.sleepQuality ? context.sleepQuality.join(', ') : '无'}
     下周目标: ${context.nextWeekGoals || '无'}
     
     请根据以上信息，用三到四句话总结我这一周的整体表现，包括成就、模式、挑战和改进方向，不超过100个字。

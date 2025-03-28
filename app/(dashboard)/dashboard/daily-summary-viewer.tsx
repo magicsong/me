@@ -143,7 +143,7 @@ export function DailySummaryViewer() {
         },
         body: JSON.stringify({ 
           dateStr: endDateStr, 
-          summaryType: 'recent3days' 
+          summaryType: 'three_day' // 修改为与后端一致的类型名
         }),
       });
       
@@ -178,7 +178,7 @@ export function DailySummaryViewer() {
         },
         body: JSON.stringify({ 
           dateStr: endDateStr, 
-          summaryType: 'lastWeek' 
+          summaryType: 'weekly' // 确保与后端一致的类型名
         }),
       });
       
@@ -292,31 +292,18 @@ export function DailySummaryViewer() {
 
   // 生成AI总结
   const generateAISummary = async () => {
-    if (!summaryData) return;
-    
     setIsGeneratingAI(true);
     try {
-      // 准备当前表单数据作为上下文
-      const context = {
-        date: summaryData.date,
-        completedTasks: summaryData.completedTasks,
-        goodThings: summaryData.goodThings,
-        learnings: summaryData.learnings,
-        challenges: summaryData.challenges,
-        improvements: summaryData.improvements,
-        mood: summaryData.mood,
-        energyLevel: summaryData.energyLevel,
-        sleepQuality: summaryData.sleepQuality,
-        tomorrowGoals: summaryData.tomorrowGoals,
-      };
-      
       // 通过API调用生成AI总结
       const response = await fetch('/api/ai/generate-summary', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ context, dateStr: format(selectedDate, 'yyyy-MM-dd') }),
+        body: JSON.stringify({ 
+          dateStr: format(selectedDate, 'yyyy-MM-dd'),
+          summaryType: 'daily' 
+        }),
       });
     
       if (!response.ok) {
@@ -333,6 +320,7 @@ export function DailySummaryViewer() {
       const refreshResult = await fetchDailySummary(dateStr);
       if (refreshResult.success && refreshResult.data) {
         setSummaryData(refreshResult.data.content);
+        setAiSummary(refreshResult.data.ai_summary); // 修复拼写错误
       }
     } catch (error) {
       console.error('生成AI总结失败:', error);
