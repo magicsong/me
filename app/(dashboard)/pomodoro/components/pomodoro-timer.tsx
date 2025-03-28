@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Play, Pause, RotateCcw, Check } from 'lucide-react';
 import { updatePomodoroStatus } from '@/lib/db/pomodoro';
 import { useSearchParams } from 'next/navigation';
+// 引入倒计时组件
+import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 
 // 预设时间选项（分钟）
 const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
@@ -404,6 +406,27 @@ export function PomodoroTimer({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
+  // 渲染倒计时的时间显示
+  const renderTime = useCallback(({ remainingTime }: { remainingTime: number }) => {
+    if (remainingTime === 0) {
+      return <div className="text-3xl font-bold">00:00</div>;
+    }
+    
+    const minutes = Math.floor(remainingTime / 60);
+    const seconds = remainingTime % 60;
+    
+    return (
+      <div className="text-center">
+        <div className="text-3xl font-bold">
+          {`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`}
+        </div>
+        <div className="text-sm mt-1">
+          {isRunning ? "正在专注" : "已暂停"}
+        </div>
+      </div>
+    );
+  }, [isRunning]);
+
   return (
     <div className="space-y-6">
       {!isRunning && !isCompleted && !isFinished && (
@@ -491,8 +514,48 @@ export function PomodoroTimer({
       )}
 
       <div className="flex flex-col items-center">
-        <div className={`text-6xl font-bold mb-6 ${isRunning ? 'rounded-full border-4 border-gray-300 p-6' : ''}`}>
-          {formatTime(timeLeft)}
+        {/* 添加在番茄钟运行时显示标题和描述 */}
+        {(isRunning || isFinished) && !isCompleted && (
+          <div className="mb-4 text-center">
+            <h3 className="text-xl font-semibold">{title}</h3>
+            {description && (
+              <p className="mt-2 text-muted-foreground whitespace-pre-line">{description}</p>
+            )}
+          </div>
+        )}
+
+        {/* 替换原来的倒计时显示 */}
+        <div className="mb-6">
+          {(isRunning || isFinished || timeLeft > 0) && (
+            <CountdownCircleTimer
+              key={isRunning ? 'running' : 'paused'} // 当状态改变时重新初始化计时器
+              isPlaying={isRunning}
+              duration={duration * 60}
+              initialRemainingTime={timeLeft}
+              colors={['#00C49F', '#F7B801', '#A30000']}
+              colorsTime={[duration * 60, duration * 30, 0]}
+              strokeWidth={12}
+              size={220}
+              trailColor="#e2e8f0"
+              onComplete={() => {
+                setIsRunning(false);
+                setIsFinished(true);
+                return { shouldRepeat: false };
+              }}
+            >
+              {renderTime}
+            </CountdownCircleTimer>
+          )}
+          {!isRunning && !isFinished && timeLeft === 0 && !isCompleted && (
+            <div className="text-6xl font-bold mb-6">
+              {formatTime(duration * 60)}
+            </div>
+          )}
+          {isCompleted && (
+            <div className="text-6xl font-bold mb-6 text-green-500">
+              完成!
+            </div>
+          )}
         </div>
 
         <div className="flex gap-4">

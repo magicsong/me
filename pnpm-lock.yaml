@@ -173,6 +173,9 @@ importers:
       react-color:
         specifier: ^2.19.3
         version: 2.19.3(react@19.0.0)
+      react-countdown-circle-timer:
+        specifier: ^3.2.1
+        version: 3.2.1(react@19.0.0)
       react-day-picker:
         specifier: 8.10.1
         version: 8.10.1(date-fns@4.1.0)(react@19.0.0)
@@ -2917,6 +2920,11 @@ packages:
     resolution: {integrity: sha512-LEeGE/ZzNLIsFWa1TMe8y5VYqr7bibneWmvJwm1pCn/eNmrabWDh659JSPn9BuaMpEfU83WTOJfnCcjDZwNQTA==}
     peerDependencies:
       react: '*'
+
+  react-countdown-circle-timer@3.2.1:
+    resolution: {integrity: sha512-yBAy/9ILXOiFbLBM+3jS72TW5LeRcH8wkRC9NNqMpUkCXkGjSnaeRbJMsR9lsYF0oVXjSDbJaRbCuVMT+9HnKA==}
+    peerDependencies:
+      react: '>=16.8.0'
 
   react-day-picker@8.10.1:
     resolution: {integrity: sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==}
@@ -5802,6 +5810,10 @@ snapshots:
       react: 19.0.0
       reactcss: 1.2.3(react@19.0.0)
       tinycolor2: 1.6.0
+
+  react-countdown-circle-timer@3.2.1(react@19.0.0):
+    dependencies:
+      react: 19.0.0
 
   react-day-picker@8.10.1(date-fns@4.1.0)(react@19.0.0):
     dependencies:
