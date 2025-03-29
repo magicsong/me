@@ -12,7 +12,7 @@ export const summaryFeedbackPrompt = PromptTemplate.fromTemplate(`
 4. 如果有挑战，可以提供应对策略
 5. 提供1-2个针对用户情况的实用建议
 
-请用友好、支持的语气，不超过400字。
+请用友好、支持的语气，不超过500字。
 `);
 
 // 标签建议提示模板

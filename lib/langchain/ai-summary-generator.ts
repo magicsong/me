@@ -22,6 +22,16 @@ type DailySummaryRow = typeof daily_summaries.$inferSelect;
 // 将 content 定义为 JournalEntry 类型
 type DailySummaryContent = JournalEntry;
 
+// 定义生成摘要返回类型
+interface SummaryResult {
+  summary: string;
+  referencedData: {
+    id: string | number;
+    tableName: string;
+    kind?: string;
+  }[];
+}
+
 /**
  * 将数据库日常总结数据转换为每日总结上下文
  */
@@ -127,32 +137,51 @@ function convertToWeeklySummaryContext(dbData: DailySummaryRow): WeeklySummaryCo
 /**
  * 根据不同总结类型生成AI总结
  */
-export async function generateAISummary(dateStr: string, userId: string, summaryType = 'daily') {
+export async function generateAISummary(dateStr: string, userId: string, summaryType = 'daily'): Promise<SummaryResult> {
   let context;
   let prompt;
-
+  let referencedDataArr: {id: string | number; tableName: string}[] = [];
+  
   switch (summaryType) {
     case SummaryType.DAILY:
       const dailyData = await getDailySummary(dateStr);
       context = convertToDailySummaryContext(dailyData.content as JournalEntry);
       prompt = getDailySummaryPrompt(dateStr, context);
+      if (dailyData.id) {
+        referencedDataArr.push({ id: dailyData.id, tableName: 'daily_summaries' });
+      }
       break;
 
     case SummaryType.THREE_DAY:
       const recentData = await getRecentDailySummaries(3);
       context = convertToThreeDaySummaryContext(recentData);
       prompt = getThreeDaySummaryPrompt(dateStr, context);
+      if (recentData && recentData.length > 0) {
+        recentData.forEach(item => {
+          if (item.id) {
+            referencedDataArr.push({ id: item.id, tableName: 'daily_summaries' });
+          }
+        });
+      }
       break;
 
     case SummaryType.WEEKLY:
       const weeklyData = await getWeeklySummary(dateStr);
       context = convertToWeeklySummaryContext(weeklyData);
       prompt = getWeeklySummaryPrompt(dateStr, context);
+      if (weeklyData.id) {
+        referencedDataArr.push({ id: weeklyData.id, tableName: 'daily_summaries' });
+      }
       break;
 
     default:
       throw new Error('不支持的总结类型');
   }
 
-  return await generateSummaryFeedback(prompt);
+  const summary = await generateSummaryFeedback(prompt);
+  
+  return {
+    summary,
+    referencedData: referencedDataArr
+  };
 }

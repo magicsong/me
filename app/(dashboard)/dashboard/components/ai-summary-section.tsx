@@ -4,19 +4,18 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormattedText } from '@/components/ui/formatted-text';
-import { fetchDailySummary} from '../actions'
 import {
   Brain,
   Lightbulb,
   History,
   LayoutGrid,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
 
 interface Result {
   success: boolean;
-  aiSummary: string;
-  error: string;
+  data?: any;
+  error?: string;
 }
 
 interface AISummarySectionProps {
@@ -44,12 +43,23 @@ export function AISummarySection({
   // 自动获取当前日期的 AI 总结
   useEffect(() => {
     async function fetchInitialSummary() {
-      setInitialLoading(true);      
+      setInitialLoading(true);
       try {
-        const dateStr = format(currentDate, 'yyyy-MM-dd');
-        const result = await fetchDailySummary(dateStr);
-        if (result.success && result.data?.ai_summary) {
-          setAiSummary(result.data.ai_summary);
+        const startDateStr = format(currentDate, 'yyyy-MM-dd');
+        const endDateStr = format(currentDate, 'yyyy-MM-dd');
+
+        const response = await fetch(
+          `/api/ai/insight?startDate=${startDateStr}&endDate=${endDateStr}&kind=daily_summary`,
+          { method: 'GET' }
+        );
+
+        if (!response.ok) {
+          throw new Error('获取AI总结失败');
+        }
+
+        const result = await response.json() as Result;
+        if (result.success && result.data?.length > 0) {
+          setAiSummary(result.data[0].content);
         }
       } catch (error) {
         console.error('加载AI总结数据失败:', error);
@@ -92,9 +102,8 @@ export function AISummarySection({
       setIsGeneratingAI(false);
     }
   };
-
-  // 加载最近三日总结
-  const loadRecentDaysSummary = async () => {
+  // 生成最近三日总结
+  const generateRecentDaysSummary = async () => {
     setIsLoadingRecentSummary(true);
     try {
       const today = new Date();
@@ -112,12 +121,45 @@ export function AISummarySection({
       });
 
       if (!response.ok) {
-        throw new Error('获取最近三日总结失败');
+        throw new Error('生成最近三日总结失败');
       }
 
       const result = await response.json() as Result;
       if (result.success) {
-        setRecentDaysSummary(result.aiSummary);
+        setRecentDaysSummary(result.aiSummary || result.data?.content);
+      } else {
+        throw new Error(result.error || '生成最近三日总结失败');
+      }
+    } catch (error) {
+      console.error('生成最近三日总结失败:', error);
+    } finally {
+      setIsLoadingRecentSummary(false);
+    }
+  }
+  // 加载最近三日总结
+  const loadRecentDaysSummary = async () => {
+    setIsLoadingRecentSummary(true);
+    try {
+      const today = new Date();
+      const startDate = subDays(today, 3);
+      const startDateStr = format(startDate, 'yyyy-MM-dd');
+      const endDateStr = format(today, 'yyyy-MM-dd');
+
+      const response = await fetch(
+        `/api/ai/insight?startDate=${startDateStr}&endDate=${endDateStr}&kind=three_day_summary`,
+        { method: 'GET' }
+      );
+
+      if (!response.ok) {
+        throw new Error('获取最近三日总结失败');
+      }
+
+      const result = await response.json() as Result;
+      if (result.success && result.data?.length > 0) {
+        setRecentDaysSummary(result.data[0].content);
+      } else if (result.success && result.data?.length === 0) {
+        // 如果没有找到总结，创建一个新的
+        // 先啥也别做
       } else {
         throw new Error(result.error || '获取最近三日总结失败');
       }
@@ -128,8 +170,8 @@ export function AISummarySection({
     }
   };
 
-  // 加载上周总结
-  const loadWeekSummary = async () => {
+  // 生成上周总结
+  const generateWeekSummary = async () => {
     setIsLoadingWeekSummary(true);
     try {
       const today = new Date();
@@ -147,12 +189,43 @@ export function AISummarySection({
       });
 
       if (!response.ok) {
-        throw new Error('获取上周总结失败');
+        throw new Error('创建最近三日总结失败');
       }
 
       const result = await response.json() as Result;
       if (result.success) {
-        setWeekSummary(result.aiSummary);
+        setRecentDaysSummary(result.data.content);
+      }
+    } catch (error) {
+      console.error('创建最近三日总结失败:', error);
+    }
+  };
+
+  // 加载上周总结
+  const loadWeekSummary = async () => {
+    setIsLoadingWeekSummary(true);
+    try {
+      const today = new Date();
+      const lastWeekStart = startOfWeek(subDays(today, 7));
+      const lastWeekEnd = endOfWeek(subDays(today, 7));
+      const startDateStr = format(lastWeekStart, 'yyyy-MM-dd');
+      const endDateStr = format(lastWeekEnd, 'yyyy-MM-dd');
+
+      const response = await fetch(
+        `/api/ai/insight?startDate=${startDateStr}&endDate=${endDateStr}&kind=weekly_summary`,
+        { method: 'GET' }
+      );
+
+      if (!response.ok) {
+        throw new Error('获取上周总结失败');
+      }
+
+      const result = await response.json() as Result;
+      if (result.success && result.data?.length > 0) {
+        setWeekSummary(result.data[0].content);
+      } else if (result.success && result.data?.length === 0) {
+        // 如果没有找到总结，创建一个新的
+        //await createWeeklySummary(startDateStr, endDateStr);
       } else {
         throw new Error(result.error || '获取上周总结失败');
       }
@@ -217,11 +290,10 @@ export function AISummarySection({
                 <Button
                   key={tab.id}
                   variant={activeTab === tab.id ? "secondary" : "ghost"}
-                  className={`justify-start h-auto py-2 px-3 font-normal ${
-                    activeTab === tab.id 
-                      ? `bg-${tab.color}-100 text-${tab.color}-800` 
+                  className={`justify-start h-auto py-2 px-3 font-normal ${activeTab === tab.id
+                      ? `bg-${tab.color}-100 text-${tab.color}-800`
                       : `hover:bg-${tab.color}-50 text-muted-foreground`
-                  }`}
+                    }`}
                   onClick={() => setActiveTab(tab.id as TabType)}
                 >
                   <div className="flex items-center">
@@ -275,7 +347,7 @@ export function AISummarySection({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={loadRecentDaysSummary}
+                    onClick={generateRecentDaysSummary}
                     disabled={isLoadingRecentSummary}
                     className="h-7 text-xs px-2.5 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
                   >
@@ -313,7 +385,7 @@ export function AISummarySection({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={loadWeekSummary}
+                    onClick={generateWeekSummary}
                     disabled={isLoadingWeekSummary}
                     className="h-7 text-xs px-2.5 text-green-600 hover:text-green-700 hover:bg-green-100"
                   >

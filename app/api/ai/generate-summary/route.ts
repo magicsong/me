@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from "@/lib/auth";
-import { updateAIDailySummary } from '@/lib/db/db-daily-summary';
 import { generateAISummary } from '@/lib/langchain/ai-summary-generator';
+import { createAiInsight, updateAiInsight } from '@/lib/db/ai-insight';
+import { insightKind } from '@../../iac/drizzle/schema';
+import { sub, parseISO } from 'date-fns';
+
+// 将summaryType映射到insightKind
+const summaryTypeToInsightKind = {
+    'daily': 'daily_summary',
+    'three_day': 'three_day_summary',
+    'weekly': 'weekly_summary'
+} as const;
 
 // 用于生成一句话总结的API
 export async function POST(request: NextRequest) {
@@ -19,14 +28,58 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '缺少必要的参数' }, { status: 400 });
         }
 
-        // 调用AI生成总结，内部会自动从数据库获取需要的数据
-        const aiSummary = await generateAISummary(dateStr, session.user.id, summaryType);
+        const kind = summaryTypeToInsightKind[summaryType] || 'daily_summary';
+        const userId = session.user.id;
+        const currentDate = parseISO(dateStr);
 
-        // 将生成的总结保存到数据库
+        // 设置时间范围
+        let periodStart, periodEnd;
+        switch (summaryType) {
+            case 'three_day':
+                periodStart = sub(currentDate, { days: 2 }); // 过去3天(包括今天)
+                periodEnd = currentDate;
+                break;
+            case 'weekly':
+                periodStart = sub(currentDate, { days: 6 }); // 过去7天(包括今天)
+                periodEnd = currentDate;
+                break;
+            default: // daily
+                periodStart = currentDate;
+                periodEnd = currentDate;
+                break;
+        }
+
+        // 调用AI生成总结，内部会自动从数据库获取需要的数据
+        const summaryResult = await generateAISummary(dateStr, userId, summaryType);
+
+        // 将生成的总结保存到ai-insight
         try {
-            await updateAIDailySummary(dateStr, aiSummary, summaryType);
+            // Generate a meaningful title based on summary type and date range
+            let title = "";
+            if (summaryType === 'daily') {
+                title = `Daily Summary: ${currentDate.toLocaleDateString()}`;
+            } else if (summaryType === 'three_day') {
+                title = `3-Day Summary: ${periodStart.toLocaleDateString()} - ${periodEnd.toLocaleDateString()}`;
+            } else if (summaryType === 'weekly') {
+                title = `Weekly Summary: ${periodStart.toLocaleDateString()} - ${periodEnd.toLocaleDateString()}`;
+            }
+
+            await createAiInsight(
+                {
+                    user_id: userId,
+                    kind,
+                    time_period_start: periodStart,
+                    time_period_end: periodEnd,
+                    content: summaryResult.summary,
+                    title: title,
+                    metadata: {
+                        generated_at: new Date().toISOString(),
+                        referenced_data: summaryResult.referencedData
+                    }
+                }
+            );
         } catch (dbError) {
-            console.error('数据库操作失败:', dbError);
+            console.error('保存到ai-insight失败:', dbError);
             return NextResponse.json(
                 { error: '保存总结失败', details: dbError instanceof Error ? dbError.message : String(dbError) },
                 { status: 500 }
@@ -35,7 +88,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            aiSummary
+            aiSummary: summaryResult.summary,
+            referencedData: summaryResult.referencedData
         });
     } catch (error) {
         console.error('AI总结生成失败:', error);
