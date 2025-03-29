@@ -30,7 +30,6 @@ export function getThreeDaySummaryPrompt(dateStr: string, context: ThreeDaySumma
   if (!dailySummaries || dailySummaries.length === 0) {
     return `请根据空数据生成三天总结。日期范围: ${startDate || '未知'} 到 ${endDate || '未知'}`;
   }
-
   // 构建每日数据的字符串表示
   let dailyDataString = '';
   

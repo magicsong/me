@@ -64,7 +64,7 @@ export function HabitCalendar({
         setCompletedDates(history.map((date: DateValue) => 
           date instanceof Date ? date : new Date(date)
         ));
-        console.log('Habit history loaded:', history);
+        //console.log('Habit history loaded:', history);
       } catch (error) {
         console.error('Error loading habit history:', error);
       } finally {

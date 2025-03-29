@@ -14,10 +14,18 @@ import {
   BaseSummaryItem
 } from './types';
 
+import {daily_summaries} from '../../iac/drizzle/schema'
+import { JournalEntry } from '../types/jsonb';
+
+// 定义从数据库 schema 推导出的类型
+type DailySummaryRow = typeof daily_summaries.$inferSelect;
+// 将 content 定义为 JournalEntry 类型
+type DailySummaryContent = JournalEntry;
+
 /**
  * 将数据库日常总结数据转换为每日总结上下文
  */
-function convertToDailySummaryContext(dbData: any): DailySummaryContext {
+function convertToDailySummaryContext(dbData: DailySummaryContent): DailySummaryContext {
   if (!dbData) {
     return {
       date: '',
@@ -50,7 +58,7 @@ function convertToDailySummaryContext(dbData: any): DailySummaryContext {
 /**
  * 将数据库多日总结数据转换为三日总结上下文
  */
-function convertToThreeDaySummaryContext(dbData: any[]): ThreeDaySummaryContext {
+function convertToThreeDaySummaryContext(dbData: DailySummaryRow[]): ThreeDaySummaryContext {
   // 如果没有数据，返回空上下文
   if (!dbData || !Array.isArray(dbData) || dbData.length === 0) {
     return {
@@ -59,22 +67,21 @@ function convertToThreeDaySummaryContext(dbData: any[]): ThreeDaySummaryContext 
       endDate: ''
     };
   }
-  
   const sortedData = [...dbData].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
   const dailySummaries: BaseSummaryItem[] = sortedData.map(item => ({
-    date: item.date || '',
-    completedTasks: item.completedTasks || [],
-    completionCount: item.completionCount || 0,
-    completionScore: item.completionScore || 0,
-    goodThings: item.goodThings || [],
-    learnings: item.learnings || '',
-    challenges: item.challenges || '',
-    improvements: item.improvements || '',
-    mood: item.mood || '',
-    energyLevel: item.energyLevel || '',
-    sleepQuality: item.sleepQuality || '',
-    tomorrowGoals: item.tomorrowGoals || ''
+    date: (item.content as JournalEntry).date || '',
+    completedTasks: (item.content as JournalEntry).completedTasks || [],
+    completionCount: (item.content as JournalEntry).completionCount || 0,
+    completionScore: (item.content as JournalEntry).completionScore || 0,
+    goodThings: (item.content as JournalEntry).goodThings || [],
+    learnings: (item.content as JournalEntry).learnings || '',
+    challenges: (item.content as JournalEntry).challenges || '',
+    improvements: (item.content as JournalEntry).improvements || '',
+    mood: (item.content as JournalEntry).mood || '',
+    energyLevel: (item.content as JournalEntry).energyLevel || '',
+    sleepQuality: (item.content as JournalEntry).sleepQuality || '',
+    tomorrowGoals: (item.content as JournalEntry).tomorrowGoals || ''
   }));
   
   return {
@@ -87,7 +94,7 @@ function convertToThreeDaySummaryContext(dbData: any[]): ThreeDaySummaryContext 
 /**
  * 将数据库周总结数据转换为周总结上下文
  */
-function convertToWeeklySummaryContext(dbData: any): WeeklySummaryContext {
+function convertToWeeklySummaryContext(dbData: DailySummaryRow): WeeklySummaryContext {
   if (!dbData) {
     return {
       startDate: '',
@@ -105,17 +112,15 @@ function convertToWeeklySummaryContext(dbData: any): WeeklySummaryContext {
   }
   
   return {
-    startDate: dbData.startDate || '',
-    endDate: dbData.endDate || '',
-    completedTasks: dbData.completedTasks || [],
-    goodThings: dbData.goodThings || [],
-    learnings: dbData.learnings || '',
-    challenges: dbData.challenges || '',
-    improvements: dbData.improvements || '',
-    mood: dbData.mood || [],
-    energyLevel: dbData.energyLevel || [],
-    sleepQuality: dbData.sleepQuality || [],
-    nextWeekGoals: dbData.nextWeekGoals || ''
+    completedTasks: (dbData.content as JournalEntry).completedTasks || [],
+    goodThings: (dbData.content as JournalEntry).goodThings || [],
+    learnings: (dbData.content as JournalEntry).learnings || '',
+    challenges: (dbData.content as JournalEntry).challenges || '',
+    improvements: (dbData.content as JournalEntry).improvements || '',
+    mood: (dbData.content as JournalEntry).mood || '',
+    energyLevel: (dbData.content as JournalEntry).energyLevel || '',
+    sleepQuality: (dbData.content as JournalEntry).sleepQuality || '',
+    tomorrowGoals: (dbData.content as JournalEntry).tomorrowGoals || ''
   };
 }
 
@@ -129,7 +134,7 @@ export async function generateAISummary(dateStr: string, userId: string, summary
   switch (summaryType) {
     case SummaryType.DAILY:
       const dailyData = await getDailySummary(dateStr);
-      context = convertToDailySummaryContext(dailyData.content);
+      context = convertToDailySummaryContext(dailyData.content as JournalEntry);
       prompt = getDailySummaryPrompt(dateStr, context);
       break;
 

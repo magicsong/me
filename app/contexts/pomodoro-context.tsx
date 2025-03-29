@@ -87,7 +87,6 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
       
       if (response.ok) {
         const data = await response.json();
-        console.log(data[0])
         if (data && data.length > 0) {
           const pomodoro = {
             id: data[0].pomodoro.id,

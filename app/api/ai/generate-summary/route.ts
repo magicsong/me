@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
         // 解析请求内容
         const { dateStr, summaryType = 'daily' } = await request.json();
-
+        console.log('Received dateStr:', dateStr, 'and summaryType:', summaryType);
         if (!dateStr) {
             return NextResponse.json({ error: '缺少必要的参数' }, { status: 400 });
         }

@@ -64,6 +64,6 @@ export interface WeeklySummaryContext {
  */
 export enum SummaryType {
   DAILY = 'daily',
-  THREE_DAY = 'recent3days',
+  THREE_DAY = 'three_day',
   WEEKLY = 'weekly'
 }
