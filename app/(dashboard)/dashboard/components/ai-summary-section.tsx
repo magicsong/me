@@ -40,37 +40,71 @@ export function AISummarySection({
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState(false);
 
-  // 自动获取当前日期的 AI 总结
-  useEffect(() => {
-    async function fetchInitialSummary() {
+  // 加载AI总结
+  const loadAISummary = async (type: TabType) => {
+    // Set appropriate loading state based on type
+    if (type === 'daily') {
       setInitialLoading(true);
-      try {
-        const startDateStr = format(currentDate, 'yyyy-MM-dd');
-        const endDateStr = format(currentDate, 'yyyy-MM-dd');
-
-        const response = await fetch(
-          `/api/ai/insight?startDate=${startDateStr}&endDate=${endDateStr}&kind=daily_summary`,
-          { method: 'GET' }
-        );
-
-        if (!response.ok) {
-          throw new Error('获取AI总结失败');
-        }
-
-        const result = await response.json() as Result;
-        if (result.success && result.data?.length > 0) {
-          setAiSummary(result.data[0].content);
-        }
-      } catch (error) {
-        console.error('加载AI总结数据失败:', error);
-      } finally {
-        setInitialLoading(false);
-      }
+    } else if (type === 'recent') {
+      setIsLoadingRecentSummary(true);
+    } else if (type === 'weekly') {
+      setIsLoadingWeekSummary(true);
     }
 
-    fetchInitialSummary();
-  }, [currentDate]);
+    try {
+      let startDateStr, endDateStr, kind;
+      const today = new Date();
 
+      // Configure parameters based on summary type
+      if (type === 'daily') {
+        startDateStr = format(currentDate, 'yyyy-MM-dd');
+        endDateStr = format(currentDate, 'yyyy-MM-dd');
+        kind = 'daily_summary';
+      } else if (type === 'recent') {
+        startDateStr = format(subDays(today, 3), 'yyyy-MM-dd');
+        endDateStr = format(today, 'yyyy-MM-dd');
+        kind = 'three_day_summary';
+      } else if (type === 'weekly') {
+        const lastWeekStart = startOfWeek(subDays(today, 7));
+        const lastWeekEnd = endOfWeek(subDays(today, 7));
+        startDateStr = format(lastWeekStart, 'yyyy-MM-dd');
+        endDateStr = format(lastWeekEnd, 'yyyy-MM-dd');
+        kind = 'weekly_summary';
+      }
+
+      const response = await fetch(
+        `/api/ai/insight?startDate=${startDateStr}&endDate=${endDateStr}&kind=${kind}`,
+        { method: 'GET' }
+      );
+
+      if (!response.ok) {
+        throw new Error(`获取${type}总结失败`);
+      }
+
+      const result = await response.json() as Result;
+      if (result.success && result.data?.length > 0) {
+        // Set appropriate state based on type
+        if (type === 'daily') {
+          setAiSummary(result.data[0].content);
+        } else if (type === 'recent') {
+          setRecentDaysSummary(result.data[0].content);
+        } else if (type === 'weekly') {
+          setWeekSummary(result.data[0].content);
+        }
+      }
+    } catch (error) {
+      console.error(`加载${type}总结数据失败:`, error);
+    } finally {
+      // Reset loading state
+      if (type === 'daily') {
+        setInitialLoading(false);
+      } else if (type === 'recent') {
+        setIsLoadingRecentSummary(false);
+      } else if (type === 'weekly') {
+        setIsLoadingWeekSummary(false);
+      }
+    }
+  };
   // 生成AI总结
   const generateAISummary = async () => {
     setIsGeneratingAI(true);
@@ -102,140 +136,86 @@ export function AISummarySection({
       setIsGeneratingAI(false);
     }
   };
-  // 生成最近三日总结
-  const generateRecentDaysSummary = async () => {
-    setIsLoadingRecentSummary(true);
-    try {
-      const today = new Date();
-      const endDateStr = format(today, 'yyyy-MM-dd');
-
-      const response = await fetch('/api/ai/generate-summary', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          dateStr: endDateStr,
-          summaryType: 'three_day'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('生成最近三日总结失败');
-      }
-
-      const result = await response.json() as Result;
-      if (result.success) {
-        setRecentDaysSummary(result.aiSummary || result.data?.content);
-      } else {
-        throw new Error(result.error || '生成最近三日总结失败');
-      }
-    } catch (error) {
-      console.error('生成最近三日总结失败:', error);
-    } finally {
-      setIsLoadingRecentSummary(false);
-    }
-  }
-  // 加载最近三日总结
-  const loadRecentDaysSummary = async () => {
-    setIsLoadingRecentSummary(true);
-    try {
-      const today = new Date();
-      const startDate = subDays(today, 3);
-      const startDateStr = format(startDate, 'yyyy-MM-dd');
-      const endDateStr = format(today, 'yyyy-MM-dd');
-
-      const response = await fetch(
-        `/api/ai/insight?startDate=${startDateStr}&endDate=${endDateStr}&kind=three_day_summary`,
-        { method: 'GET' }
-      );
-
-      if (!response.ok) {
-        throw new Error('获取最近三日总结失败');
-      }
-
-      const result = await response.json() as Result;
-      if (result.success && result.data?.length > 0) {
-        setRecentDaysSummary(result.data[0].content);
-      } else if (result.success && result.data?.length === 0) {
-        // 如果没有找到总结，创建一个新的
-        // 先啥也别做
-      } else {
-        throw new Error(result.error || '获取最近三日总结失败');
-      }
-    } catch (error) {
-      console.error('加载最近三日总结失败:', error);
-    } finally {
-      setIsLoadingRecentSummary(false);
-    }
-  };
-
   // 生成上周总结
-  const generateWeekSummary = async () => {
-    setIsLoadingWeekSummary(true);
+  const generateAISummaryByType = async (type: TabType) => {
+    // Set appropriate loading state based on type
+    if (type === 'daily') {
+      setIsGeneratingAI(true);
+    } else if (type === 'recent') {
+      setIsLoadingRecentSummary(true);
+    } else if (type === 'weekly') {
+      setIsLoadingWeekSummary(true);
+    }
+    
     try {
       const today = new Date();
-      const endDateStr = format(today, 'yyyy-MM-dd');
+      let dateStr, startDate, endDate;
+      
+      // Configure parameters based on summary type
+      if (type === 'daily') {
+        dateStr = format(currentDate, 'yyyy-MM-dd');
+      } else if (type === 'recent') {
+        startDate = format(subDays(today, 3), 'yyyy-MM-dd');
+        endDate = format(today, 'yyyy-MM-dd');
+        dateStr = endDate;
+      } else if (type === 'weekly') {
+        const lastWeekStart = startOfWeek(subDays(today, 7));
+        const lastWeekEnd = endOfWeek(subDays(today, 7));
+        startDate = format(lastWeekStart, 'yyyy-MM-dd');
+        endDate = format(lastWeekEnd, 'yyyy-MM-dd');
+        dateStr = endDate;
+      }
+
+      const requestBody: any = {
+        dateStr,
+        summaryType: type,
+      };
+      
+      if (type !== 'daily') {
+        requestBody.startDate = startDate;
+        requestBody.endDate = endDate;
+      }
 
       const response = await fetch('/api/ai/generate-summary', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          dateStr: endDateStr,
-          summaryType: 'weekly'
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error('创建最近三日总结失败');
+        throw new Error(`创建${type}总结失败`);
       }
 
       const result = await response.json() as Result;
       if (result.success) {
-        setRecentDaysSummary(result.data.content);
+        // Set appropriate state based on type
+        if (type === 'daily') {
+          setAiSummary(result.aiSummary);
+        } else if (type === 'recent') {
+          setRecentDaysSummary(result.data.content);
+        } else if (type === 'weekly') {
+          setWeekSummary(result.data.content);
+        }
       }
     } catch (error) {
-      console.error('创建最近三日总结失败:', error);
-    }
-  };
-
-  // 加载上周总结
-  const loadWeekSummary = async () => {
-    setIsLoadingWeekSummary(true);
-    try {
-      const today = new Date();
-      const lastWeekStart = startOfWeek(subDays(today, 7));
-      const lastWeekEnd = endOfWeek(subDays(today, 7));
-      const startDateStr = format(lastWeekStart, 'yyyy-MM-dd');
-      const endDateStr = format(lastWeekEnd, 'yyyy-MM-dd');
-
-      const response = await fetch(
-        `/api/ai/insight?startDate=${startDateStr}&endDate=${endDateStr}&kind=weekly_summary`,
-        { method: 'GET' }
-      );
-
-      if (!response.ok) {
-        throw new Error('获取上周总结失败');
-      }
-
-      const result = await response.json() as Result;
-      if (result.success && result.data?.length > 0) {
-        setWeekSummary(result.data[0].content);
-      } else if (result.success && result.data?.length === 0) {
-        // 如果没有找到总结，创建一个新的
-        //await createWeeklySummary(startDateStr, endDateStr);
-      } else {
-        throw new Error(result.error || '获取上周总结失败');
-      }
-    } catch (error) {
-      console.error('加载上周总结失败:', error);
+      console.error(`创建${type}总结失败:`, error);
     } finally {
-      setIsLoadingWeekSummary(false);
+      // Reset loading state
+      if (type === 'daily') {
+        setIsGeneratingAI(false);
+      } else if (type === 'recent') {
+        setIsLoadingRecentSummary(false);
+      } else if (type === 'weekly') {
+        setIsLoadingWeekSummary(false);
+      }
     }
   };
 
+  // Function aliases for UI handlers
+  const generateWeekSummary = () => generateAISummaryByType('weekly');
+  const generateRecentDaysSummary = () => generateAISummaryByType('recent');
   // Tab数据
   const tabs = [
     {
@@ -260,13 +240,7 @@ export function AISummarySection({
 
   // 根据当前选中Tab执行加载操作
   const handleTabAction = (tabId: TabType) => {
-    if (tabId === 'daily' && !aiSummary && !initialLoading && !isGeneratingAI) {
-      generateAISummary();
-    } else if (tabId === 'recent' && !recentDaysSummary && !isLoadingRecentSummary) {
-      loadRecentDaysSummary();
-    } else if (tabId === 'weekly' && !weekSummary && !isLoadingWeekSummary) {
-      loadWeekSummary();
-    }
+    loadAISummary(tabId);
   };
 
   // 切换Tab时执行相应操作
