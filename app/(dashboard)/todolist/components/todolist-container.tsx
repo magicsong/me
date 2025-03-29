@@ -6,11 +6,12 @@ import { TodoForm } from './todo-form';
 import { TodoFilter } from './todo-filter';
 import { useToast } from '@/components/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Plus, ListTodo, Tag, ClipboardList, AlertCircle, Sparkles } from 'lucide-react';
+import { Plus, ListTodo, Tag, ClipboardList, AlertCircle, Sparkles, Calendar } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TodoTagManager } from './todo-tag-manager';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { TodoAutoPlan } from './todo-auto-plan';
+import { DailyTimelineView } from './daily-timeline-view';
 
 // 定义待办事项类型
 export interface Todo {
@@ -23,6 +24,8 @@ export interface Todo {
   created_at: string;
   updated_at: string;
   completed_at?: string;
+  planned_start_time?: string; // 新增：计划开始时间
+  planned_end_time?: string;   // 新增：计划结束时间
 }
 
 // 定义标签类型
@@ -36,6 +39,17 @@ export interface TodoTag {
 export interface TodoWithTags {
   todo: Todo;
   tags: TodoTag[];
+}
+
+// 新增：番茄钟会话记录类型
+export interface PomodoroSession {
+  id: number;
+  todo_id: number;
+  start_time: string;
+  end_time: string;
+  duration: number;
+  is_completed: boolean;
+  created_at: string;
 }
 
 export function TodoListContainer() {
@@ -54,6 +68,10 @@ export function TodoListContainer() {
   // 添加自动规划相关状态
   const [isAutoPlanOpen, setIsAutoPlanOpen] = useState(false);
   const [availableTags, setAvailableTags] = useState<TodoTag[]>([]);
+  // 新增：时间视图相关状态
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [pomodoroSessions, setPomodoroSessions] = useState<PomodoroSession[]>([]);
+  const [timeViewTodos, setTimeViewTodos] = useState<TodoWithTags[]>([]);
 
   const fetchTodos = async () => {
     try {
@@ -375,13 +393,99 @@ export function TodoListContainer() {
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
+  // 新增：获取指定日期的番茄钟记录
+  const fetchPomodoroSessions = async (date: Date) => {
+    try {
+      const formattedDate = date.toISOString().split('T')[0];
+      const response = await fetch(`/api/pomodoro/sessions?date=${formattedDate}`);
+      
+      if (!response.ok) {
+        throw new Error('获取番茄钟记录失败');
+      }
+      
+      const data = await response.json();
+      setPomodoroSessions(data);
+    } catch (error) {
+      console.error('获取番茄钟记录失败:', error);
+      toast({
+        title: "错误",
+        description: "获取番茄钟记录失败",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 新增：获取指定日期的待办事项（用于时间视图）
+  const fetchTimeViewTodos = async (date: Date) => {
+    try {
+      const formattedDate = date.toISOString().split('T')[0];
+      const searchParams = new URLSearchParams();
+      searchParams.append('date', formattedDate);
+      
+      const response = await fetch(`/api/todolist/todos?${searchParams.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('获取日程待办事项失败');
+      }
+      
+      const data = await response.json();
+      setTimeViewTodos(data);
+    } catch (error) {
+      console.error('获取日程待办事项失败:', error);
+      toast({
+        title: "错误",
+        description: "获取日程待办事项失败",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 新增：更新待办事项的计划时间
+  const updateTodoPlannedTime = async (todoId: number, startTime: string, endTime: string) => {
+    try {
+      await handleUpdateTodo(todoId, {
+        planned_start_time: startTime,
+        planned_end_time: endTime
+      });
+      
+      // 重新获取时间视图所需数据
+      fetchTimeViewTodos(selectedDate);
+    } catch (error) {
+      console.error('更新计划时间失败:', error);
+      toast({
+        title: "错误",
+        description: "更新计划时间失败",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // 处理日期变更
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+    fetchPomodoroSessions(date);
+    fetchTimeViewTodos(date);
+  };
+
+  // 在现有useEffect之后添加一个新的useEffect来处理时间视图的初始化
+  useEffect(() => {
+    if (selectedDate) {
+      fetchPomodoroSessions(selectedDate);
+      fetchTimeViewTodos(selectedDate);
+    }
+  }, [selectedDate]);
+
   return (
     <div className="space-y-8">
       <Tabs defaultValue="list" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="list" className="flex items-center gap-2">
             <ListTodo className="h-4 w-4" />
             待办事项
+          </TabsTrigger>
+          <TabsTrigger value="timeline" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            时间视图
           </TabsTrigger>
           <TabsTrigger value="tags" className="flex items-center gap-2">
             <Tag className="h-4 w-4" />
@@ -475,6 +579,30 @@ export function TodoListContainer() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* 新增的时间视图标签内容 */}
+        <TabsContent value="timeline" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold flex items-center gap-2">
+              <Calendar className="h-6 w-6" />
+              每日时间规划
+            </h2>
+          </div>
+          
+          <Card className="bg-card shadow">
+            <CardContent className="pt-6">
+              <DailyTimelineView 
+                todos={timeViewTodos}
+                pomodoroSessions={pomodoroSessions}
+                selectedDate={selectedDate}
+                onDateChange={handleDateChange}
+                onUpdateTodoTime={updateTodoPlannedTime}
+                onStartPomodoro={startPomodoro}
+                onEditTodo={(todo) => openEditForm(todo)}
+              />
             </CardContent>
           </Card>
         </TabsContent>
