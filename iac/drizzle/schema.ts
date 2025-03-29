@@ -280,3 +280,51 @@ export const tags = pgTable("tags", {
 	  references: [tags.id],
 	}),
   }));
+
+// 添加AI洞察类型枚举
+export const insightKind = pgEnum("insight_kind", [
+  'daily_summary',     // 日常总结
+  'three_day_summary', // 三天总结
+  'weekly_summary',    // 周总结
+  'monthly_summary',   // 月度总结
+  'quarterly_summary', // 季度总结
+  'yearly_summary',    // 年度总结
+  'personal_profile',  // 个人画像
+  'habit_analysis',    // 习惯分析
+  'goal_tracking',     // 目标进度跟踪
+  'productivity_trend' // 生产力趋势
+])
+
+// 添加AI洞察表
+export const ai_insights = pgTable("ai_insights", {
+  id: serial("id").primaryKey().notNull(),
+  user_id: text("user_id").notNull(),
+  kind: insightKind("kind").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),     // AI 分析内容（文本格式）
+  content_json: jsonb("content_json"),    // 结构化的 AI 分析内容（JSON 格式，可选）
+  
+  // 时间范围
+  time_period_start: timestamp("time_period_start", { mode: 'string', withTimezone: true }).notNull(),
+  time_period_end: timestamp("time_period_end", { mode: 'string', withTimezone: true }).notNull(),
+  
+  // 元数据
+  metadata: jsonb("metadata").default({}), // 存储额外的元数据（如周数、月份等）
+  
+  // 系统时间戳
+  created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+  
+  // 引用和关联
+  reference_ids: jsonb("reference_ids").default([]), // 可以引用相关的记录ID（如习惯、目标等）
+  tags: jsonb("tags").default([]),                  // 标签数组
+},
+(table) => {
+  return {
+    idx_ai_insights_user_id: index("idx_ai_insights_user_id").using("btree", table.user_id),
+    idx_ai_insights_kind: index("idx_ai_insights_kind").using("btree", table.kind),
+    idx_ai_insights_created_at: index("idx_ai_insights_created_at").using("btree", table.created_at),    
+    // 复合索引，确保用户在特定时间段内特定类型的洞察是唯一的
+    unique_user_kind_period: uniqueIndex("unique_user_kind_period").on(table.user_id, table.kind, table.time_period_start, table.time_period_end),
+  }
+});
