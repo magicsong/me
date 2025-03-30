@@ -13,12 +13,12 @@ export async function GET(
     }
 
     const { id } = await params;
-    const tagId = parseInt(id);
-    if (isNaN(id)) {
+    const todoId = parseInt(id);
+    if (isNaN(todoId)) {
       return NextResponse.json({ error: '无效的待办事项ID' }, { status: 400 });
     }
 
-    const todo = await getTodo(id);
+    const todo = await getTodo(todoId);
     if (!todo) {
       return NextResponse.json({ error: '待办事项不存在' }, { status: 404 });
     }
@@ -38,19 +38,14 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: '未授权：需要用户登录' }, { status: 401 });
-    }
-
     const { id } = await params;
-    const tagId = parseInt(id);
-    if (isNaN(id)) {
+    const todoId = parseInt(id);
+    if (isNaN(todoId)) {
       return NextResponse.json({ error: '无效的待办事项ID' }, { status: 400 });
     }
 
     const body = await request.json();
-    const updatedTodo = await updateTodo(id, body);
+    const updatedTodo = await updateTodo(todoId, body);
 
     if (!updatedTodo) {
       return NextResponse.json({ error: '待办事项不存在或无权更新' }, { status: 404 });
@@ -71,11 +66,6 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: '未授权：需要用户登录' }, { status: 401 });
-    }
-
     const { id } = await params;
     const todoId = parseInt(id);
     if (isNaN(todoId)) {

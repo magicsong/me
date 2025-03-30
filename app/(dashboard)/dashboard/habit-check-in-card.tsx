@@ -401,18 +401,7 @@ export function HabitCheckInCard({
           onConfirm={handleDifficultyConfirm}
           habitName={currentHabit.name}
         />
-      )}
-      
-      {/* 每日总结对话框 */}
-      <DailySummaryForm 
-        isOpen={summaryDialogOpen}
-        onClose={() => setSummaryDialogOpen(false)}
-        onSubmit={handleSummarySubmit}
-        completedTasks={habits.filter(h => h.completedToday).map(h => h.name)}
-        totalTasks={habits.length}
-        summaryDate={summaryDate}
-      />
-      
+      )}      
       <div className="flex flex-col md:flex-row gap-4 w-full">
         <Card className="flex-1">
           <CardHeader className="pb-3">

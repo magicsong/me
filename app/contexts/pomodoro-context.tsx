@@ -123,7 +123,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     fetchActivePomodoro();
     
     // 定期检查是否有新的活动番茄钟
-    const intervalId = setInterval(fetchActivePomodoro, 30000);
+    const intervalId = setInterval(fetchActivePomodoro, 60000);
     
     return () => {
       clearInterval(intervalId);

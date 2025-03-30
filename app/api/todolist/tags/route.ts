@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { pomodoro_tags } from '@../../iac/drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +42,22 @@ export async function POST(request: NextRequest) {
     
     if (!name || !name.trim()) {
       return NextResponse.json({ error: '标签名称不能为空' }, { status: 400 });
+    }
+    
+    // 检查是否已存在同名标签
+    const existingTags = await db
+      .select()
+      .from(pomodoro_tags)
+      .where(
+        and(
+          eq(pomodoro_tags.user_id, userId),
+          eq(pomodoro_tags.name, name.trim())
+        )
+      );
+    
+    // 如果已存在同名标签，直接返回该标签
+    if (existingTags.length > 0) {
+      return NextResponse.json(existingTags[0], { status: 201 });
     }
     
     // 创建新标签

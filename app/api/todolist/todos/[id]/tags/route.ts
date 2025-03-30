@@ -1,26 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { todo_tag_relations, todos } from '@../../iac/drizzle/schema';
 import { and, eq } from 'drizzle-orm';
+import { getCurrentUserId } from '@/lib/utils';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: '未授权：需要用户登录' }, { status: 401 });
-    }
-    
+  
     const { id } = await params;
-    const tagId = parseInt(id);
+    const todoId = parseInt(id);
     if (isNaN(todoId)) {
       return NextResponse.json({ error: '无效的待办事项ID' }, { status: 400 });
     }
     
-    const userId = session.user.id;
+    const userId = await getCurrentUserId()
     
     // 验证待办事项是否存在并属于当前用户
     const todoExists = await db
