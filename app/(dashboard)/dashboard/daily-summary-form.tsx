@@ -8,22 +8,22 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { 
   BatteryFull, BatteryMedium, BatteryLow,
   Smile, Meh, Frown, 
   Moon, CalendarIcon, Sparkles,
-  Flower2 // 替换数字图标导入
+  Flower2, CheckCircle2, XCircle
 } from 'lucide-react';
 import { fetchDailySummary } from './actions';
 import { useToast } from '@/components/hooks/use-toast';
-import { useRouter } from 'next/navigation'; // 导入路由器用于刷新页面
+import { useRouter } from 'next/navigation';
 
 type DailySummaryFormProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => Promise<{ success: boolean, error?: string }>;
   completedTasks: string[];
+  failedTasks: string[];
   totalTasks: number;
   summaryDate: 'today' | 'yesterday';
 };
@@ -35,6 +35,7 @@ export function DailySummaryForm({
   onClose,
   onSubmit,
   completedTasks,
+  failedTasks,
   totalTasks,
   summaryDate
 }: DailySummaryFormProps) {
@@ -47,13 +48,11 @@ export function DailySummaryForm({
   const [energyLevel, setEnergyLevel] = useState('medium');
   const [sleepQuality, setSleepQuality] = useState('average');
   const [tomorrowGoals, setTomorrowGoals] = useState('');
-  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false); // 添加提交状态跟踪
+  const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const router = useRouter(); // 获取路由实例用于刷新
-  const [failedTasks, setFailedTasks] = useState<string[]>([]); // 新增：未完成任务列表
+  const router = useRouter();
 
   // 更新三件好事中的一项
   const updateGoodThing = (index: number, value: string) => {
@@ -92,7 +91,6 @@ export function DailySummaryForm({
       setEnergyLevel('medium');
       setSleepQuality('average');
       setTomorrowGoals('');
-      setSelectedTasks([]);
     }
   }, [isOpen, summaryDate]);
 
@@ -128,7 +126,6 @@ export function DailySummaryForm({
           if (summaryData.energyLevel) setEnergyLevel(summaryData.energyLevel);
           if (summaryData.sleepQuality) setSleepQuality(summaryData.sleepQuality);
           if (summaryData.tomorrowGoals) setTomorrowGoals(summaryData.tomorrowGoals);
-          if (summaryData.completedTasks) setSelectedTasks(summaryData.completedTasks);
         } else {
           // 重置表单
           resetForm();
@@ -156,7 +153,6 @@ export function DailySummaryForm({
     setEnergyLevel('medium');
     setSleepQuality('average');
     setTomorrowGoals('');
-    setSelectedTasks([]);
   };
 
   // 处理表单提交
@@ -166,8 +162,8 @@ export function DailySummaryForm({
     const formData = {
       date: getDateString(),
       dateType: summaryDate,
-      completedTasks: selectedTasks,
-      completionCount: selectedTasks.length,
+      completedTasks: completedTasks, // 直接使用传入的已完成任务
+      completionCount: completedTasks.length,
       completionScore,
       goodThings,
       learnings,
@@ -177,7 +173,7 @@ export function DailySummaryForm({
       energyLevel,
       sleepQuality,
       tomorrowGoals,
-      failedTasks: failedTasks, // 新增：未完成任务
+      failedTasks: failedTasks, // 使用传入的未完成任务
     };
     
     try {
@@ -214,29 +210,12 @@ export function DailySummaryForm({
     }
   };
 
-  const handleTaskToggle = (task: string) => {
-    setSelectedTasks(prev => 
-      prev.includes(task) 
-        ? prev.filter(t => t !== task) 
-        : [...prev, task]
-    );
-  };
-
-  // 新增：处理未完成任务的切换
-  const handleFailedTaskToggle = (task: string) => {
-    setFailedTasks(prev =>
-      prev.includes(task)
-        ? prev.filter(t => t !== task)
-        : [...prev, task]
-    );
-  };
-
   // 计算完成率
-  const completionRate = totalTasks > 0 ? Math.round((selectedTasks.length / totalTasks) * 100) : 0;
+  const completionRate = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto"> {/* 增加宽度 */}
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             📋 {summaryDate === 'today' ? '今日总结' : '昨日总结'}
@@ -262,56 +241,43 @@ export function DailySummaryForm({
                 <h3 className="text-md font-semibold">1️⃣ {summaryDate === 'today' ? '今日' : '昨日'}完成情况</h3>
                 
                 <div className="space-y-2">
-                  <Label>✅ 今天完成了哪些重要任务？</Label>
-                  <div className="grid grid-cols-1 gap-2">
+                  {/* 已完成任务列表 - 只展示不可修改 */}
+                  <Label>✅ {summaryDate === 'today' ? '今日' : '昨日'}已完成的任务</Label>
+                  <div className="border rounded-md p-3 bg-slate-50">
                     {completedTasks.length > 0 ? (
-                      completedTasks.map((task) => (
-                        <div key={task} className="flex items-center space-x-2">
-                          <Checkbox 
-                            id={`task-${task}`} 
-                            checked={selectedTasks.includes(task)}
-                            onCheckedChange={() => handleTaskToggle(task)}
-                          />
-                          <label
-                            htmlFor={`task-${task}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {task}
-                          </label>
-                        </div>
-                      ))
+                      <div className="space-y-2">
+                        {completedTasks.map((task) => (
+                          <div key={task} className="flex items-center space-x-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <span className="text-sm">{task}</span>
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">今天没有完成任何习惯任务</p>
+                      <p className="text-sm text-muted-foreground">没有完成任何习惯任务</p>
                     )}
                   </div>
                   
-                  {/* 新增：未完成任务列表 */}
-                  <Label>❌ 今天未完成的任务？</Label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {completedTasks.length > 0 ? (
-                      completedTasks.map((task) => (
-                        <div key={`failed-${task}`} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`failed-task-${task}`}
-                            checked={failedTasks.includes(task)}
-                            onCheckedChange={() => handleFailedTaskToggle(task)}
-                          />
-                          <label
-                            htmlFor={`failed-task-${task}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {task}
-                          </label>
+                  {/* 未完成任务列表 - 只展示不可修改 */}
+                  {failedTasks && failedTasks.length > 0 && (
+                    <>
+                      <Label>❌ {summaryDate === 'today' ? '今日' : '昨日'}未完成的任务</Label>
+                      <div className="border rounded-md p-3 bg-slate-50">
+                        <div className="space-y-2">
+                          {failedTasks.map((task) => (
+                            <div key={task} className="flex items-center space-x-2">
+                              <XCircle className="h-4 w-4 text-red-500" />
+                              <span className="text-sm">{task}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">今天没有需要标记为未完成的任务</p>
-                    )}
-                  </div>
+                      </div>
+                    </>
+                  )}
                   
                   <div className="flex justify-between text-sm mt-3">
-                    <Label>🔢 已选完成任务数：{selectedTasks.length} / {totalTasks}</Label>
-                    <Label>📈 完成率：{completionRate}%</Label> {/* 显示完成率 */}
+                    <Label>🔢 已完成任务数：{completedTasks.length} / {totalTasks}</Label>
+                    <Label>📈 完成率：{completionRate}%</Label>
                   </div>
                 </div>
                 

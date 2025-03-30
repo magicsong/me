@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth'; // 导入auth函数
-import { 
-  getHabitsFromDB, 
+import {
+  getHabitsFromDB,
   createHabitInDB,
   deleteHabitFromDB,
   completeHabitInDB,
@@ -15,9 +15,9 @@ import {
   completeHabitOnDateInDB, // 添加此导入用于补打卡
 } from '@/lib/db';
 // 从新文件导入奖励相关函数
-import { 
-  getUserRewardsFromDB, 
-  updateUserRewardsInDB 
+import {
+  getUserRewardsFromDB,
+  updateUserRewardsInDB
 } from '@/lib/db-rewards';
 
 // 获取当前用户ID的辅助函数
@@ -29,11 +29,10 @@ async function getCurrentUserId() {
   return session.user.id;
 }
 
-export async function getHabits() {
+export async function getHabits(date?: Date) {
   // 获取当前用户ID
   const userId = await getCurrentUserId();
-  // 从数据库获取习惯列表
-  return getHabitsFromDB(userId);
+  return getHabitsFromDB(userId, date);
 }
 
 export async function createHabit(formData: FormData) {
@@ -43,20 +42,20 @@ export async function createHabit(formData: FormData) {
   const frequency = formData.get('frequency') as string;
   const category = formData.get('category') as string;
   const rewardPoints = parseInt(formData.get('rewardPoints') as string) || 10;
-  
+
   // 验证
   if (!name) throw new Error('习惯名称不能为空');
-  
+
   // 将数据保存到数据库 - 修改参数传递方式，分别传递category和rewardPoints
   const newHabit = await createHabitInDB(
-    name, 
-    description, 
-    frequency, 
-    userId, 
+    name,
+    description,
+    frequency,
+    userId,
     category,  // 直接传递category字符串
     rewardPoints  // 直接传递rewardPoints数值
   );
-  
+
   revalidatePath('/habits');
   return newHabit;
 }
@@ -65,7 +64,7 @@ export async function deleteHabit(id: string) {
   const userId = await getCurrentUserId();
   // 从数据库删除习惯，传入用户ID确保只能删除自己的习惯
   await deleteHabitFromDB(Number(id), userId);
-  
+
   revalidatePath('/habits');
   return { success: true };
 }
@@ -79,15 +78,15 @@ export async function completeHabit(habitId: string) {
   // 首先获取当前习惯状态
   const habits = await getHabitsFromDB(userId);
   const habit = habits.find(h => h.id === habitId);
-  
+
   if (!habit) {
     throw new Error('习惯不存在');
   }
-  
+
   // 切换完成状态
   const newCompletedState = !habit.completedToday;
   await completeHabitInDB(Number(habitId), newCompletedState, userId);
-  
+
   // 如果是完成习惯(从未完成到完成)，添加奖励
   if (newCompletedState) {
     const rewardPoints = habit.rewardPoints || 10;
@@ -97,7 +96,7 @@ export async function completeHabit(habitId: string) {
     const rewardPoints = habit.rewardPoints || 10;
     await updateUserRewardsInDB(userId, -rewardPoints, habit.category);
   }
-  
+
   revalidatePath('/habits');
   return { success: true };
 }
@@ -109,11 +108,11 @@ export async function saveHabitDifficulty(
   comment?: string
 ) {
   const userId = await getCurrentUserId();
-  
+
   if (!difficulty) {
     throw new Error('难度评估不能为空');
   }
-  
+
   // 保存难度评估到数据库
   await saveHabitDifficultyInDB(
     Number(habitId),
@@ -121,7 +120,7 @@ export async function saveHabitDifficulty(
     difficulty,
     comment
   );
-  
+
   revalidatePath('/habits');
   return { success: true };
 }
@@ -154,17 +153,17 @@ export async function updateHabit(id: string, data: {
   rewardPoints?: number;
 }) {
   const userId = await getCurrentUserId();
-  
+
   // 验证
   if (!data.name) throw new Error('习惯名称不能为空');
-  
+
   // 确保解构出独立的字段传递给数据库函数
   const { name, description, frequency, category, rewardPoints } = data;
-  
+
   // 更新数据库 - 分别传递各个字段
   await updateHabitInDB(
-    Number(id), 
-    userId, 
+    Number(id),
+    userId,
     {
       name,
       description,
@@ -173,7 +172,7 @@ export async function updateHabit(id: string, data: {
       rewardPoints    // 确保这是一个数字
     }
   );
-  
+
   revalidatePath('/habits');
   return { success: true };
 }
@@ -181,7 +180,7 @@ export async function updateHabit(id: string, data: {
 // 获取习惯的难度历史
 export async function getHabitDifficultyHistory(habitId: string) {
   const userId = await getCurrentUserId();
-  
+
   // 从数据库获取该习惯的难度评估历史
   return getHabitDifficultyHistoryFromDB(Number(habitId), userId);
 }
@@ -194,29 +193,47 @@ export async function completeHabitOnDate(habitId: string, date: string) {
   }
 
   const userId = await getCurrentUserId();
-  
+
   // 解析日期
   const targetDate = new Date(date);
   // 确保日期有效
   if (isNaN(targetDate.getTime())) {
     throw new Error('无效的日期格式');
   }
-  
+
   // 获取当前习惯
   const habits = await getHabitsFromDB(userId);
   const habit = habits.find(h => h.id === habitId);
-  
+
   if (!habit) {
     throw new Error('习惯不存在');
   }
-  
+
   // 在特定日期完成习惯
   await completeHabitOnDateInDB(Number(habitId), userId, targetDate);
-  
+
   // 添加奖励
   const rewardPoints = habit.rewardPoints || 10;
   await updateUserRewardsInDB(userId, rewardPoints, habit.category);
-  
+
   revalidatePath('/habits');
   return { success: true };
+}
+
+// 获取指定日期的习惯列表
+export async function getHabitsForDate(dateString?: string) {
+  const userId = await getCurrentUserId();
+
+  // 如果提供了日期字符串，则转换为日期对象
+  let targetDate: Date | undefined = undefined;
+  if (dateString) {
+    targetDate = new Date(dateString);
+    // 验证日期是否有效
+    if (isNaN(targetDate.getTime())) {
+      throw new Error('无效的日期格式');
+    }
+  }
+
+  // 从数据库获取习惯列表，可能为特定日期
+  return getHabitsFromDB(userId, targetDate);
 }

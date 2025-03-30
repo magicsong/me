@@ -42,6 +42,7 @@ import { useEffect, useState } from 'react';
 import { fetchDailySummary, saveDailySummary } from './actions';
 import { AISummarySection } from './components/ai-summary-section';
 import { DailySummaryForm } from './daily-summary-form';
+import { getHabits } from '../habits/actions';
 
 type SummaryData = {
   date: string;
@@ -58,11 +59,6 @@ type SummaryData = {
   tomorrowGoals: string;
   aiSummary?: string; // 添加AI总结字段
 };
-interface Result {
-  success: boolean
-  aiSummary: string
-  error: string
-}
 
 export function DailySummaryViewer() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -71,6 +67,10 @@ export function DailySummaryViewer() {
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+  const [failedTasks, setFailedTasks] = useState<string[]>([]); // 添加未完成任务状态
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [habitsLoading, setHabitsLoading] = useState(false);
 
   // 默认选择个人总结区为活跃Tab
   const [activeTab, setActiveTab] = useState("personal");
@@ -110,7 +110,46 @@ export function DailySummaryViewer() {
     }
 
     loadSummary();
+    loadHabitsData(); // 在日期改变时也加载习惯数据
   }, [selectedDate]);
+
+  // 加载习惯数据
+  const loadHabitsData = async () => {
+    setHabitsLoading(true);
+    try {
+      const result = await getHabits(selectedDate);
+      
+      if (result.length > 0) {
+        // 过滤出已完成的习惯
+        const completedHabits = result.filter((habit) => habit.completedToday);
+        // 过滤出未完成的习惯
+        const failedHabits = result.filter((habit) => !habit.completedToday);
+        
+        setCompletedTasks(completedHabits.map(habit => habit.name) || []);
+        setFailedTasks(failedHabits.map(habit => habit.name) || []);
+        setTotalTasks(result.length || 0); // 总任务数应该是所有习惯数量
+      } else {
+        setCompletedTasks([]);
+        setFailedTasks([]);
+        setTotalTasks(0);
+      }
+    } catch (err) {
+      console.error('加载习惯数据失败:', err);
+      setCompletedTasks([]);
+      setFailedTasks([]);
+      setTotalTasks(0);
+    } finally {
+      setHabitsLoading(false);
+    }
+  };
+
+  // 打开表单前确保已加载最新的习惯数据
+  const handleOpenForm = async () => {
+    if (!habitsLoading) {
+      await loadHabitsData();
+    }
+    setIsFormOpen(true);
+  };
 
   // 日期导航
   const goToPreviousDay = () => {
@@ -202,6 +241,7 @@ export function DailySummaryViewer() {
       default: return { label: '未知', color: 'bg-gray-100 text-gray-800' };
     }
   };
+
   return (
     <>
       {/* 主卡片 */}
@@ -252,7 +292,7 @@ export function DailySummaryViewer() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsFormOpen(true)}
+                onClick={() => handleOpenForm()}
                 aria-label="编辑总结"
               >
                 <Edit className="h-4 w-4" />
@@ -275,7 +315,7 @@ export function DailySummaryViewer() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsFormOpen(true)}
+                onClick={() => handleOpenForm()}
                 className="mt-2"
               >
                 {dateType === 'past' ? '添加历史总结' : '记录今日总结'}
@@ -324,8 +364,8 @@ export function DailySummaryViewer() {
                   <TabsTrigger value="ai" className="flex items-center gap-1.5">
                     <Brain className="h-3.5 w-3.5" />
                     <span>AI 总结</span>
-                  </TabsTrigger>
-                </TabsList>
+                    </TabsTrigger>
+                  </TabsList>
 
                 {/* 个人总结区Tab内容 */}
                 <TabsContent value="personal" className="mt-0">
@@ -438,8 +478,9 @@ export function DailySummaryViewer() {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleSubmitSummary}
-        completedTasks={[]} // 这里需要从外部传入当天完成的任务
-        totalTasks={0} // 这里需要从外部传入任务总数
+        completedTasks={completedTasks}
+        failedTasks={failedTasks}
+        totalTasks={totalTasks}
         summaryDate={dateType === 'today' ? 'today' : 'yesterday'}
       />
 

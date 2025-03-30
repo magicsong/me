@@ -66,3 +66,40 @@ export async function fetchRecentSummaries(limit = 5) {
     return { success: false, error: '获取最近总结失败' };
   }
 }
+
+/**
+ * 获取特定日期的习惯数据
+ */
+export async function fetchDailyHabits(date: string) {
+  try {
+    const response = await fetch(`/api/habits/daily/${date}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { 
+        success: false, 
+        message: `获取习惯数据失败: ${errorText}` 
+      };
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      data: {
+        completedHabits: data.completedHabits || [],
+        totalHabits: data.totalHabits || 0
+      }
+    };
+  } catch (error) {
+    console.error("获取习惯数据出错:", error);
+    return { 
+      success: false, 
+      message: "无法连接服务器" 
+    };
+  }
+}

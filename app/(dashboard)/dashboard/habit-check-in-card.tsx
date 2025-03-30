@@ -1,34 +1,28 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CheckCircle2, Circle, CalendarIcon, CheckCheck, 
-  ThumbsUp, AlertCircle, AlertTriangle, ClipboardList, 
-  CheckSquare, ChevronDown 
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { useRouter } from 'next/navigation';
-import { completeHabit, getHabitDifficultyHistory, saveHabitDifficulty } from '../habits/actions';
-import { HabitCalendar } from '../habits/habit-calendar';
-import { 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogFooter
+  DialogTitle
 } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { DailySummaryForm } from './daily-summary-form';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  AlertCircle, AlertTriangle,
+  CalendarIcon, CheckCheck,
+  CheckCircle2, Circle,
+  ThumbsUp
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { completeHabit, getHabitDifficultyHistory, saveHabitDifficulty } from '../habits/actions';
+import { HabitCalendar } from '../habits/habit-calendar';
 import { checkSummaryCompletion, saveDailySummary } from './actions';
 
 // 导入类型定义
@@ -244,10 +238,7 @@ export function HabitCheckInCard({
   const [currentHabit, setCurrentHabit] = useState<Habit | null>(null);
   
   // 每日总结状态
-  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
-  const [summaryDate, setSummaryDate] = useState<'today' | 'yesterday'>('today');
   const [completedSummaries, setCompletedSummaries] = useState<{[key: string]: boolean}>({});
-  const [loadingStatus, setLoadingStatus] = useState(true);
   
   // 今天和昨天的日期字符串
   const todayStr = new Date().toISOString().split('T')[0];
@@ -256,7 +247,6 @@ export function HabitCheckInCard({
   // 从数据库加载总结完成状态
   useEffect(() => {
     async function loadSummaryStatus() {
-      setLoadingStatus(true);
       try {
         const result = await checkSummaryCompletion([todayStr, yesterdayStr]);
         if (result.success) {
@@ -264,19 +254,12 @@ export function HabitCheckInCard({
         }
       } catch (error) {
         console.error('加载总结状态失败:', error);
-      } finally {
-        setLoadingStatus(false);
       }
     }
     
     loadSummaryStatus();
   }, [todayStr, yesterdayStr]);
-  
-  // 检查指定日期是否已完成总结
-  const isSummaryCompleted = (date: string) => {
-    return completedSummaries[date] || false;
-  };
-  
+   
   // 默认选择第一个习惯展示日历
   useEffect(() => {
     if (habits.length > 0 && !selectedHabit) {
@@ -380,12 +363,6 @@ export function HabitCheckInCard({
       return { success: false, error: "保存过程中发生错误" };
     }
   }
-  
-  // 打开总结对话框
-  const openSummaryDialog = (date: 'today' | 'yesterday') => {
-    setSummaryDate(date);
-    setSummaryDialogOpen(true);
-  };
 
   return (
     <>
@@ -506,53 +483,7 @@ export function HabitCheckInCard({
         </div>
         
         {/* 桌面端显示 - 右侧内容 */}
-        <div className="hidden md:flex md:flex-col md:w-5/12 lg:w-2/5 gap-4">
-          {/* 每日总结按钮 */}
-          <Card className="w-full p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium">📋 每日总结</h3>
-              {loadingStatus ? (
-                <Button variant="outline" size="sm" disabled>
-                  加载中...
-                </Button>
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    {isSummaryCompleted(todayStr) && isSummaryCompleted(yesterdayStr) ? (
-                      <Button variant="outline" size="sm" className="gap-1 text-green-600">
-                        <CheckSquare className="h-4 w-4" />
-                        已完成
-                      </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="gap-1">
-                        <ClipboardList className="h-4 w-4" />
-                        开始总结 <ChevronDown className="h-3 w-3 ml-1" />
-                      </Button>
-                    )}
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
-                      onClick={() => openSummaryDialog('today')}
-                      disabled={isSummaryCompleted(todayStr)}
-                      className={isSummaryCompleted(todayStr) ? "text-green-600" : ""}
-                    >
-                      {isSummaryCompleted(todayStr) && <CheckSquare className="h-4 w-4 mr-2" />}
-                      今日总结
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => openSummaryDialog('yesterday')}
-                      disabled={isSummaryCompleted(yesterdayStr)}
-                      className={isSummaryCompleted(yesterdayStr) ? "text-green-600" : ""}
-                    >
-                      {isSummaryCompleted(yesterdayStr) && <CheckSquare className="h-4 w-4 mr-2" />}
-                      昨日总结
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </Card>
-          
+        <div className="hidden md:flex md:flex-col md:w-5/12 lg:w-2/5 gap-4">       
           {/* 日历卡片 */}
           {selectedHabit && (
             <Card className="w-full">

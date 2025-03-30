@@ -187,26 +187,26 @@ export async function deleteProductById(id: number) {
 }
 
 // 习惯相关的数据库函数
-export async function getHabitsFromDB(userId: string) {
+export async function getHabitsFromDB(userId: string, targetDate?: Date) {
   const allHabits = await db.select().from(habits)
     .where(eq(habits.userId, userId))
     .orderBy(desc(habits.createdAt));
   
-  // 获取今天的日期，用于检查今天是否完成
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // 设置为今天的开始时间
+  // 获取目标日期，如果没提供就用今天
+  const checkDate = targetDate || new Date();
+  checkDate.setHours(0, 0, 0, 0); // 设置为当天的开始时间
   
   // 为每个习惯获取完成记录
   const habitsWithProgress = await Promise.all(
     allHabits.map(async (habit) => {
-      // 检查今天是否已完成
-      const todayEntry = await db
+      // 检查目标日期是否已完成
+      const dateEntry = await db
         .select()
         .from(habitEntries)
         .where(
           and(
             eq(habitEntries.habitId, habit.id),
-            eq(habitEntries.completedAt, today),
+            eq(habitEntries.completedAt, checkDate),
             eq(habitEntries.userId, userId)
           )
         )
@@ -259,7 +259,7 @@ export async function getHabitsFromDB(userId: string) {
         description: habit.description || '',
         frequency: habit.frequency,
         createdAt: habit.createdAt.toISOString(),
-        completedToday: todayEntry.length > 0,
+        completedToday: dateEntry.length > 0,
         category: habit.category,
         rewardPoints: habit.rewardPoints,
         streak: streak

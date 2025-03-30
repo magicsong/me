@@ -79,7 +79,6 @@ export function PomodoroTimer({
   // 恢复活动中的番茄钟
   useEffect(() => {
     if (activePomodoro) {
-      console.log("恢复番茄钟状态:", activePomodoro);
       const endTime = activePomodoro.startTime + activePomodoro.duration * 1000*60;
       setTitle(activePomodoro.title || '');
       setDescription(activePomodoro.description || '');
