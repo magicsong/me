@@ -12,7 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { 
   BatteryFull, BatteryMedium, BatteryLow,
   Smile, Meh, Frown, 
-  Moon, CalendarIcon, Sparkles
+  Moon, CalendarIcon, Sparkles,
+  Flower2 // 替换数字图标导入
 } from 'lucide-react';
 import { fetchDailySummary } from './actions';
 import { useToast } from '@/components/hooks/use-toast';
@@ -52,6 +53,7 @@ export function DailySummaryForm({
   const { toast } = useToast();
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const router = useRouter(); // 获取路由实例用于刷新
+  const [failedTasks, setFailedTasks] = useState<string[]>([]); // 新增：未完成任务列表
 
   // 更新三件好事中的一项
   const updateGoodThing = (index: number, value: string) => {
@@ -174,7 +176,8 @@ export function DailySummaryForm({
       mood: emojis[moodIndex],
       energyLevel,
       sleepQuality,
-      tomorrowGoals
+      tomorrowGoals,
+      failedTasks: failedTasks, // 新增：未完成任务
     };
     
     try {
@@ -219,105 +222,21 @@ export function DailySummaryForm({
     );
   };
 
-  // 处理 AI 生成建议 - 修改为使用API调用
-  const handleAIAssist = async () => {
-    setIsGeneratingAI(true);
-    
-    try {
-      // 准备当前表单数据作为上下文
-      const formContext = {
-        completedTasks: selectedTasks,
-        goodThings: goodThings.filter(item => item.trim()).join(", "),
-        learnings,
-        challenges,
-        mood: emojis[moodIndex],
-        dateType: summaryDate
-      };
-      
-      // 将表单数据转换为字符串供AI分析
-      const contextString = Object.entries(formContext)
-        .filter(([_, value]) => value)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join("\n");
-      
-      // 通过API调用AI生成功能
-      const generateAISuggestion = async (prompt: string) => {
-        const response = await fetch('/api/ai/summary-suggestions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ prompt }),
-        });
-      
-        if (!response.ok) {
-          throw new Error('AI请求失败');
-        }
-      
-        const result = await response.json();
-        return result.suggestion;
-      };
-      
-      // 根据不同的空字段生成不同的提示
-      if (!learnings && !challenges) {
-        // 生成反思建议
-        const reflectionPrompt = `以下是我今天的情况：\n${contextString}\n请帮我总结一些今天可能的收获和面临的挑战。`;
-        const reflection = await generateAISuggestion(reflectionPrompt);
-        
-        // 提取建议并填入表单
-        const suggestionParts = reflection.split('\n\n');
-        if (suggestionParts.length >= 2) {
-          setLearnings(suggestionParts[0].replace(/^收获[：:]\s*/i, ''));
-          setChallenges(suggestionParts[1].replace(/^挑战[：:]\s*/i, ''));
-        } else {
-          setLearnings(reflection);
-        }
-      }
-      
-      // 如果三件好事为空，生成建议
-      if (goodThings.every(thing => !thing.trim())) {
-        const goodThingsPrompt = `根据以下信息：\n${contextString}\n请为我生成今天可能的三件好事`;
-        const goodThingsSuggestion = await generateAISuggestion(goodThingsPrompt);
-        
-        // 拆分建议并填入表单
-        const suggestions = goodThingsSuggestion
-          .split(/\d+[.、)]/g)
-          .filter(s => s.trim())
-          .slice(0, 3);
-          
-        if (suggestions.length) {
-          setGoodThings(suggestions.map(s => s.trim()));
-        }
-      }
-      
-      // 如果明日目标为空，生成建议
-      if (!tomorrowGoals) {
-        const goalsPrompt = `根据今天的情况：\n${contextString}\n请为我规划明天的3个重要目标`;
-        const goalsSuggestion = await generateAISuggestion(goalsPrompt);
-        
-        setTomorrowGoals(goalsSuggestion.replace(/^明[日天]目标[：:]\s*/i, ''));
-      }
-      
-      // 成功提示
-      toast({
-        title: "AI 助手",
-        description: "已根据你的情况生成建议内容",
-      });
-    } catch (error) {
-      console.error('AI 建议生成失败:', error);
-      toast({
-        title: "生成失败",
-        description: "AI 助手暂时无法提供建议，请稍后再试",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGeneratingAI(false);
-    }
+  // 新增：处理未完成任务的切换
+  const handleFailedTaskToggle = (task: string) => {
+    setFailedTasks(prev =>
+      prev.includes(task)
+        ? prev.filter(t => t !== task)
+        : [...prev, task]
+    );
   };
+
+  // 计算完成率
+  const completionRate = totalTasks > 0 ? Math.round((selectedTasks.length / totalTasks) * 100) : 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto"> {/* 增加宽度 */}
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             📋 {summaryDate === 'today' ? '今日总结' : '昨日总结'}
@@ -338,20 +257,6 @@ export function DailySummaryForm({
             </div>
           ) : (
             <>
-              {/* AI 助手建议按钮 - 添加在表单顶部 */}
-              <div className="flex justify-end mb-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleAIAssist}
-                  disabled={isGeneratingAI}
-                  className="flex items-center gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {isGeneratingAI ? "生成中..." : "AI 建议"}
-                </Button>
-              </div>
-
               {/* 1. 今日完成情况 */}
               <div className="space-y-3">
                 <h3 className="text-md font-semibold">1️⃣ {summaryDate === 'today' ? '今日' : '昨日'}完成情况</h3>
@@ -380,8 +285,33 @@ export function DailySummaryForm({
                     )}
                   </div>
                   
+                  {/* 新增：未完成任务列表 */}
+                  <Label>❌ 今天未完成的任务？</Label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {completedTasks.length > 0 ? (
+                      completedTasks.map((task) => (
+                        <div key={`failed-${task}`} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`failed-task-${task}`}
+                            checked={failedTasks.includes(task)}
+                            onCheckedChange={() => handleFailedTaskToggle(task)}
+                          />
+                          <label
+                            htmlFor={`failed-task-${task}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {task}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">今天没有需要标记为未完成的任务</p>
+                    )}
+                  </div>
+                  
                   <div className="flex justify-between text-sm mt-3">
-                    <Label>🔢 已选任务数：{selectedTasks.length} / {totalTasks}</Label>
+                    <Label>🔢 已选完成任务数：{selectedTasks.length} / {totalTasks}</Label>
+                    <Label>📈 完成率：{completionRate}%</Label> {/* 显示完成率 */}
                   </div>
                 </div>
                 
@@ -405,8 +335,10 @@ export function DailySummaryForm({
                 <h3 className="text-md font-semibold">2️⃣ 三件好事</h3>
                 
                 {[0, 1, 2].map((index) => (
-                  <div key={index} className="space-y-1">
-                    <Label htmlFor={`good-thing-${index}`}>{index + 1}.</Label>
+                  <div key={index} className="grid grid-cols-[1fr_5fr] gap-2 items-center">
+                    <Label htmlFor={`good-thing-${index}`} className="flex justify-center">
+                      <Flower2/>
+                    </Label>
                     <Input
                       id={`good-thing-${index}`}
                       placeholder={`今天发生的好事 #${index + 1}`}
