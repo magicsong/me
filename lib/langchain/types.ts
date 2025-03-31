@@ -52,13 +52,18 @@ export interface WeeklySummaryContext {
   endDate: string;
   completedTasks: string[];
   goodThings: string[];
-  learnings: string;
-  challenges: string;
-  improvements: string;
+  learnings: string[];
+  challenges: string[];
+  improvements: string[];
   mood: string[];
   energyLevel: string[];
   sleepQuality: string[];
-  nextWeekGoals: string;
+  nextWeekGoals: string[];
+  // 新增字段
+  habitCompletionRates: Record<string, number>; // 各项习惯的完成率，例如 {"阅读": 0.8, "锻炼": 0.6}
+  weeklyGoals: string[]; // 本周设定的目标
+  weeklyGoalsCompletion: Record<string, boolean>; // 本周目标的完成情况
+  weaknesses: string[]; // 详细的不足描述
 }
 
 /**

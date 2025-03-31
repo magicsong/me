@@ -57,6 +57,21 @@ export function ClientBreadcrumb() {
       name: 'Goals',
       page: '目标追踪'
     };
+  } else if (pathname?.includes('/ai-history')) {
+    // 添加AI历史面包屑
+    if (pathname.includes('/ai-history/')) {
+      breadcrumbItems = {
+        link: '/ai-history',
+        name: 'AI History',
+        page: '交互详情'
+      };
+    } else {
+      breadcrumbItems = {
+        link: '/ai-history',
+        name: 'AI History',
+        page: 'AI交互历史'
+      };
+    }
   }
 
   return (

@@ -63,20 +63,49 @@ export function getThreeDaySummaryPrompt(dateStr: string, context: ThreeDaySumma
  * 生成周总结的提示模板
  */
 export function getWeeklySummaryPrompt(dateStr: string, context: WeeklySummaryContext): string {
+  // 构建习惯完成率的字符串表示
+  let habitRatesString = '无相关数据';
+  if (context.habitCompletionRates && Object.keys(context.habitCompletionRates).length > 0) {
+    habitRatesString = Object.entries(context.habitCompletionRates)
+      .map(([habit, rate]) => `${habit}: ${Math.round(rate * 100)}%`)
+      .join(', ');
+  }
+  
+  // 构建周目标完成情况的字符串表示
+  let goalsCompletionString = '无相关数据';
+  if (context.weeklyGoals && context.weeklyGoals.length > 0) {
+    const completionStatus = context.weeklyGoals.map(goal => {
+      const isCompleted = context.weeklyGoalsCompletion?.[goal] ?? false;
+      return `${goal} [${isCompleted ? '已完成' : '未完成'}]`;
+    });
+    goalsCompletionString = completionStatus.join(', ');
+  }
+
   return `
     以下是我本周(${context.startDate} 到 ${context.endDate})的日常总结：
     
+    本周目标: ${context.weeklyGoals ? context.weeklyGoals.join(', ') : '无设定目标'}
+    目标完成情况: ${goalsCompletionString}
     完成任务: ${context.completedTasks ? context.completedTasks.join(', ') : '无'}
+    习惯完成率: ${habitRatesString}
     好事集锦: ${context.goodThings ? context.goodThings.filter(Boolean).join(', ') : '无'}
-    一周收获: ${context.learnings || '无'}
-    主要挑战: ${context.challenges || '无'}
-    待改进方面: ${context.improvements || '无'}
+    一周收获: ${context.learnings ? context.learnings.join(', ') : '无'}
+    主要挑战: ${context.challenges ? context.challenges.join(', ') : '无'}
+    待改进方面: ${context.improvements ? context.improvements.join(', ') : '无'}
+    存在的不足: ${context.weaknesses ? context.weaknesses.join(', ') : '无'}
     心情波动: ${context.mood ? context.mood.join(', ') : '无'}
     精力状态: ${context.energyLevel ? context.energyLevel.join(', ') : '无'}
     睡眠情况: ${context.sleepQuality ? context.sleepQuality.join(', ') : '无'}
-    下周目标: ${context.nextWeekGoals || '无'}
+    下周目标: ${context.nextWeekGoals ? context.nextWeekGoals.join(', ') : '无'}
     
-    请根据以上信息，用三到四句话总结我这一周的整体表现，包括成就、模式、挑战和改进方向，不超过100个字。
+    请根据以上信息，用三到四句话总结我这一周的整体表现，包括成就、模式、挑战和改进方向，不超过1000个字。
+    请重点分析以下几个方面：
+    1. 目标完成情况和习惯养成的进度
+    2. 一周的主要成就和收获
+    3. 存在的不足和具体改进方向，总结经验教训
+    4. 心情、精力和睡眠质量对效率的影响
+    5. 推荐下周计划
+    
     分析一周的规律和趋势，使用客观但鼓励的语气，直接给出总结，不需要"你的总结是"这样的开头。
   `;
 }

@@ -86,3 +86,67 @@ export async function saveLLMRecordToDB(
       return null;
     }
   }
+
+// 获取LLM历史记录(分页)
+export async function getLLMHistory(
+  page: number = 1,
+  pageSize: number = 10,
+  userId?: string
+) {
+  try {
+    const offset = (page - 1) * pageSize;
+    
+    let query = db
+      .select()
+      .from(llmCacheRecords)
+      .orderBy(desc(llmCacheRecords.createdAt))
+      .limit(pageSize)
+      .offset(offset);
+      
+    if (userId) {
+      query = query.where(eq(llmCacheRecords.userId, userId));
+    }
+    
+    const records = await query;
+    
+    // 获取总记录数
+    let countQuery = db
+      .select({ count: count() })
+      .from(llmCacheRecords);
+      
+    if (userId) {
+      countQuery = countQuery.where(eq(llmCacheRecords.userId, userId));
+    }
+    
+    const [{ count: total }] = await countQuery;
+    
+    return {
+      records,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(Number(total) / pageSize)
+      }
+    };
+  } catch (error) {
+    console.error('获取LLM历史记录失败:', error);
+    throw error;
+  }
+}
+
+// 根据ID获取单条LLM记录
+export async function getLLMRecordById(id: number): Promise<LLMCacheRecord | null> {
+  try {
+    const records = await db
+      .select()
+      .from(llmCacheRecords)
+      .where(eq(llmCacheRecords.id, id))
+      .limit(1);
+      
+    return records.length > 0 ? records[0] : null;
+  } catch (error) {
+    console.error('获取LLM记录详情失败:', error);
+    return null;
+  }
+}

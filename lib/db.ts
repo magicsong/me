@@ -22,7 +22,7 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
-export const db = drizzle(pool,{logger: true});
+export const db = drizzle(pool);
 
 // 现有的枚举和产品表
 export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);

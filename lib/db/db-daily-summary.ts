@@ -141,9 +141,9 @@ export async function getWeeklySummary(dateStr: string) {
     .from(daily_summaries)
     .where(and(
       eq(daily_summaries.user_id, userId),
-      gte(daily_summaries.date, startDate),
-      desc(daily_summaries.date)
+      gte(daily_summaries.date, startDate)
     ))
+    .orderBy(desc(daily_summaries.date))
     .limit(6);
   // 合并数据，创建周总结上下文
   return createWeeklySummaryContext(previousDaysSummaries, lastDaySummary);
