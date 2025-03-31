@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbackweb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgbackweb
+  template:
+    metadata:
+      labels:
+        app: pgbackweb
+    spec:
+      containers:
+      - name: pgbackweb
+        image: eduardolat/pgbackweb:latest
+        env:
+        - name: PBW_ENCRYPTION_KEY
+          value: "my_secret_key"
+        - name: PBW_POSTGRES_CONN_STRING
+          value: "postgresql://postgres:password@postgres:5432/pgbackweb?sslmode=disable"
+        - name: TZ
+          value: "Asia/Shanghai"
+        ports:
+        - containerPort: 8085
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+        volumeMounts:
+        - name: backups
+          mountPath: /backups
+      volumes:
+      - name: backups
+        persistentVolumeClaim:
+          claimName: backups-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbackweb
+spec:
+  selector:
+    app: pgbackweb
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8085
+    targetPort: 8085
+  type: NodePort
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backups-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: auto-ebs-sc

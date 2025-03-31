@@ -1,4 +1,9 @@
 export default {
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
   output: 'standalone',
   images: {
     remotePatterns: [
