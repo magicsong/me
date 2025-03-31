@@ -24,7 +24,7 @@ interface AISummarySectionProps {
 }
 
 // Tab类型定义
-type TabType = 'daily' | 'recent' | 'weekly';
+type TabType = 'daily' | 'three_day' | 'weekly';
 
 export function AISummarySection({
   currentDate,
@@ -141,7 +141,7 @@ export function AISummarySection({
     // Set appropriate loading state based on type
     if (type === 'daily') {
       setIsGeneratingAI(true);
-    } else if (type === 'recent') {
+    } else if (type === 'three_day') {
       setIsLoadingRecentSummary(true);
     } else if (type === 'weekly') {
       setIsLoadingWeekSummary(true);
@@ -154,7 +154,7 @@ export function AISummarySection({
       // Configure parameters based on summary type
       if (type === 'daily') {
         dateStr = format(currentDate, 'yyyy-MM-dd');
-      } else if (type === 'recent') {
+      } else if (type === 'three_day') {
         startDate = format(subDays(today, 3), 'yyyy-MM-dd');
         endDate = format(today, 'yyyy-MM-dd');
         dateStr = endDate;
@@ -192,8 +192,8 @@ export function AISummarySection({
       if (result.success) {
         // Set appropriate state based on type
         if (type === 'daily') {
-          setAiSummary(result.aiSummary);
-        } else if (type === 'recent') {
+          setAiSummary(result.data.content);
+        } else if (type === 'three_day') {
           setRecentDaysSummary(result.data.content);
         } else if (type === 'weekly') {
           setWeekSummary(result.data.content);
@@ -205,7 +205,7 @@ export function AISummarySection({
       // Reset loading state
       if (type === 'daily') {
         setIsGeneratingAI(false);
-      } else if (type === 'recent') {
+      } else if (type === 'three_day') {
         setIsLoadingRecentSummary(false);
       } else if (type === 'weekly') {
         setIsLoadingWeekSummary(false);
@@ -215,7 +215,7 @@ export function AISummarySection({
 
   // Function aliases for UI handlers
   const generateWeekSummary = () => generateAISummaryByType('weekly');
-  const generateRecentDaysSummary = () => generateAISummaryByType('recent');
+  const generateRecentDaysSummary = () => generateAISummaryByType('three_day');
   // Tab数据
   const tabs = [
     {
@@ -314,7 +314,7 @@ export function AISummarySection({
             )}
 
             {/* 最近三日总结 */}
-            {activeTab === 'recent' && (
+            {activeTab === 'three_day' && (
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-medium text-purple-900">最近三日总结</h3>

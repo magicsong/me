@@ -4,6 +4,7 @@
 export interface BaseSummaryItem {
   date: string;
   completedTasks: string[];
+  failedTasks: string[];
   completionCount: number;
   completionScore: number;
   goodThings: string[];
@@ -23,6 +24,7 @@ export interface BaseSummaryItem {
 export interface DailySummaryContext {
   date: string;
   completedTasks: string[];
+  failedTasks: string[];
   goodThings: string[];
   learnings: string;
   challenges: string;

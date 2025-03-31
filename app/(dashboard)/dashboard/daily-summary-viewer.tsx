@@ -38,7 +38,7 @@ import {
   Star,
   User
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState ,useMemo } from 'react';
 import { fetchDailySummary, saveDailySummary } from './actions';
 import { AISummarySection } from './components/ai-summary-section';
 import { DailySummaryForm } from './daily-summary-form';
@@ -76,11 +76,13 @@ export function DailySummaryViewer() {
   const [activeTab, setActiveTab] = useState("personal");
 
   // 判断日期类型
-  const dateType = isToday(selectedDate)
-    ? 'today'
-    : isYesterday(selectedDate)
-      ? 'yesterday'
-      : 'past';
+  const dateType = useMemo(() => {
+    return isToday(selectedDate)
+      ? 'today'
+      : isYesterday(selectedDate)
+        ? 'yesterday'
+        : 'past';
+  }, [selectedDate]);
 
   // 加载总结数据
   useEffect(() => {
@@ -153,6 +155,7 @@ export function DailySummaryViewer() {
 
   // 日期导航
   const goToPreviousDay = () => {
+    
     setSelectedDate(prev => subDays(prev, 1));
   };
 
@@ -317,7 +320,12 @@ export function DailySummaryViewer() {
                 onClick={() => handleOpenForm()}
                 className="mt-2"
               >
-                {dateType === 'past' ? '添加历史总结' : '记录今日总结'}
+                {dateType === 'today' 
+                  ? '记录今日总结' 
+                  : dateType === 'yesterday' 
+                  ? '记录昨日总结' 
+                  : '添加历史总结'
+                }
               </Button>
             </div>
           ) : (
