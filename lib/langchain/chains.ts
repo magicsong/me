@@ -47,6 +47,7 @@ const createCachedChain = async <T>(chainFunc: () => Promise<T>, cacheKey: strin
   return result;
 };
 
+export { createCachedChain };
 // 生成总结反馈
 export async function generateSummaryFeedback(summaryContent: string): Promise<string> {
   const chain = RunnableSequence.from([

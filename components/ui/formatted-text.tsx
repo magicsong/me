@@ -8,13 +8,16 @@ interface FormattedTextProps {
 export function FormattedText({ text, className = "" }: FormattedTextProps) {
   if (!text) return null;
   
+  // 去掉前置和后置换行符
+  const trimmedText = text.replace(/^\n+|\n+$/g, '');
+  const lines = trimmedText.split('\n');
+  
   return (
     <div className={className}>
-      {text.split('\n').map((line, index) => (
+      {lines.map((line, index) => (
         <React.Fragment key={index}>
-            
           {line}
-          {index < text.split('\n').length - 1 && <br />}
+          {index < lines.length - 1 && <br />}
         </React.Fragment>
       ))}
     </div>

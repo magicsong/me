@@ -1,22 +1,14 @@
 import 'server-only';
 
-import { Pool } from 'pg';
+import { and, count, desc, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import {
   pgTable,
-  text,
-  numeric,
-  integer,
-  timestamp,
-  pgEnum,
   serial,
-  boolean,
-  date,
-  primaryKey,
-  json
+  text,
+  timestamp
 } from 'drizzle-orm/pg-core';
-import { count, eq, ilike, and, sql, desc } from 'drizzle-orm';
-import { createInsertSchema } from 'drizzle-zod';
+import { Pool } from 'pg';
 
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL
