@@ -11,16 +11,19 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
+import { InsightData } from '@/lib/types/ai-insight';
 
 interface Result {
   success: boolean;
   aiSummary: string;
   referencedData: any[];
+  error: any;
 }
 
 interface InsightResult {
   success: boolean;
-  data: any[];
+  data: InsightData[];
+  error: any;
 } 
 
 interface AISummarySectionProps {

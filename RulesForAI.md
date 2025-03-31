@@ -8,6 +8,7 @@
   ├─ langchain/       # AI 模型集成
   ├─ utils/           # 工具函数
   └─ auth/            # 认证服务
+  └─ types/           # 后端服务返回的各种类型，任何新增API都需要在此定义APIrequest和response
 ```
 2. 功能模块层
 ```
