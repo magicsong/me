@@ -14,9 +14,14 @@ import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
 
 interface Result {
   success: boolean;
-  data?: any;
-  error?: string;
+  aiSummary: string;
+  referencedData: any[];
 }
+
+interface InsightResult {
+  success: boolean;
+  data: any[];
+} 
 
 interface AISummarySectionProps {
   currentDate: Date;
@@ -45,7 +50,7 @@ export function AISummarySection({
     // Set appropriate loading state based on type
     if (type === 'daily') {
       setInitialLoading(true);
-    } else if (type === 'recent') {
+    } else if (type === 'three_day') {
       setIsLoadingRecentSummary(true);
     } else if (type === 'weekly') {
       setIsLoadingWeekSummary(true);
@@ -53,14 +58,14 @@ export function AISummarySection({
 
     try {
       let startDateStr, endDateStr, kind;
-      const today = new Date();
+      const today = currentDate;
 
       // Configure parameters based on summary type
       if (type === 'daily') {
         startDateStr = format(currentDate, 'yyyy-MM-dd');
         endDateStr = format(currentDate, 'yyyy-MM-dd');
         kind = 'daily_summary';
-      } else if (type === 'recent') {
+      } else if (type === 'three_day') {
         startDateStr = format(subDays(today, 3), 'yyyy-MM-dd');
         endDateStr = format(today, 'yyyy-MM-dd');
         kind = 'three_day_summary';
@@ -70,6 +75,8 @@ export function AISummarySection({
         startDateStr = format(lastWeekStart, 'yyyy-MM-dd');
         endDateStr = format(lastWeekEnd, 'yyyy-MM-dd');
         kind = 'weekly_summary';
+      } else {
+        throw new Error('无效的总结类型');
       }
 
       const response = await fetch(
@@ -81,12 +88,12 @@ export function AISummarySection({
         throw new Error(`获取${type}总结失败`);
       }
 
-      const result = await response.json() as Result;
-      if (result.success && result.data?.length > 0) {
+      const result = await response.json() as InsightResult;
+      if (result.success && result.data.length>0) {
         // Set appropriate state based on type
         if (type === 'daily') {
           setAiSummary(result.data[0].content);
-        } else if (type === 'recent') {
+        } else if (type === 'three_day') {
           setRecentDaysSummary(result.data[0].content);
         } else if (type === 'weekly') {
           setWeekSummary(result.data[0].content);
@@ -98,7 +105,7 @@ export function AISummarySection({
       // Reset loading state
       if (type === 'daily') {
         setInitialLoading(false);
-      } else if (type === 'recent') {
+      } else if (type === 'three_day') {
         setIsLoadingRecentSummary(false);
       } else if (type === 'weekly') {
         setIsLoadingWeekSummary(false);
@@ -146,11 +153,11 @@ export function AISummarySection({
     } else if (type === 'weekly') {
       setIsLoadingWeekSummary(true);
     }
-    
+
     try {
-      const today = new Date();
+      const today = currentDate;
       let dateStr, startDate, endDate;
-      
+
       // Configure parameters based on summary type
       if (type === 'daily') {
         dateStr = format(currentDate, 'yyyy-MM-dd');
@@ -170,7 +177,7 @@ export function AISummarySection({
         dateStr,
         summaryType: type,
       };
-      
+
       if (type !== 'daily') {
         requestBody.startDate = startDate;
         requestBody.endDate = endDate;
@@ -192,11 +199,11 @@ export function AISummarySection({
       if (result.success) {
         // Set appropriate state based on type
         if (type === 'daily') {
-          setAiSummary(result.data.content);
+          setAiSummary(result.aiSummary);
         } else if (type === 'three_day') {
-          setRecentDaysSummary(result.data.content);
+          setRecentDaysSummary(result.aiSummary);
         } else if (type === 'weekly') {
-          setWeekSummary(result.data.content);
+          setWeekSummary(result.aiSummary);
         }
       }
     } catch (error) {
@@ -225,7 +232,7 @@ export function AISummarySection({
       color: 'blue'
     },
     {
-      id: 'recent',
+      id: 'three_day',
       title: '最近三日',
       icon: <History className="h-4 w-4 mr-2 text-purple-600" />,
       color: 'purple'
@@ -265,8 +272,8 @@ export function AISummarySection({
                   key={tab.id}
                   variant={activeTab === tab.id ? "secondary" : "ghost"}
                   className={`justify-start h-auto py-2 px-3 font-normal ${activeTab === tab.id
-                      ? `bg-${tab.color}-100 text-${tab.color}-800`
-                      : `hover:bg-${tab.color}-50 text-muted-foreground`
+                    ? `bg-${tab.color}-100 text-${tab.color}-800`
+                    : `hover:bg-${tab.color}-50 text-muted-foreground`
                     }`}
                   onClick={() => setActiveTab(tab.id as TabType)}
                 >

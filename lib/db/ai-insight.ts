@@ -159,6 +159,7 @@ export async function getAiInsightsByTimeRange(
     }
     
     const result = await query;
+    console.log(result)
     return { success: true, data: result };
   } catch (error) {
     console.error('Failed to get AI insights by time range:', error);

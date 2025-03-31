@@ -19,10 +19,10 @@ import { count, eq, ilike, and, sql, desc } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL
+  connectionString: process.env.POSTGRES_URL,
 });
 
-export const db = drizzle(pool);
+export const db = drizzle(pool,{logger: true});
 
 // 现有的枚举和产品表
 export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);
