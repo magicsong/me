@@ -2,7 +2,6 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { da } from 'date-fns/locale';
 
 interface Pomodoro {
   id: string;

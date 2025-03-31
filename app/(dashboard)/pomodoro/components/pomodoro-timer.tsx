@@ -43,6 +43,8 @@ export function PomodoroTimer({
   const [pomodoroId, setPomodoroId] = useState<number | null>(null);
   const [relatedTodoId, setRelatedTodoId] = useState<string | null>(null);
   const [isLoadingTodo, setIsLoadingTodo] = useState(false);
+  const [todos, setTodos] = useState<any[]>([]);  // 添加todos状态
+  const [isLoadingTodos, setIsLoadingTodos] = useState(false);  // 添加加载状态
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -139,6 +141,61 @@ export function PomodoroTimer({
       })();
     }
   }, [searchParams, fetchTodoDetails]);
+
+  // 获取待办事项列表
+  const fetchTodos = useCallback(async () => {
+    try {
+      setIsLoadingTodos(true);
+      const response = await fetch('/api/todolist/todos');
+      
+      if (!response.ok) {
+        throw new Error('获取待办事项列表失败');
+      }
+      
+      const todosData = await response.json();
+      // 只获取未完成的任务
+      const serverTodos = todosData.filter((todo: any) => !todo.completed);
+      //convertToClientToDos
+      const activeTodos = serverTodos.map((todo: any) => ({
+        tags,
+        ...todo.todo,
+      }));
+      setTodos(activeTodos);
+      
+      // 如果有活动任务且当前没有选定的任务，默认选择第一个
+      if (activeTodos.length > 0 && !relatedTodoId && !title) {
+        setRelatedTodoId(activeTodos[0].id);
+        setTitle(activeTodos[0].title || '');
+        if (activeTodos[0].description) {
+          setDescription(activeTodos[0].description);
+        }
+      }
+    } catch (error) {
+      console.error('获取待办事项列表失败:', error);
+      toast({
+        title: "错误",
+        description: "无法加载待办事项列表",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingTodos(false);
+    }
+  }, [relatedTodoId, title, toast]);
+
+  // 初始化时加载待办事项列表
+  useEffect(() => {
+    fetchTodos();
+  }, [fetchTodos]);
+
+  // 处理待办事项选择
+  const handleTodoSelection = useCallback((todoId: string) => {
+    const selectedTodo = todos.find(todo => todo.id === todoId);
+    if (selectedTodo) {
+      setRelatedTodoId(todoId);
+      setTitle(selectedTodo.title || '');
+      setDescription(selectedTodo.description || '');
+    }
+  }, [todos]);
 
   // 处理计时器
   useEffect(() => {
@@ -430,6 +487,32 @@ export function PomodoroTimer({
     <div className="space-y-6">
       {!isRunning && !isCompleted && !isFinished && (
         <div className="grid gap-4">
+          {/* 添加待办事项选择 */}
+          <div>
+            <Label htmlFor="todo">从待办事项选择</Label>
+            <Select
+              value={relatedTodoId || ''}
+              onValueChange={handleTodoSelection}
+              disabled={isRunning || isLoadingTodos}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={isLoadingTodos ? "正在加载待办事项..." : "选择一个待办事项"} />
+              </SelectTrigger>
+              <SelectContent>
+                {todos.map((todo) => (
+                  <SelectItem key={todo.id} value={todo.id}>
+                    {todo.title}
+                  </SelectItem>
+                ))}
+                {todos.length === 0 && !isLoadingTodos && (
+                  <SelectItem value="none" disabled>
+                    没有可用的待办事项
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <Label htmlFor="title">
               标题 {relatedTodoId ? '(关联待办事项)' : ''} {isLoadingTodo && '加载中...'}

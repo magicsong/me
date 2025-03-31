@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { Analytics } from '@vercel/analytics/react';
 import { Toaster } from '@/components/ui/toaster';
 import { PomodoroProvider } from './contexts/pomodoro-context';
-import { PomodoroReminder } from './components/pomodoro-reminder';
+import { PomodoroReminder } from '@/components/pomodoro-reminder';
 
 export const metadata = {
   title: 'app for me',
