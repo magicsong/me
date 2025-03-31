@@ -191,7 +191,6 @@ export function DailySummaryViewer() {
         const refreshResult = await fetchDailySummary(dateStr);
         if (refreshResult.success && refreshResult.data) {
           setSummaryData(refreshResult.data.content);
-          setAiSummary(refreshResult.data.ai_summary);
         }
 
         // 关闭表单
