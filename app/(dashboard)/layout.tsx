@@ -12,7 +12,8 @@ import {
   CheckSquare,
   FileText,
   History,
-  Brain
+  Brain,
+  MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -73,6 +74,9 @@ function DesktopNav() {
 
         <NavItem href="/" label="Dashboard">
           <Home className="h-5 w-5" />
+        </NavItem>
+        <NavItem href="/chat" label="AI Chat">
+          <MessageSquare className="h-5 w-5" />
         </NavItem>
         <NavItem href="/goals" label="Goals">
           <Package2 className="h-5 w-5" />
@@ -177,6 +181,13 @@ function MobileNav() {
           >
             <Brain className="h-5 w-5" />
             AI交互历史
+          </Link>
+          <Link
+            href="/chat"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <MessageSquare className="h-5 w-5" />
+            AI聊天
           </Link>
           <Link
             href="#"

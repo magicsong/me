@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Timer, CheckCircle } from 'lucide-react';
+import { Timer, CheckCircle, ArrowRight } from 'lucide-react';
 import { usePomodoro } from '../app/contexts/pomodoro-context';
 
 export function PomodoroReminder() {
@@ -42,16 +42,18 @@ export function PomodoroReminder() {
   // 计算剩余时间
   useEffect(() => {
     if (!activePomodoro) return;
-
-    // 重置音频播放标记
-    hasPlayedRef.current = false;
-
     const startTimeMs = activePomodoro.startTime;
     const endTime = startTimeMs + (activePomodoro.duration * 60 * 1000);
 
     const updateTimeLeft = () => {
       const now = Date.now();
       const remaining = Math.max(0, endTime - now);
+      if (timeLeft === 0 && remaining === 0 && !hasPlayedRef.current) {
+        hasPlayedRef.current = true; // 标记为已播放
+      }
+      if (remaining > 0 || hasPlayedRef.current) {
+        setIsLoading(false); // 当有剩余时间时，设置加载状态为 false
+      }
       setTimeLeft(remaining);
     };
 
@@ -83,28 +85,54 @@ export function PomodoroReminder() {
   // 显示加载状态
   if (isLoading && !activePomodoro) {
     return (
-      <Card className="fixed bottom-4 right-4 p-4 flex items-center gap-3 bg-card shadow-md z-50 max-w-xs">
+      <Card className="fixed bottom-4 right-4 p-4 flex items-center justify-between gap-3 bg-card shadow-md z-50 max-w-xs">
         <div className="flex items-center gap-2 text-orange-500">
           <Timer size={20} className="animate-pulse" />
-          <span className="font-medium">加载中...</span>
+          <span className="font-medium">加载任务中...</span>
         </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="ml-2 flex items-center gap-1"
+          onClick={() => useRouter().push('/pomodoro')}
+          title="前往番茄钟页面"
+        >
+          查看<ArrowRight size={14} />
+        </Button>
       </Card>
     );
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 p-4 flex items-center gap-3 bg-card shadow-md z-50 max-w-xs">
-      <div className="flex items-center gap-2 text-orange-500">
-        <Timer size={20} />
-        <span className="font-medium">{formatTime(timeLeft)}</span>
+    <Card className="fixed bottom-4 right-4 p-4 bg-card shadow-md z-50 max-w-xs">
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="flex items-center gap-2 text-orange-500">
+          <Timer size={20} />
+          <span className="font-medium">{formatTime(timeLeft)}</span>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="ml-auto flex items-center gap-1"
+          onClick={() => useRouter().push('/pomodoro')}
+          title="前往番茄钟页面"
+        >
+          查看<ArrowRight size={14} />
+        </Button>
       </div>
+      
+      {activePomodoro?.title && (
+        <div className="text-sm text-muted-foreground mb-2">
+          {activePomodoro.title}
+        </div>
+      )}
 
       <Button
         size="sm"
         variant="outline"
-        className="flex gap-1 items-center"
+        className="flex gap-1 items-center w-full"
         onClick={completePomodoro}
-        disabled={timeLeft > 0} // 时间未结束时禁用按钮
+        disabled={timeLeft > 0}
         title={timeLeft > 0 ? "请等待番茄钟计时结束" : "完成番茄钟"}
       >
         <CheckCircle size={16} />

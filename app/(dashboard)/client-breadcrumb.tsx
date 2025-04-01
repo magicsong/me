@@ -72,6 +72,12 @@ export function ClientBreadcrumb() {
         page: 'AI交互历史'
       };
     }
+  } else if (pathname?.includes('/chat')) {
+    breadcrumbItems = {
+      link: '/chat',
+      name: 'AI Chat',
+      page: 'AI聊天'
+    };
   }
 
   return (
