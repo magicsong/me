@@ -1,5 +1,5 @@
-import { relations, sql } from "drizzle-orm"
-import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar, uniqueIndex } from "drizzle-orm/pg-core"
+import { relations, sql, InferSelectModel } from "drizzle-orm"
+import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar, uniqueIndex, uuid, boolean, foreignKey } from "drizzle-orm/pg-core"
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
@@ -13,7 +13,7 @@ export const products = pgTable("products", {
 	image_url: text("image_url").notNull(),
 	name: text("name").notNull(),
 	status: status("status").notNull(),
-	price: numeric("price", { precision: 10, scale:  2 }).notNull(),
+	price: numeric("price", { precision: 10, scale: 2 }).notNull(),
 	stock: integer("stock").notNull(),
 	available_at: timestamp("available_at", { mode: 'string', withTimezone: true }).notNull(),
 });
@@ -36,12 +36,12 @@ export const habit_entries = pgTable("habit_entries", {
 	completed_at: timestamp("completed_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	user_id: text("user_id"),
 },
-(table) => {
-	return {
-		idx_habit_entries_completed_at: index("idx_habit_entries_completed_at").using("btree", table.completed_at),
-		idx_habit_entries_habit_id: index("idx_habit_entries_habit_id").using("btree", table.habit_id),
-	}
-});
+	(table) => {
+		return {
+			idx_habit_entries_completed_at: index("idx_habit_entries_completed_at").using("btree", table.completed_at),
+			idx_habit_entries_habit_id: index("idx_habit_entries_habit_id").using("btree", table.habit_id),
+		}
+	});
 
 export const users = pgTable("users", {
 	id: serial("id").primaryKey().notNull(),
@@ -89,12 +89,12 @@ export const habit_difficulties = pgTable("habit_difficulties", {
 	comment: text("comment"),
 	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		idx_habit_difficulties_habit_id: index("idx_habit_difficulties_habit_id").using("btree", table.habit_id),
-		idx_habit_difficulties_completed_at: index("idx_habit_difficulties_completed_at").using("btree", table.completed_at),
-	}
-});
+	(table) => {
+		return {
+			idx_habit_difficulties_habit_id: index("idx_habit_difficulties_habit_id").using("btree", table.habit_id),
+			idx_habit_difficulties_completed_at: index("idx_habit_difficulties_completed_at").using("btree", table.completed_at),
+		}
+	});
 
 // LLM缓存记录表
 export const llm_cache_records = pgTable("llm_cache_records", {
@@ -107,12 +107,12 @@ export const llm_cache_records = pgTable("llm_cache_records", {
 	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	user_id: text("user_id"),
 },
-(table) => {
-	return {
-		idx_llm_cache_records_request_hash: index("idx_llm_cache_records_request_hash").using("btree", table.request_hash),
-		idx_llm_cache_records_created_at: index("idx_llm_cache_records_created_at").using("btree", table.created_at),
-	}
-});
+	(table) => {
+		return {
+			idx_llm_cache_records_request_hash: index("idx_llm_cache_records_request_hash").using("btree", table.request_hash),
+			idx_llm_cache_records_created_at: index("idx_llm_cache_records_created_at").using("btree", table.created_at),
+		}
+	});
 
 // 番茄钟状态枚举
 export const pomodoroStatus = pgEnum("pomodoro_status", ['running', 'completed', 'canceled', 'paused'])
@@ -131,13 +131,13 @@ export const pomodoros = pgTable("pomodoros", {
 	goal_id: integer("goal_id").references(() => goals.id),
 	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 },
-(table) => {
-	return {
-		idx_pomodoros_user_id: index("idx_pomodoros_user_id").using("btree", table.user_id),
-		idx_pomodoros_status: index("idx_pomodoros_status").using("btree", table.status),
-		idx_pomodoros_start_time: index("idx_pomodoros_start_time").using("btree", table.start_time),
-	}
-});
+	(table) => {
+		return {
+			idx_pomodoros_user_id: index("idx_pomodoros_user_id").using("btree", table.user_id),
+			idx_pomodoros_status: index("idx_pomodoros_status").using("btree", table.status),
+			idx_pomodoros_start_time: index("idx_pomodoros_start_time").using("btree", table.start_time),
+		}
+	});
 
 // 番茄钟标签表
 export const pomodoro_tags = pgTable("pomodoro_tags", {
@@ -153,11 +153,11 @@ export const pomodoro_tag_relations = pgTable("pomodoro_tag_relations", {
 	pomodoro_id: integer("pomodoro_id").notNull().references(() => pomodoros.id),
 	tag_id: integer("tag_id").notNull().references(() => pomodoro_tags.id),
 },
-(table) => {
-	return {
-		pk: primaryKey({ columns: [table.pomodoro_id, table.tag_id] }),
-	}
-});
+	(table) => {
+		return {
+			pk: primaryKey({ columns: [table.pomodoro_id, table.tag_id] }),
+		}
+	});
 
 // Todo状态枚举
 export const todoStatus = pgEnum("todo_status", ['pending', 'in_progress', 'completed', 'archived'])
@@ -178,35 +178,35 @@ export const todos = pgTable("todos", {
 	updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	completed_at: timestamp("completed_at", { mode: 'string', withTimezone: true }),
 },
-(table) => {
-	return {
-		idx_todos_user_id: index("idx_todos_user_id").using("btree", table.user_id),
-		idx_todos_status: index("idx_todos_status").using("btree", table.status),
-		idx_todos_due_date: index("idx_todos_due_date").using("btree", table.due_date),
-	}
-});
+	(table) => {
+		return {
+			idx_todos_user_id: index("idx_todos_user_id").using("btree", table.user_id),
+			idx_todos_status: index("idx_todos_status").using("btree", table.status),
+			idx_todos_due_date: index("idx_todos_due_date").using("btree", table.due_date),
+		}
+	});
 
 // Todo与标签的关联表
 export const todo_tag_relations = pgTable("todo_tag_relations", {
 	todo_id: integer("todo_id").notNull().references(() => todos.id, { onDelete: 'cascade' }),
 	tag_id: integer("tag_id").notNull().references(() => pomodoro_tags.id, { onDelete: 'cascade' }),
 },
-(table) => {
-	return {
-		pk: primaryKey({ columns: [table.todo_id, table.tag_id] }),
-	}
-});
+	(table) => {
+		return {
+			pk: primaryKey({ columns: [table.todo_id, table.tag_id] }),
+		}
+	});
 
 // Todo与番茄钟的关联表
 export const todo_pomodoro_relations = pgTable("todo_pomodoro_relations", {
 	todo_id: integer("todo_id").notNull().references(() => todos.id, { onDelete: 'cascade' }),
 	pomodoro_id: integer("pomodoro_id").notNull().references(() => pomodoros.id, { onDelete: 'cascade' }),
 },
-(table) => {
-	return {
-		pk: primaryKey({ columns: [table.todo_id, table.pomodoro_id] }),
-	}
-});
+	(table) => {
+		return {
+			pk: primaryKey({ columns: [table.todo_id, table.pomodoro_id] }),
+		}
+	});
 
 // 添加每日总结表
 export const daily_summaries = pgTable("daily_summaries", {
@@ -220,24 +220,24 @@ export const daily_summaries = pgTable("daily_summaries", {
 	ai_feedback_actions: jsonb("ai_feedback_actions"), // AI反馈行动
 	summary_type: summaryType("summary_type").default('daily'), // 总结类型：日常、三天、周总结
 },
-(table) => {
-	return {
-		idx_daily_summaries_user_id: index("idx_daily_summaries_user_id").using("btree", table.user_id),
-		idx_daily_summaries_date: index("idx_daily_summaries_date").using("btree", table.date),
-		// 创建复合唯一索引，确保每个用户每天只有一条总结
-		unique_user_date: uniqueIndex("unique_user_date").on(table.user_id, table.date),
-	}
-});
+	(table) => {
+		return {
+			idx_daily_summaries_user_id: index("idx_daily_summaries_user_id").using("btree", table.user_id),
+			idx_daily_summaries_date: index("idx_daily_summaries_date").using("btree", table.date),
+			// 创建复合唯一索引，确保每个用户每天只有一条总结
+			unique_user_date: uniqueIndex("unique_user_date").on(table.user_id, table.date),
+		}
+	});
 
 // 笔记表
 export const notes = pgTable("notes", {
-  id: serial("id").primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  content: text("content").notNull(),
-  category: varchar("category", { length: 100 }),
-  userId: varchar("user_id", { length: 255 }).notNull(),
-  createdAt: timestamp("created_at",{ mode: 'string', withTimezone: true }).defaultNow(),
-  updatedAt: timestamp("updated_at",{ mode: 'string', withTimezone: true }).defaultNow(),
+	id: serial("id").primaryKey(),
+	title: varchar("title", { length: 255 }).notNull(),
+	content: text("content").notNull(),
+	category: varchar("category", { length: 100 }),
+	userId: varchar("user_id", { length: 255 }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
 });
 
 // 标签表
@@ -245,86 +245,218 @@ export const tags = pgTable("tags", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 100 }).notNull(),
 	userId: varchar("user_id", { length: 255 }).notNull(),
-  }, (table) => {
+}, (table) => {
 	return {
 		nameUserIdIdx: uniqueIndex("nameUserIdIdx").on(table.name, table.userId),
 	};
-  });
-  
-  // 笔记-标签关联表
-  export const notesTags = pgTable("notes_tags", {
+});
+
+// 笔记-标签关联表
+export const notesTags = pgTable("notes_tags", {
 	noteId: serial("note_id").references(() => notes.id).notNull(),
 	tagId: serial("tag_id").references(() => tags.id).notNull(),
-  }, (table) => {
+}, (table) => {
 	return {
-	  pk: primaryKey({ columns: [table.noteId, table.tagId] }),
+		pk: primaryKey({ columns: [table.noteId, table.tagId] }),
 	};
-  });
-  
-  // 定义关系
-  export const notesRelations = relations(notes, ({ many }) => ({
+});
+
+// 定义关系
+export const notesRelations = relations(notes, ({ many }) => ({
 	tags: many(notesTags),
-  }));
-  
-  export const tagsRelations = relations(tags, ({ many }) => ({
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
 	notes: many(notesTags),
-  }));
-  
-  export const notesTagsRelations = relations(notesTags, ({ one }) => ({
+}));
+
+export const notesTagsRelations = relations(notesTags, ({ one }) => ({
 	note: one(notes, {
-	  fields: [notesTags.noteId],
-	  references: [notes.id],
+		fields: [notesTags.noteId],
+		references: [notes.id],
 	}),
 	tag: one(tags, {
-	  fields: [notesTags.tagId],
-	  references: [tags.id],
+		fields: [notesTags.tagId],
+		references: [tags.id],
 	}),
-  }));
+}));
 
 // 添加AI洞察类型枚举
 export const insightKind = pgEnum("insight_kind", [
-  'daily_summary',     // 日常总结
-  'three_day_summary', // 三天总结
-  'weekly_summary',    // 周总结
-  'monthly_summary',   // 月度总结
-  'quarterly_summary', // 季度总结
-  'yearly_summary',    // 年度总结
-  'personal_profile',  // 个人画像
-  'habit_analysis',    // 习惯分析
-  'goal_tracking',     // 目标进度跟踪
-  'productivity_trend' // 生产力趋势
+	'daily_summary',     // 日常总结
+	'three_day_summary', // 三天总结
+	'weekly_summary',    // 周总结
+	'monthly_summary',   // 月度总结
+	'quarterly_summary', // 季度总结
+	'yearly_summary',    // 年度总结
+	'personal_profile',  // 个人画像
+	'habit_analysis',    // 习惯分析
+	'goal_tracking',     // 目标进度跟踪
+	'productivity_trend' // 生产力趋势
 ])
 
 // 添加AI洞察表
 export const ai_insights = pgTable("ai_insights", {
-  id: serial("id").primaryKey().notNull(),
-  user_id: text("user_id").notNull(),
-  kind: insightKind("kind").notNull(),
-  title: text("title").notNull(),
-  content: text("content").notNull(),     // AI 分析内容（文本格式）
-  content_json: jsonb("content_json"),    // 结构化的 AI 分析内容（JSON 格式，可选）
-  
-  // 时间范围
-  time_period_start: timestamp("time_period_start", { mode: 'string', withTimezone: true }).notNull(),
-  time_period_end: timestamp("time_period_end", { mode: 'string', withTimezone: true }).notNull(),
-  
-  // 元数据
-  metadata: jsonb("metadata").default({}), // 存储额外的元数据（如周数、月份等）
-  
-  // 系统时间戳
-  created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
-  updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
-  
-  // 引用和关联
-  reference_ids: jsonb("reference_ids").default([]), // 可以引用相关的记录ID（如习惯、目标等）
-  tags: jsonb("tags").default([]),                  // 标签数组
+	id: serial("id").primaryKey().notNull(),
+	user_id: text("user_id").notNull(),
+	kind: insightKind("kind").notNull(),
+	title: text("title").notNull(),
+	content: text("content").notNull(),     // AI 分析内容（文本格式）
+	content_json: jsonb("content_json"),    // 结构化的 AI 分析内容（JSON 格式，可选）
+
+	// 时间范围
+	time_period_start: timestamp("time_period_start", { mode: 'string', withTimezone: true }).notNull(),
+	time_period_end: timestamp("time_period_end", { mode: 'string', withTimezone: true }).notNull(),
+
+	// 元数据
+	metadata: jsonb("metadata").default({}), // 存储额外的元数据（如周数、月份等）
+
+	// 系统时间戳
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+
+	// 引用和关联
+	reference_ids: jsonb("reference_ids").default([]), // 可以引用相关的记录ID（如习惯、目标等）
+	tags: jsonb("tags").default([]),                  // 标签数组
 },
-(table) => {
-  return {
-    idx_ai_insights_user_id: index("idx_ai_insights_user_id").using("btree", table.user_id),
-    idx_ai_insights_kind: index("idx_ai_insights_kind").using("btree", table.kind),
-    idx_ai_insights_created_at: index("idx_ai_insights_created_at").using("btree", table.created_at),    
-    // 复合索引，确保用户在特定时间段内特定类型的洞察是唯一的
-    unique_user_kind_period: uniqueIndex("unique_user_kind_period").on(table.user_id, table.kind, table.time_period_start, table.time_period_end),
-  }
+	(table) => {
+		return {
+			idx_ai_insights_user_id: index("idx_ai_insights_user_id").using("btree", table.user_id),
+			idx_ai_insights_kind: index("idx_ai_insights_kind").using("btree", table.kind),
+			idx_ai_insights_created_at: index("idx_ai_insights_created_at").using("btree", table.created_at),
+			// 复合索引，确保用户在特定时间段内特定类型的洞察是唯一的
+			unique_user_kind_period: uniqueIndex("unique_user_kind_period").on(table.user_id, table.kind, table.time_period_start, table.time_period_end),
+		}
+	});
+
+
+export type User = InferSelectModel<typeof users>;
+
+export const chat = pgTable('Chat', {
+	id: uuid('id').primaryKey().notNull().defaultRandom(),
+	createdAt: timestamp('createdAt').notNull(),
+	title: text('title').notNull(),
+	userId: text('userId')
+		.notNull(),
+	visibility: varchar('visibility', { enum: ['public', 'private'] })
+		.notNull()
+		.default('private'),
 });
+
+export type Chat = InferSelectModel<typeof chat>;
+
+// DEPRECATED: The following schema is deprecated and will be removed in the future.
+// Read the migration guide at https://github.com/vercel/ai-chatbot/blob/main/docs/04-migrate-to-parts.md
+export const messageDeprecated = pgTable('Message', {
+	id: uuid('id').primaryKey().notNull().defaultRandom(),
+	chatId: uuid('chatId')
+		.notNull()
+		.references(() => chat.id),
+	role: varchar('role').notNull(),
+	content: jsonb('content').notNull(),
+	createdAt: timestamp('createdAt').notNull(),
+});
+
+export type MessageDeprecated = InferSelectModel<typeof messageDeprecated>;
+
+export const message = pgTable('Message_v2', {
+	id: uuid('id').primaryKey().notNull().defaultRandom(),
+	chatId: uuid('chatId')
+		.notNull()
+		.references(() => chat.id),
+	role: varchar('role').notNull(),
+	parts: jsonb('parts').notNull(),
+	attachments: jsonb('attachments').notNull(),
+	createdAt: timestamp('createdAt').notNull(),
+});
+
+export type DBMessage = InferSelectModel<typeof message>;
+
+// DEPRECATED: The following schema is deprecated and will be removed in the future.
+// Read the migration guide at https://github.com/vercel/ai-chatbot/blob/main/docs/04-migrate-to-parts.md
+export const voteDeprecated = pgTable(
+	'Vote',
+	{
+		chatId: uuid('chatId')
+			.notNull()
+			.references(() => chat.id),
+		messageId: uuid('messageId')
+			.notNull()
+			.references(() => messageDeprecated.id),
+		isUpvoted: boolean('isUpvoted').notNull(),
+	},
+	(table) => {
+		return {
+			pk: primaryKey({ columns: [table.chatId, table.messageId] }),
+		};
+	},
+);
+
+export type VoteDeprecated = InferSelectModel<typeof voteDeprecated>;
+
+export const vote = pgTable(
+	'Vote_v2',
+	{
+		chatId: uuid('chatId')
+			.notNull()
+			.references(() => chat.id),
+		messageId: uuid('messageId')
+			.notNull()
+			.references(() => message.id),
+		isUpvoted: boolean('isUpvoted').notNull(),
+	},
+	(table) => {
+		return {
+			pk: primaryKey({ columns: [table.chatId, table.messageId] }),
+		};
+	},
+);
+
+export type Vote = InferSelectModel<typeof vote>;
+
+export const document = pgTable(
+	'Document',
+	{
+		id: uuid('id').notNull().defaultRandom(),
+		createdAt: timestamp('createdAt').notNull(),
+		title: text('title').notNull(),
+		content: text('content'),
+		kind: varchar('text', { enum: ['text', 'code', 'image', 'sheet'] })
+			.notNull()
+			.default('text'),
+		userId: text('userId')
+			.notNull()
+	},
+	(table) => {
+		return {
+			pk: primaryKey({ columns: [table.id, table.createdAt] }),
+		};
+	},
+);
+
+export type Document = InferSelectModel<typeof document>;
+
+export const suggestion = pgTable(
+	'Suggestion',
+	{
+		id: uuid('id').notNull().defaultRandom(),
+		documentId: uuid('documentId').notNull(),
+		documentCreatedAt: timestamp('documentCreatedAt').notNull(),
+		originalText: text('originalText').notNull(),
+		suggestedText: text('suggestedText').notNull(),
+		description: text('description'),
+		isResolved: boolean('isResolved').notNull().default(false),
+		userId: text('userId')
+			.notNull(),
+		createdAt: timestamp('createdAt').notNull(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.id] }),
+		documentRef: foreignKey({
+			columns: [table.documentId, table.documentCreatedAt],
+			foreignColumns: [document.id, document.createdAt],
+		}),
+	}),
+);
+
+export type Suggestion = InferSelectModel<typeof suggestion>;

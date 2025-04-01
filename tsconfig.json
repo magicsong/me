@@ -19,7 +19,10 @@
     "paths": {
       "@/components/*": ["components/*"],
       "@/lib/*": ["lib/*"],
-      "@/iac/*": ["iac/*"]
+      "@/iac/*": ["iac/*"],
+      "@/artifacts/*": ["artifacts/*"],
+      "@/tests/*": ["tests/*"],
+      "@/app/*": ["app/*"],
     },
     "plugins": [
       {
