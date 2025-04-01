@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { notes, tags, notesTags } from '@/iac/drizzle/schema';
-import { auth } from '@clerk/nextjs';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { 
   ApiErrorResponse, 
   UpdateNoteMetadataRequest, 
   UpdateNoteMetadataResponse 
-} from '@/app/api/types/note';
+} from '../../../types/note';
+import { getCurrentUserId } from '@/lib/utils';
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ): Promise<NextResponse<UpdateNoteMetadataResponse | ApiErrorResponse>> {
   try {
-    const { userId } = auth();
-    if (!userId) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 });
-    }
+    const userId = await getCurrentUserId()
     
     const noteId = Number(params.id);
     if (isNaN(noteId)) {
