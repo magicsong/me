@@ -1,10 +1,10 @@
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
-import { auth } from '@/app/(auth)/auth';
-import { Chat } from '@/components/chat';
+import { auth } from '@/lib/auth';
+import { Chat } from '@/components/ai/chat';
 import { getChatById, getMessagesByChatId } from '@/lib/db/queries';
-import { DataStreamHandler } from '@/components/data-stream-handler';
+import { DataStreamHandler } from '@/components/ai/data-stream-handler';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
 import { DBMessage } from '@/iac/drizzle/schema';
 import { Attachment, UIMessage } from 'ai';
