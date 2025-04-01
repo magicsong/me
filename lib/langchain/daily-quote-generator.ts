@@ -1,6 +1,7 @@
 
 import { PromptTemplate } from "@langchain/core/prompts";
 import { chatModel, createCachedChain } from ".";
+import { trimLLMContentToJsonObject } from "../utils";
 type DailyQuoteResult = {
     quote: string;
     author?: string;
@@ -31,12 +32,11 @@ export async function generateDailyQuote(dateStr: string, userId: string): Promi
         `);
         
         const prompt = await promptTemplate.format({ date: dateStr });
-
         const response = await createCachedChain(() => chatModel.invoke(prompt), `daily-quote:${dateStr}:${userId}`,240);
         
         try {
             // 尝试解析JSON响应
-            const parsedResponse = JSON.parse(response.content.toString());
+            const parsedResponse = JSON.parse(trimLLMContentToJsonObject(response.content.toString()));
             return {
                 quote: parsedResponse.quote,
                 author: parsedResponse.author,

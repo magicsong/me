@@ -1,5 +1,5 @@
 DO $$ BEGIN
- CREATE TYPE "public"."insight_kind" AS ENUM('daily_summary', 'three_day_summary', 'weekly_summary', 'monthly_summary', 'quarterly_summary', 'yearly_summary', 'personal_profile', 'habit_analysis', 'goal_tracking', 'productivity_trend');
+ CREATE TYPE "public"."insight_kind" AS ENUM('daily_summary', 'three_day_summary', 'weekly_summary', 'monthly_summary', 'quarterly_summary', 'yearly_summary', 'personal_profile', 'habit_analysis', 'goal_tracking', 'productivity_trend','daily_quote');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
