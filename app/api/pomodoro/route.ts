@@ -45,12 +45,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const offset = parseInt(searchParams.get('offset') || '0');
     const status = searchParams.get('status') as any;
+    const date = searchParams.get('date') || undefined;
     
     const pomodoros = await getUserPomodoros(
       userId,
       status || undefined,
       limit,
-      offset
+      offset,
+      date // 传递日期参数
     );
     
     return NextResponse.json(pomodoros);

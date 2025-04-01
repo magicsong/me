@@ -81,23 +81,43 @@ export async function updatePomodoroStatus(id: number, status: 'running' | 'comp
 }
 
 // 获取用户的番茄钟列表
-export async function getUserPomodoros(userId: string, status?: 'running' | 'completed' | 'canceled' | 'paused', limit = 20, offset = 0) {
+export async function getUserPomodoros(
+  userId: string, 
+  status?: 'running' | 'completed' | 'canceled' | 'paused', 
+  limit = 20, 
+  offset = 0, 
+  date?: string
+) {
   try {
+    let whereConditions = eq(pomodoros.user_id, userId);
+    
+    if (status) {
+      whereConditions = and(whereConditions, eq(pomodoros.status, status));
+    }
+    
+    // 添加对日期的过滤
+    if (date) {
+      const startOfDay = new Date(date);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      whereConditions = and(
+        whereConditions, 
+        between(pomodoros.start_time, startOfDay, endOfDay)
+      );
+    }
+    
     let query = db.select({
       pomodoro: pomodoros,
       tagsCount: count(pomodoro_tag_relations.tag_id)
     })
     .from(pomodoros)
     .leftJoin(pomodoro_tag_relations, eq(pomodoros.id, pomodoro_tag_relations.pomodoro_id))
-    .where(eq(pomodoros.user_id, userId))
+    .where(whereConditions)
     .groupBy(pomodoros.id)
     .orderBy(desc(pomodoros.created_at))
     .limit(limit)
     .offset(offset);
-    
-    if (status) {
-      query = query.where(eq(pomodoros.status, status));
-    }
     
     return await query;
   } catch (error) {

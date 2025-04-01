@@ -397,7 +397,7 @@ export function TodoListContainer() {
   const fetchPomodoroSessions = async (date: Date) => {
     try {
       const formattedDate = date.toISOString().split('T')[0];
-      const response = await fetch(`/api/pomodoro/sessions?date=${formattedDate}`);
+      const response = await fetch(`/api/pomodoro?date=${formattedDate}`);
       
       if (!response.ok) {
         throw new Error('获取番茄钟记录失败');
