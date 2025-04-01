@@ -17,7 +17,7 @@ export function getDailySummaryPrompt(dateStr: string, context: DailySummaryCont
     睡眠质量: ${context.sleepQuality || '无'}
     明日目标: ${context.tomorrowGoals || '无'}
     
-    请根据以上信息，用一句话总结我这一天的情况，包括亮点和改进空间，不超过50个字。
+    请根据以上信息，总结我这一天的情况，包括亮点和改进空间，不超过500个字。
     使用客观但鼓励的语气，直接给出总结，不需要"你的总结是"这样的开头。
   `;
 }
