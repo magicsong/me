@@ -143,7 +143,7 @@ export async function POST(request: Request) {
             }
           },
           experimental_telemetry: {
-            isEnabled: true,
+            isEnabled: isProductionEnvironment,
             functionId: 'stream-text',
           },
         });
