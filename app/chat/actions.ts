@@ -8,7 +8,7 @@ import {
   getMessageById,
   updateChatVisiblityById,
 } from '@/lib/db/queries';
-import { VisibilityType } from '@/components/visibility-selector';
+import { VisibilityType } from '@/components/ai/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
 
 export async function saveChatModelAsCookie(model: string) {
@@ -29,6 +29,7 @@ export async function generateTitleFromUserMessage({
     - the title should be a summary of the user's message
     - do not use quotes or colons`,
     prompt: JSON.stringify(message),
+    experimental_telemetry: { isEnabled: true },
   });
 
   return title;

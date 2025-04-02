@@ -2,8 +2,15 @@
 
 import { motion } from 'framer-motion';
 import { Button } from '../ui/button';
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { UseChatHelpers } from '@ai-sdk/react';
+import { Loader2 } from 'lucide-react';
+
+interface SuggestionItem {
+  title: string;
+  label: string;
+  action: string;
+}
 
 interface SuggestedActionsProps {
   chatId: string;
@@ -11,7 +18,11 @@ interface SuggestedActionsProps {
 }
 
 function PureSuggestedActions({ chatId, append }: SuggestedActionsProps) {
-  const suggestedActions = [
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 默认建议，当API加载失败时使用
+  const defaultSuggestions = [
     {
       title: 'What are the advantages',
       label: 'of using Next.js?',
@@ -33,6 +44,36 @@ function PureSuggestedActions({ chatId, append }: SuggestedActionsProps) {
       action: 'What is the weather in San Francisco?',
     },
   ];
+
+  useEffect(() => {
+    async function fetchSuggestions() {
+      try {
+        const response = await fetch('/api/suggestions?count=4');
+        if (!response.ok) {
+          throw new Error('Failed to fetch suggestions');
+        }
+        const data = await response.json();
+        setSuggestions(data);
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        setSuggestions(defaultSuggestions); // 使用默认建议
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchSuggestions();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center w-full py-4">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const suggestedActions = suggestions.length > 0 ? suggestions : defaultSuggestions;
 
   return (
     <div
