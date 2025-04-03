@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarCheck, CheckCircle2, Trash2, Award, BookOpen, Brain, Heart, Users, Pencil } from 'lucide-react';
+import { CalendarCheck, CheckCircle2, Trash2, Award, BookOpen, Brain, Heart, Users, Pencil, BarChart } from 'lucide-react';
 import { deleteHabit, completeHabit, updateHabit } from './actions';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { EditHabitForm } from './edit-habit-form';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import Link from 'next/link';
 
 type Habit = {
   id: string;
@@ -121,6 +122,16 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
 
   return (
     <>
+      {/* 添加习惯分析按钮 */}
+      <div className="flex justify-end mb-4">
+        <Link href="/habits/analysis">
+          <Button variant="outline" className="flex items-center gap-2">
+            <BarChart className="h-4 w-4" />
+            习惯分析
+          </Button>
+        </Link>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {habits.map((habit) => {
           const categoryStyles = getCategoryStyles(habit.category);

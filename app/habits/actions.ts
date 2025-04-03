@@ -9,7 +9,7 @@ import {
   completeHabitInDB,
   getHabitStatsFromDB
 } from "@/lib/db";
-import { auth } from "@/auth"; // 导入auth函数，用于获取会话
+import { auth } from "@/lib/auth"; // 导入auth函数，用于获取会话
 
 // 获取习惯列表
 export async function getHabits() {

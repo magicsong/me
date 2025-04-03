@@ -13,7 +13,8 @@ import {
   saveHabitDifficultyInDB,  // 添加此导入
   getHabitDifficultyHistoryFromDB,  // 添加此导入
   completeHabitOnDateInDB, // 添加此导入用于补打卡
-} from '@/lib/db';
+  HabitHistoryEntry,
+} from '@/lib/db/db-habit';
 // 从新文件导入奖励相关函数
 import {
   getUserRewardsFromDB,
@@ -125,7 +126,7 @@ export async function saveHabitDifficulty(
   return { success: true };
 }
 
-export async function getHabitHistory(id: string) {
+export async function getHabitHistory(id: string): Promise<HabitHistoryEntry[]> {
   const userId = await getCurrentUserId();
   // 获取特定习惯的历史记录，传入用户ID确保只能查看自己的习惯
   return getHabitHistoryFromDB(Number(id), userId);
