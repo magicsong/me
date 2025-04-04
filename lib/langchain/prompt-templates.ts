@@ -3,7 +3,7 @@ import { DailySummaryContext, ThreeDaySummaryContext, WeeklySummaryContext } fro
 /**
  * 生成每日总结的提示模板
  */
-export function getDailySummaryPrompt(dateStr: string, context: DailySummaryContext): string {
+export function getDailySummaryPrompt(dateStr: string, context: DailySummaryContext, yesterdaySummary?: string): string {
   return `
     以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
     完成任务: ${context.completedTasks ? context.completedTasks.join(', ') : '无'}
@@ -16,6 +16,7 @@ export function getDailySummaryPrompt(dateStr: string, context: DailySummaryCont
     精力水平: ${context.energyLevel || '无'}
     睡眠质量: ${context.sleepQuality || '无'}
     明日目标: ${context.tomorrowGoals || '无'}
+    昨日总结: ${yesterdaySummary || '无'}
     
     请根据以上信息，总结我这一天的情况，包括亮点和改进空间，不超过500个字。
     使用客观但鼓励的语气，直接给出总结，不需要"你的总结是"这样的开头。

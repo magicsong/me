@@ -41,9 +41,9 @@ function convertToDailySummaryContext(dbData: DailySummaryContent): DailySummary
       date: '',
       completedTasks: [],
       goodThings: [],
-      learnings: '',
-      challenges: '',
-      improvements: '',
+      learnings: [], // 修改为数组类型
+      challenges: [], // 修改为数组类型
+      improvements: [], // 修改为数组类型
       mood: '',
       energyLevel: '',
       sleepQuality: '',
@@ -141,12 +141,19 @@ export async function generateAISummary(dateStr: string, userId: string, summary
   let context;
   let prompt;
   let referencedDataArr: {id: string | number; tableName: string}[] = [];
-  
+
   switch (summaryType) {
     case SummaryType.DAILY:
       const dailyData = await getDailySummary(dateStr);
+      const yesterdayDate = new Date(dateStr);
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+      const yesterdayData = await getDailySummary(yesterdayStr);
+
       context = convertToDailySummaryContext(dailyData.content as JournalEntry);
-      prompt = getDailySummaryPrompt(dateStr, context);
+      const yesterdaySummary = JSON.stringify(yesterdayData?.content) || '';
+      prompt = getDailySummaryPrompt(dateStr, context, yesterdaySummary);
+
       if (dailyData.id) {
         referencedDataArr.push({ id: dailyData.id, tableName: 'daily_summaries' });
       }
@@ -179,7 +186,7 @@ export async function generateAISummary(dateStr: string, userId: string, summary
   }
 
   const summary = await generateSummaryFeedback(prompt);
-  
+
   return {
     summary,
     referencedData: referencedDataArr

@@ -4,13 +4,13 @@
 export interface BaseSummaryItem {
   date: string;
   completedTasks: string[];
-  failedTasks: string[];
+  failedTasks: string[]; // 添加字段
   completionCount: number;
   completionScore: number;
   goodThings: string[];
-  learnings: string;
-  challenges: string;
-  improvements: string;
+  learnings: string[]; // 修改为数组类型
+  challenges: string[]; // 修改为数组类型
+  improvements: string[]; // 修改为数组类型
   mood: string;
   energyLevel: string;
   sleepQuality: string;

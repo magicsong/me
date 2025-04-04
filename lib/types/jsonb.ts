@@ -21,16 +21,18 @@ export interface JournalEntry {
     date: string; // Format: 'YYYY-MM-DD'
     mood: MoodType;
     dateType: DateType;
-    learnings: string;
-    challenges: string;
+    learnings: string[]; // 修改为数组类型
+    challenges: string[]; // 修改为数组类型
     goodThings: string[];
     energyLevel: EnergyLevel;
-    improvements: string;
+    improvements: string[]; // 修改为数组类型
     sleepQuality: SleepQuality;
     tomorrowGoals: string;
     completedTasks: string[];
+    failedTasks: string[]; // 添加字段
     completionCount: number;
     completionScore: number;
+    summary?: string; // 添加字段
 }
 
 // Helper type for partial journal entries

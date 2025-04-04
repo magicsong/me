@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { generateTodoItemsPlan } from '@/lib/langchain/chains';
+import { createTodo, addTagToTodo } from '@/lib/db-todolist';
+import { db } from '@/lib/db';
+import { pomodoro_tags } from '@/iac/drizzle/schema';
+import { eq } from 'drizzle-orm';
 
 // 示例输出格式与字段描述
 const EXAMPLE_OUTPUT = `[
@@ -39,9 +43,13 @@ export async function POST(request: NextRequest) {
     // 调用Langchain生成任务计划
     const todoItems = await generateTodoItems(description);
     
+    // 保存生成的待办事项到数据库
+    const savedTasks = await saveTodoItems(todoItems);
+    
     return NextResponse.json({
       success: true,
-      todoItems
+      todoItems: savedTasks,
+      message: '待办事项已成功生成并保存'
     });
   } catch (error) {
     console.error('生成待办事项计划失败:', error);
@@ -90,4 +98,68 @@ ${EXAMPLE_OUTPUT}
     console.error('生成任务计划失败:', error);
     throw error;
   }
+}
+
+// 新增：保存待办事项到数据库
+async function saveTodoItems(todoItems: any[]) {
+  const savedItems = [];
+  
+  for (const item of todoItems) {
+    // 计算截止日期：当前时间 + 预估时间（分钟）
+    const dueDate = new Date();
+    dueDate.setMinutes(dueDate.getMinutes() + (item.estimatedDuration || 0));
+    
+    // 保存待办事项
+    const savedTodo = await createTodo({
+      title: item.title,
+      description: item.description || '',
+      priority: item.priority?.toLowerCase() || 'medium',
+      status: 'pending',
+      due_date: dueDate,
+      estimated_duration: item.estimatedDuration || 0
+    });
+    
+    // 处理标签
+    if (item.suggestedTags && Array.isArray(item.suggestedTags)) {
+      const tagPromises = item.suggestedTags.map(async (tagName: string) => {
+        // 查找是否已存在相同名称的标签
+        let existingTags = await db
+          .select()
+          .from(pomodoro_tags)
+          .where(eq(pomodoro_tags.name, tagName));
+        
+        let tagId;
+        if (existingTags.length > 0) {
+          // 使用现有标签
+          tagId = existingTags[0].id;
+        } else {
+          // 创建新标签 (假设有一个创建标签的函数)
+          const [newTag] = await db
+            .insert(pomodoro_tags)
+            .values({ name: tagName, color: generateRandomColor() })
+            .returning();
+          tagId = newTag.id;
+        }
+        
+        // 关联标签与待办事项
+        await addTagToTodo(savedTodo.id, tagId);
+      });
+      
+      await Promise.all(tagPromises);
+    }
+    
+    // 重新获取保存后的待办事项（包含标签）
+    savedItems.push(savedTodo);
+  }
+  
+  return savedItems;
+}
+
+// 生成随机颜色
+function generateRandomColor() {
+  const colors = [
+    "#FF5733", "#33FF57", "#3357FF", "#FF33A8", 
+    "#33A8FF", "#A833FF", "#FF8C33", "#33FFE0"
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
 }
