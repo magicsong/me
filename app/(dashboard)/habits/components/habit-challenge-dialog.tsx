@@ -14,6 +14,8 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { completeHabit, getHabitDetail } from '../actions';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 interface HabitChallengeTier {
     id: number;
@@ -53,18 +55,19 @@ export function HabitChallengeDialog({
     const [generatingTiers, setGeneratingTiers] = useState(false);
     const [tiersError, setTiersError] = useState<string | null>(null);
     const [completingTier, setCompletingTier] = useState<number | null>(null);
+    const [currentStatus, setCurrentStatus] = useState<string>('');
 
     async function handleGenerateTiers(id: number) {
         setGeneratingTiers(true);
         setTiersError(null);
         try {
-            // 直接调用API生成挑战阶梯
+            // 直接调用API生成挑战阶梯，并传递当前状态
             const response = await fetch('/api/habits/generate-tiers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ habitId: id }),
+                body: JSON.stringify({ habitId: id, currentStatus }),
             });
 
             if (!response.ok) {
@@ -150,6 +153,20 @@ export function HabitChallengeDialog({
                                 <p className="text-muted-foreground mb-4">
                                     创建不同难度的挑战阶梯，完成后获得额外奖励。
                                 </p>
+                                
+                                <div className="mb-4">
+                                    <Label htmlFor="currentStatus" className="text-left block mb-2">
+                                        请描述您当前的状态（可选）
+                                    </Label>
+                                    <Textarea
+                                        id="currentStatus"
+                                        placeholder="例如：我目前每周跑步两次，每次30分钟，想提高耐力和频率..."
+                                        value={currentStatus}
+                                        onChange={(e) => setCurrentStatus(e.target.value)}
+                                        className="min-h-[80px]"
+                                    />
+                                </div>
+                                
                                 <Button
                                     onClick={() => habitDetail && handleGenerateTiers(habitDetail.id)}
                                     disabled={generatingTiers}
@@ -218,11 +235,24 @@ export function HabitChallengeDialog({
                                     })}
                                 </div>
 
-                                <DialogFooter>
+                                <DialogFooter className="flex-col gap-4 sm:flex-row">
+                                    <div className="w-full sm:w-2/3">
+                                        <Label htmlFor="regenerateStatus" className="text-left block mb-2">
+                                            请描述您当前的状态（可选）
+                                        </Label>
+                                        <Textarea
+                                            id="regenerateStatus"
+                                            placeholder="描述您的当前状态以获取更个性化的挑战"
+                                            value={currentStatus}
+                                            onChange={(e) => setCurrentStatus(e.target.value)}
+                                            className="min-h-[60px]"
+                                        />
+                                    </div>
                                     <Button
                                         variant="outline"
                                         onClick={() => habitDetail && handleGenerateTiers(habitDetail.id)}
                                         disabled={generatingTiers}
+                                        className="sm:self-end"
                                     >
                                         {generatingTiers ? (
                                             <>

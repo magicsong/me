@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
         // 解析请求体
         const body = await request.json();
-        const { habitId } = body;
+        const { habitId, currentStatus } = body;
 
         if (!habitId) {
             return NextResponse.json(
@@ -45,13 +45,16 @@ export async function POST(request: Request) {
     请为以下习惯设计三个不同难度级别的挑战阶梯，从简单到困难。每个阶梯需要包含：
     1. 名称
     2. 难度级别（1-3，1最简单）
-    3. 详细描述
+    3. 详细描述，重点在于每日/每次应该怎么做，或者什么要求，不需要添加连续N天，或者坚持多少天等内容
     4. 奖励点数（简单10-20，中等30-40，困难50-70）
 
     习惯名称：${habit.name}
     习惯描述：${habit.description || '无描述'}
     类别：${habit.category || '无类别'}
     频率：${habit.frequency}
+    用户当前状态：${currentStatus || '用户未提供当前状态'}
+
+    请特别注意用户的当前状态，确保设计的挑战阶梯符合用户的现状。第一级挑战应该略高于用户当前水平，让用户容易入门；第二级和第三级挑战应该逐步提高难度，帮助用户持续进步。
 
     请以JSON格式返回三个挑战阶梯，不要包含任何其他说明文字。格式例子：
     [
