@@ -324,8 +324,6 @@ export const ai_insights = pgTable("ai_insights", {
 			idx_ai_insights_user_id: index("idx_ai_insights_user_id").using("btree", table.user_id),
 			idx_ai_insights_kind: index("idx_ai_insights_kind").using("btree", table.kind),
 			idx_ai_insights_created_at: index("idx_ai_insights_created_at").using("btree", table.created_at),
-			// 复合索引，确保用户在特定时间段内特定类型的洞察是唯一的
-			unique_user_kind_period: uniqueIndex("unique_user_kind_period").on(table.user_id, table.kind, table.time_period_start, table.time_period_end),
 		}
 	});
 

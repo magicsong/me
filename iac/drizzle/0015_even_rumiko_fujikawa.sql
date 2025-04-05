@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS "unique_user_kind_period";
