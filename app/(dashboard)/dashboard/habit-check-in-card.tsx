@@ -12,28 +12,48 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge'; // 添加 Badge 导入
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle, AlertTriangle,
   CalendarIcon, CheckCheck,
   CheckCircle2, Circle,
-  ThumbsUp
+  ThumbsUp, Trophy
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { completeHabit, getHabitDifficultyHistory, saveHabitDifficulty } from '../habits/actions';
+import { completeHabit, getHabitDifficultyHistory, saveHabitDifficulty, getHabitDetail } from '../habits/actions';
 import { HabitCalendar } from '../habits/habit-calendar';
 import { checkSummaryCompletion, saveDailySummary } from './actions';
 
 // 导入类型定义
 type Habit = {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   frequency: 'daily' | 'weekly' | 'monthly';
   createdAt: string;
   completedToday: boolean;
   streak: number;
+  challenge_tiers?: ChallengeTier[];
+  completed_tier?: CompletedTier | null;
+};
+
+// 挑战阶梯类型
+type ChallengeTier = {
+  id: number;
+  name: string;
+  level: number;
+  description?: string;
+  reward_points: number;
+};
+
+// 完成的挑战阶梯类型
+type CompletedTier = {
+  id: number;
+  name: string;
+  level: number;
+  reward_points: number;
 };
 
 // 难度评估类型
@@ -138,6 +158,157 @@ function DifficultyDialog({
   );
 }
 
+// 挑战阶梯对话框
+function TierSelectionDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  habit
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (habitId: number, tierId: number) => void;
+  habit: Habit | null;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [habitDetail, setHabitDetail] = useState<any>(null);
+  
+  useEffect(() => {
+    async function loadHabitDetail() {
+      if (!habit) return;
+      setLoading(true);
+      try {
+        const detail = await getHabitDetail(habit.id);
+        setHabitDetail(detail);
+      } catch (error) {
+        console.error('获取习惯详情失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    if (isOpen && habit) {
+      loadHabitDetail();
+    }
+  }, [isOpen, habit]);
+  
+  const handleTierSelect = (tierId: number) => {
+    if (!habit) return;
+    onConfirm(habit.id, tierId);
+  };
+  
+  const getTierColors = (level: number) => {
+    return {
+      1: 'border-green-500 bg-green-50 hover:bg-green-100',
+      2: 'border-amber-500 bg-amber-50 hover:bg-amber-100',
+      3: 'border-red-500 bg-red-50 hover:bg-red-100',
+    }[level] || 'border-gray-500 bg-gray-50 hover:bg-gray-100';
+  };
+  
+  const getTierLabel = (level: number) => {
+    return {
+      1: '初级',
+      2: '中级',
+      3: '高级',
+    }[level] || '其他';
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>选择挑战级别</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            为「{habit?.name || ''}」选择一个挑战级别，不同级别将获得不同的奖励点数。
+          </p>
+          
+          {loading ? (
+            <div className="flex justify-center p-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : !habitDetail?.challenge_tiers?.length ? (
+            <div className="text-center py-6">
+              <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+              <p>此习惯暂无挑战级别</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => {
+                  // 直接完成普通打卡
+                  if (habit) onConfirm(habit.id, 0);
+                  onClose();
+                }}
+              >
+                进行普通打卡
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3 mt-2">
+              {habitDetail.challenge_tiers.map((tier: ChallengeTier) => {
+                const tierColors = getTierColors(tier.level);
+                
+                return (
+                  <div 
+                    key={tier.id} 
+                    className={`border-l-4 p-3 rounded-md ${tierColors} cursor-pointer transition-all duration-200`}
+                    onClick={() => handleTierSelect(tier.id)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-medium flex items-center gap-2">
+                          {tier.name}
+                          <Badge>{getTierLabel(tier.level)}</Badge>
+                        </h4>
+                        {tier.description && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {tier.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center">
+                        <Badge variant="outline" className="text-amber-600">
+                          +{tier.reward_points} 奖励
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              <div 
+                className="border p-3 rounded-md bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all duration-200"
+                onClick={() => {
+                  if (habit) onConfirm(habit.id, 0);
+                  onClose();
+                }}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className="font-medium">普通完成</h4>
+                    <p className="text-xs text-muted-foreground">
+                      不选择挑战级别，获得标准奖励
+                    </p>
+                  </div>
+                  <Badge variant="outline">
+                    +{habit?.rewardPoints || 10} 奖励
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            取消
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // 难度调整建议组件
 function DifficultyFeedback({ habitId, habitName }: { habitId: string, habitName: string }) {
   const [difficultyHistory, setDifficultyHistory] = useState<any>(null);
@@ -229,16 +400,21 @@ export function HabitCheckInCard({
 }) {
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
-  const [animatingHabitId, setAnimatingHabitId] = useState<string | null>(null);
+  const [animatingHabitId, setAnimatingHabitId] = useState<number | null>(null);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const progress = totalCount > 0 ? (completedCount / totalCount * 100) : 0;
   
   // 难度评估对话框状态
   const [difficultyDialogOpen, setDifficultyDialogOpen] = useState(false);
   const [currentHabit, setCurrentHabit] = useState<Habit | null>(null);
+
+  // 挑战选择对话框状态
+  const [tierDialogOpen, setTierDialogOpen] = useState(false);
   
   // 每日总结状态
   const [completedSummaries, setCompletedSummaries] = useState<{[key: string]: boolean}>({});
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  const [summaryDate, setSummaryDate] = useState<'today' | 'yesterday'>('today');
   
   // 今天和昨天的日期字符串
   const todayStr = new Date().toISOString().split('T')[0];
@@ -272,16 +448,33 @@ export function HabitCheckInCard({
     setSelectedHabit(habit);
   };
   
-  // 处理打卡完成
-  async function handleCheckIn(e: React.MouseEvent, habit: Habit) {
+  // 处理打卡开始
+  function handleCheckInStart(e: React.MouseEvent, habit: Habit) {
     e.stopPropagation(); // 阻止冒泡，避免同时触发打开日历
     if (habit.completedToday) return;
     
-    setAnimatingHabitId(habit.id);
+    // 查看习惯是否有挑战阶梯
+    if (habit.challenge_tiers && habit.challenge_tiers.length > 0) {
+      // 打开挑战选择对话框
+      setCurrentHabit(habit);
+      setTierDialogOpen(true);
+    } else {
+      // 直接完成普通打卡
+      handleCheckIn(habit.id);
+    }
+  }
+  
+  // 处理打卡完成
+  async function handleCheckIn(habitId: number, tierId?: number) {
+    setAnimatingHabitId(habitId);
     
     try {
-      // 先完成打卡
-      await completeHabit(habit.id);
+      // 完成打卡，可能带有特定的挑战阶梯ID
+      await completeHabit(habitId, tierId);
+      
+      // 获取对应的习惯
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) return;
       
       // 打开难度评估对话框
       setCurrentHabit(habit);
@@ -310,8 +503,8 @@ export function HabitCheckInCard({
   async function handleDifficultyConfirm(difficulty: DifficultyLevel, comment: string) {
     if (currentHabit && difficulty) {
       try {
-        // 使用新的专用函数保存难度评估，而不是completeHabit
-        await saveHabitDifficulty(currentHabit.id, difficulty, comment);
+        // 使用新的专用函数保存难度评估
+        await saveHabitDifficulty(String(currentHabit.id), difficulty, comment);
         // 刷新数据
         router.refresh();
       } catch (error) {
@@ -322,7 +515,7 @@ export function HabitCheckInCard({
     setCurrentHabit(null);
   }
 
-  // 处理每日总结提交 - 使用API保存
+  // 处理每日总结提交
   async function handleSummarySubmit(data: any) {
     // 确定要标记为完成的日期
     const dateToMark = summaryDate === 'today' ? todayStr : yesterdayStr;
@@ -378,7 +571,16 @@ export function HabitCheckInCard({
           onConfirm={handleDifficultyConfirm}
           habitName={currentHabit.name}
         />
-      )}      
+      )}
+
+      {/* 挑战选择对话框 */}
+      <TierSelectionDialog 
+        isOpen={tierDialogOpen}
+        onClose={() => setTierDialogOpen(false)}
+        onConfirm={handleCheckIn}
+        habit={currentHabit}
+      />
+      
       <div className="flex flex-col md:flex-row gap-4 w-full">
         <Card className="flex-1">
           <CardHeader className="pb-3">
@@ -440,9 +642,23 @@ export function HabitCheckInCard({
                     {habit.description && (
                       <div className="text-xs text-muted-foreground">{habit.description}</div>
                     )}
+                    
+                    {/* 显示已完成的挑战级别 */}
+                    {habit.completedToday && habit.completed_tier && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Trophy className="h-3 w-3 text-amber-500" />
+                        <span className="text-xs font-medium text-amber-600">
+                          挑战已完成: {habit.completed_tier.name}
+                        </span>
+                        <Badge variant="outline" className="text-xs ml-1 h-5 px-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100">
+                          +{habit.completed_tier.reward_points}
+                        </Badge>
+                      </div>
+                    )}
+                    
                     {/* 添加难度建议显示 */}
                     {habit.completedToday && (
-                      <DifficultyFeedback habitId={habit.id} habitName={habit.name} />
+                      <DifficultyFeedback habitId={String(habit.id)} habitName={habit.name} />
                     )}
                   </div>
                   
@@ -457,7 +673,7 @@ export function HabitCheckInCard({
                         variant="outline" 
                         size="sm" 
                         className="ml-2 h-8"
-                        onClick={(e) => handleCheckIn(e, habit)}
+                        onClick={(e) => handleCheckInStart(e, habit)}
                       >
                         <CheckCheck className="h-4 w-4 mr-1" />
                         打卡

@@ -16,11 +16,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CalendarCheck, CheckCircle2, Trash2, Award, BookOpen, Brain, Heart, Users, Pencil, BarChart } from 'lucide-react';
-import { deleteHabit, completeHabit, updateHabit } from './actions';
+import { CalendarCheck, CheckCircle2, Trash2, Award, BookOpen, Brain, Heart, Users, Pencil, BarChart, Trophy } from 'lucide-react';
+import { deleteHabit, completeHabit, updateHabit, getHabitDetail, completeHabitWithTier } from './actions';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -28,9 +29,10 @@ import { EditHabitForm } from './edit-habit-form';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
+import { HabitChallengeDialog } from './components/habit-challenge-dialog';
 
 type Habit = {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   frequency: 'daily' | 'weekly' | 'monthly';
@@ -39,14 +41,23 @@ type Habit = {
   streak: number;
   category?: 'health' | 'productivity' | 'mindfulness' | 'learning' | 'social';
   rewardPoints?: number;
+  challenge_tiers?: any[];
+  completed_tier?: {
+    id: number;
+    name: string;
+    level: number;
+    reward_points: number;
+  } | null;
 };
 
 export function HabitsList({ habits }: { habits: Habit[] }) {
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
+  const [habitToDelete, setHabitToDelete] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [habitToEdit, setHabitToEdit] = useState<Habit | null>(null);
+  const [habitDetail, setHabitDetail] = useState<Habit | null>(null);
+  const [challengeDialogOpen, setChallengeDialogOpen] = useState(false);
   
   async function handleDeleteHabit() {
     if (habitToDelete) {
@@ -56,12 +67,12 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
     }
   }
   
-  async function handleCompleteHabit(id: string) {
+  async function handleCompleteHabit(id: number) {
     await completeHabit(id);
     router.refresh();
   }
   
-  function openDeleteDialog(id: string) {
+  function openDeleteDialog(id: number) {
     setHabitToDelete(id);
     setDeleteDialogOpen(true);
   }
@@ -71,7 +82,24 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
     setEditDialogOpen(true);
   }
 
-  // 获取类别对应的图标和颜色
+  async function handleViewHabitDetail(id: number) {
+    try {
+      const detail = await getHabitDetail(id);
+      setHabitDetail(detail);
+      setChallengeDialogOpen(true);
+    } catch (error) {
+      console.error('获取习惯详情失败:', error);
+    }
+  }
+
+  async function refreshHabitDetail() {
+    if (habitDetail) {
+      const updatedDetail = await getHabitDetail(habitDetail.id);
+      setHabitDetail(updatedDetail);
+      router.refresh();
+    }
+  }
+
   function getCategoryStyles(category?: string) {
     switch (category) {
       case 'health':
@@ -89,7 +117,6 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
     }
   }
 
-  // 获取类别的中文名称
   function getCategoryName(category?: string) {
     switch (category) {
       case 'health': return '健康';
@@ -113,16 +140,14 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
     );
   }
 
-  // 计算进度，暂时以30天为目标
   const calculateProgress = (streak: number) => {
-    const target = 30; // 假设30天为养成习惯的目标
+    const target = 30;
     const progress = Math.min((streak / target) * 100, 100);
     return Math.round(progress);
   };
 
   return (
     <>
-      {/* 添加习惯分析按钮 */}
       <div className="flex justify-end mb-4">
         <Link href="/habits/analysis">
           <Button variant="outline" className="flex items-center gap-2">
@@ -199,21 +224,45 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
                 {habit.description && (
                   <p className="text-sm text-muted-foreground mb-4">{habit.description}</p>
                 )}
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
                     <CalendarCheck className="h-5 w-5 text-muted-foreground" />
                     <span className="font-medium">连续: {habit.streak} 天</span>
                   </div>
-                  <Button
-                    variant={habit.completedToday ? "secondary" : "outline"}
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => handleCompleteHabit(habit.id)}
-                  >
-                    <CheckCircle2 className={`h-4 w-4 ${habit.completedToday ? 'text-green-500' : ''}`} />
-                    {habit.completedToday ? '已完成' : '完成'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleViewHabitDetail(habit.id)}
+                    >
+                      <Trophy className="h-4 w-4" />
+                      挑战
+                    </Button>
+                    <Button
+                      variant={habit.completedToday ? "secondary" : "outline"}
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleCompleteHabit(habit.id)}
+                    >
+                      <CheckCircle2 className={`h-4 w-4 ${habit.completedToday ? 'text-green-500' : ''}`} />
+                      {habit.completedToday ? '已完成' : '完成'}
+                    </Button>
+                  </div>
                 </div>
+                
+                {/* 添加已完成挑战显示 */}
+                {habit.completedToday && habit.completed_tier && (
+                  <div className="mt-2 flex items-center gap-2 bg-amber-50 rounded-md p-2 border border-amber-200 animate-pulse">
+                    <div className="flex items-center gap-1">
+                      <Trophy className="h-4 w-4 text-amber-500" />
+                      <span className="text-sm font-medium text-amber-700">
+                        已完成挑战: {habit.completed_tier.name}
+                      </span>
+                    </div>
+                    <Badge className="bg-amber-500">+{habit.completed_tier.reward_points}分</Badge>
+                  </div>
+                )}
               </CardContent>
               <CardFooter className="pt-0 pb-4">
                 <div className="w-full">
@@ -232,7 +281,6 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
         })}
       </div>
       
-      {/* 删除确认对话框 */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -250,7 +298,6 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 编辑习惯对话框 */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -270,6 +317,13 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
           )}
         </DialogContent>
       </Dialog>
+
+      <HabitChallengeDialog 
+        isOpen={challengeDialogOpen}
+        habitDetail={habitDetail}
+        onClose={() => setChallengeDialogOpen(false)}
+        onRefresh={refreshHabitDetail}
+      />
     </>
   );
 }

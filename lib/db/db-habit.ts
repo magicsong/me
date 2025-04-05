@@ -1,5 +1,4 @@
-
-import { habits } from "@/iac/drizzle/schema";
+import { habits, habit_challenge_tiers, habit_entries } from "@/iac/drizzle/schema";
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
     date,
@@ -17,7 +16,8 @@ export const habitEntries = pgTable('habit_entries', {
     id: serial('id').primaryKey(),
     habitId: integer('habit_id').references(() => habits.id).notNull(),
     completedAt: date('completed_at').defaultNow().notNull(),
-    userId: text('user_id')  // 如果系统支持多用户，这里可以关联到用户表
+    userId: text('user_id'),  // 如果系统支持多用户，这里可以关联到用户表
+    tierId: integer('tier_id')
 });
 
 // 难度级别枚举
@@ -34,9 +34,64 @@ export const habitDifficulties = pgTable('habit_difficulties', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
 
+// 获取习惯及其挑战阶梯
 export async function getHabitByIdDB(id: number, userId: string) {
+    // 获取习惯基本信息
     const habit = await db.select().from(habits).where(and(eq(habits.id, id), eq(habits.user_id, userId))).limit(1);
-    return habit.length > 0 ? habit[0] : null;
+    
+    if (habit.length === 0) {
+        return null;
+    }
+    
+    // 获取该习惯的所有挑战阶梯
+    const tiers = await db.select()
+        .from(habit_challenge_tiers)
+        .where(and(
+            eq(habit_challenge_tiers.habit_id, id),
+            eq(habit_challenge_tiers.user_id, userId)
+        ))
+        .orderBy(habit_challenge_tiers.level);
+    
+    // 获取今天的完成情况和挑战阶梯信息
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const dateEntries = await db
+        .select({
+            id: habit_entries.id,
+            tier_id: habit_entries.tier_id,
+            tier_name: habit_challenge_tiers.name,
+            tier_level: habit_challenge_tiers.level,
+            tier_reward_points: habit_challenge_tiers.reward_points
+        })
+        .from(habit_entries)
+        .leftJoin(
+            habit_challenge_tiers,
+            eq(habit_entries.tier_id, habit_challenge_tiers.id)
+        )
+        .where(
+            and(
+                eq(habit_entries.habit_id, id),
+                eq(habit_entries.completed_at, today),
+                eq(habit_entries.user_id, userId)
+            )
+        )
+        .limit(1);
+    
+    const completedEntry = dateEntries.length > 0 ? dateEntries[0] : null;
+    
+    // 返回包含挑战阶梯和当前完成状态的习惯信息
+    return {
+        ...habit[0],
+        challenge_tiers: tiers || [],
+        completedToday: dateEntries.length > 0,
+        completed_tier: completedEntry && completedEntry.tier_id ? {
+            id: completedEntry.tier_id,
+            name: completedEntry.tier_name,
+            level: completedEntry.tier_level,
+            reward_points: completedEntry.tier_reward_points
+        } : null
+    };
 }
 
 // 习惯相关的数据库函数
@@ -52,15 +107,25 @@ export async function getHabitsFromDB(userId: string, targetDate?: Date) {
     // 为每个习惯获取完成记录
     const habitsWithProgress = await Promise.all(
         allHabits.map(async (habit) => {
-            // 检查目标日期是否已完成
-            const dateEntry = await db
-                .select()
-                .from(habitEntries)
+            // 检查目标日期是否已完成，同时获取挑战阶梯信息
+            const dateEntries = await db
+                .select({
+                    id: habit_entries.id,
+                    tier_id: habit_entries.tier_id,
+                    tier_name: habit_challenge_tiers.name,
+                    tier_level: habit_challenge_tiers.level,
+                    tier_reward_points: habit_challenge_tiers.reward_points
+                })
+                .from(habit_entries)
+                .leftJoin(
+                    habit_challenge_tiers,
+                    eq(habit_entries.tier_id, habit_challenge_tiers.id)
+                )
                 .where(
                     and(
-                        eq(habitEntries.habitId, habit.id),
-                        eq(habitEntries.completedAt, checkDate),
-                        eq(habitEntries.userId, userId)
+                        eq(habit_entries.habit_id, habit.id),
+                        eq(habit_entries.completed_at, checkDate),
+                        eq(habit_entries.user_id, userId)
                     )
                 )
                 .limit(1);
@@ -106,16 +171,36 @@ export async function getHabitsFromDB(userId: string, targetDate?: Date) {
                 streak = currentStreak;
             }
 
+            // 获取此习惯的所有挑战阶梯
+            const challengeTiers = await db
+                .select()
+                .from(habit_challenge_tiers)
+                .where(and(
+                    eq(habit_challenge_tiers.habit_id, habit.id),
+                    eq(habit_challenge_tiers.user_id, userId)
+                ))
+                .orderBy(habit_challenge_tiers.level);
+
+            const completedEntry = dateEntries.length > 0 ? dateEntries[0] : null;
+            
             return {
-                id: habit.id.toString(),
+                id: habit.id,
                 name: habit.name,
                 description: habit.description || '',
                 frequency: habit.frequency,
                 createdAt: habit.created_at,
-                completedToday: dateEntry.length > 0,
+                completedToday: dateEntries.length > 0,
                 category: habit.category,
                 rewardPoints: habit.reward_points,
-                streak: streak
+                streak: streak,
+                // 添加挑战相关信息
+                challenge_tiers: challengeTiers,
+                completed_tier: completedEntry && completedEntry.tier_id ? {
+                    id: completedEntry.tier_id,
+                    name: completedEntry.tier_name,
+                    level: completedEntry.tier_level,
+                    reward_points: completedEntry.tier_reward_points
+                } : null
             };
         })
     );
@@ -153,43 +238,57 @@ export async function deleteHabitFromDB(id: number, userId: string) {
     );
 }
 
-export async function completeHabitInDB(id: number, completed: boolean, userId: string) {
+export async function completeHabitInDB(id: number, completed: boolean, userId: string, tierId?: number) {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // 设置为今天的开始时间
 
     // 检查今天是否已有记录
     const existingEntry = await db
         .select()
-        .from(habitEntries)
+        .from(habit_entries)
         .where(
             and(
-                eq(habitEntries.habitId, id),
-                eq(habitEntries.completedAt, today),
-                eq(habitEntries.userId, userId)
+                eq(habit_entries.habit_id, id),
+                eq(habit_entries.completed_at, today),
+                eq(habit_entries.user_id, userId)
             )
         )
         .limit(1);
 
     // 如果需要标记为完成且没有现有记录，则添加新记录
     if (completed && existingEntry.length === 0) {
-        await db.insert(habitEntries).values({
-            habitId: id,
-            completedAt: today,
-            userId
+        await db.insert(habit_entries).values({
+            habit_id: id,
+            completed_at: today,
+            user_id: userId,
+            tier_id: tierId || null
         });
         return true;
     }
 
     // 如果需要标记为未完成且有记录，则删除记录
     if (!completed && existingEntry.length > 0) {
-        await db.delete(habitEntries).where(
+        await db.delete(habit_entries).where(
             and(
-                eq(habitEntries.habitId, id),
-                eq(habitEntries.completedAt, today),
-                eq(habitEntries.userId, userId)
+                eq(habit_entries.habit_id, id),
+                eq(habit_entries.completed_at, today),
+                eq(habit_entries.user_id, userId)
             )
         );
         return false;
+    }
+
+    // 如果已完成并存在记录，但需要更新挑战阶梯
+    if (completed && existingEntry.length > 0 && tierId !== undefined && tierId !== existingEntry[0].tier_id) {
+        await db.update(habit_entries)
+            .set({ tier_id: tierId })
+            .where(
+                and(
+                    eq(habit_entries.habit_id, id),
+                    eq(habit_entries.completed_at, today),
+                    eq(habit_entries.user_id, userId)
+                )
+            );
     }
 
     // 返回当前状态
@@ -197,7 +296,7 @@ export async function completeHabitInDB(id: number, completed: boolean, userId: 
 }
 
 // 在特定日期完成习惯
-export async function completeHabitOnDateInDB(habitId: number, userId: string, targetDate: Date) {
+export async function completeHabitOnDateInDB(habitId: number, userId: string, targetDate: Date, tierId?: number) {
     // 将日期设置为当天的开始时间（0点0分0秒）
     const normalizedDate = new Date(targetDate);
     normalizedDate.setHours(0, 0, 0, 0);
@@ -205,18 +304,28 @@ export async function completeHabitOnDateInDB(habitId: number, userId: string, t
     // 检查指定日期是否已有记录
     const existingEntry = await db
         .select()
-        .from(habitEntries)
+        .from(habit_entries)
         .where(
             and(
-                eq(habitEntries.habitId, habitId),
-                eq(habitEntries.completedAt, normalizedDate),
-                eq(habitEntries.userId, userId)
+                eq(habit_entries.habit_id, habitId),
+                eq(habit_entries.completed_at, normalizedDate),
+                eq(habit_entries.user_id, userId)
             )
         )
         .limit(1);
 
-    // 如果已存在记录，直接返回（避免重复记录）
+    // 如果已存在记录但需要更新挑战阶梯
     if (existingEntry.length > 0) {
+        if (tierId !== undefined && tierId !== existingEntry[0].tier_id) {
+            await db.update(habit_entries)
+                .set({ tier_id: tierId })
+                .where(
+                    and(
+                        eq(habit_entries.id, existingEntry[0].id),
+                        eq(habit_entries.user_id, userId)
+                    )
+                );
+        }
         return existingEntry[0].id;
     }
 
@@ -228,10 +337,11 @@ export async function completeHabitOnDateInDB(habitId: number, userId: string, t
     }
 
     // 添加补打卡记录
-    const result = await db.insert(habitEntries).values({
-        habitId,
-        completedAt: normalizedDate,
-        userId
+    const result = await db.insert(habit_entries).values({
+        habit_id: habitId,
+        completed_at: normalizedDate,
+        user_id: userId,
+        tier_id: tierId || null
     }).returning();
 
     return result[0].id;
@@ -247,29 +357,36 @@ export interface HabitHistoryEntry {
 
 // 获取习惯历史记录
 export async function getHabitHistoryFromDB(habitId: number, userId: string): Promise<HabitHistoryEntry[]> {
-    // 使用JOIN查询同时获取完成记录和难度评价
+    // 使用JOIN查询同时获取完成记录、挑战阶梯和难度评价
     const entries = await db
         .select({
-            completedAt: habitEntries.completedAt,
+            completedAt: habit_entries.completed_at,
             difficulty: habitDifficulties.difficulty,
-            comment: habitDifficulties.comment
+            comment: habitDifficulties.comment,
+            tierId: habit_entries.tier_id,
+            tierName: habit_challenge_tiers.name,
+            tierRewardPoints: habit_challenge_tiers.reward_points
         })
-        .from(habitEntries)
+        .from(habit_entries)
         .leftJoin(
             habitDifficulties,
             and(
-                eq(habitEntries.habitId, habitDifficulties.habitId),
-                eq(habitEntries.userId, habitDifficulties.userId),
-                eq(habitEntries.completedAt, habitDifficulties.completedAt)
+                eq(habit_entries.habit_id, habitDifficulties.habitId),
+                eq(habit_entries.user_id, habitDifficulties.userId),
+                eq(habit_entries.completed_at, habitDifficulties.completedAt)
             )
+        )
+        .leftJoin(
+            habit_challenge_tiers,
+            eq(habit_entries.tier_id, habit_challenge_tiers.id)
         )
         .where(
             and(
-                eq(habitEntries.habitId, habitId),
-                eq(habitEntries.userId, userId)
+                eq(habit_entries.habit_id, habitId),
+                eq(habit_entries.user_id, userId)
             )
         )
-        .orderBy(desc(habitEntries.completedAt))
+        .orderBy(desc(habit_entries.completed_at))
         .limit(30); // 限制返回最多30条记录
 
     // 将查询结果转换为前端需要的格式
@@ -277,7 +394,12 @@ export async function getHabitHistoryFromDB(habitId: number, userId: string): Pr
         date: new Date(entry.completedAt),
         completed: true,
         difficulty: entry.difficulty || null,
-        comment: entry.comment || null
+        comment: entry.comment || null,
+        tier: entry.tierId ? {
+            id: entry.tierId,
+            name: entry.tierName,
+            rewardPoints: entry.tierRewardPoints
+        } : null
     }));
 }
 
@@ -614,5 +736,125 @@ export async function getHabitDifficultyHistoryFromDB(habitId: number, userId: s
             date: entry.completedAt,
             comment: entry.comment
         }))
+    };
+}
+
+// 添加习惯挑战阶梯相关的数据库函数
+
+// 创建习惯挑战阶梯
+export async function createHabitTierInDB(habitId: number, userId: string, tierData: {
+    name: string;
+    level: number;
+    description?: string;
+    reward_points: number;
+    completion_criteria?: any;
+}) {
+    const result = await db.insert(habit_challenge_tiers).values({
+        habit_id: habitId,
+        user_id: userId,
+        name: tierData.name,
+        level: tierData.level,
+        description: tierData.description || null,
+        reward_points: tierData.reward_points,
+        completion_criteria: tierData.completion_criteria || {}
+    }).returning();
+
+    return result[0];
+}
+
+// 获取习惯的所有挑战阶梯
+export async function getHabitTiersFromDB(habitId: number, userId: string) {
+    const tiers = await db.select()
+        .from(habit_challenge_tiers)
+        .where(and(
+            eq(habit_challenge_tiers.habit_id, habitId),
+            eq(habit_challenge_tiers.user_id, userId)
+        ))
+        .orderBy(habit_challenge_tiers.level);
+    
+    return tiers;
+}
+
+// 更新习惯挑战阶梯
+export async function updateHabitTierInDB(tierId: number, userId: string, tierData: {
+    name?: string;
+    level?: number;
+    description?: string;
+    reward_points?: number;
+    completion_criteria?: any;
+}) {
+    const result = await db.update(habit_challenge_tiers)
+        .set({
+            name: tierData.name,
+            level: tierData.level,
+            description: tierData.description,
+            reward_points: tierData.reward_points,
+            completion_criteria: tierData.completion_criteria
+        })
+        .where(and(
+            eq(habit_challenge_tiers.id, tierId),
+            eq(habit_challenge_tiers.user_id, userId)
+        ))
+        .returning();
+    
+    return result[0];
+}
+
+// 删除习惯挑战阶梯
+export async function deleteHabitTierFromDB(tierId: number, userId: string) {
+    // 首先更新所有使用此阶梯的记录
+    await db.update(habit_entries)
+        .set({ tier_id: null })
+        .where(eq(habit_entries.tier_id, tierId));
+    
+    // 然后删除阶梯
+    await db.delete(habit_challenge_tiers)
+        .where(and(
+            eq(habit_challenge_tiers.id, tierId),
+            eq(habit_challenge_tiers.user_id, userId)
+        ));
+}
+
+// 获取习惯的统计信息，包含挑战阶梯完成情况
+export async function getHabitTierStatsFromDB(habitId: number, userId: string) {
+    // 获取所有的挑战阶梯
+    const tiers = await getHabitTiersFromDB(habitId, userId);
+    
+    // 统计每个阶梯完成的次数
+    const tierStats = await Promise.all(tiers.map(async tier => {
+        const completions = await db
+            .select({ count: sql`count(*)` })
+            .from(habit_entries)
+            .where(and(
+                eq(habit_entries.habit_id, habitId),
+                eq(habit_entries.user_id, userId),
+                eq(habit_entries.tier_id, tier.id)
+            ));
+        
+        return {
+            id: tier.id,
+            name: tier.name,
+            level: tier.level,
+            reward_points: tier.reward_points,
+            completion_count: parseInt(completions[0].count.toString())
+        };
+    }));
+    
+    // 获取没有指定阶梯的完成次数
+    const defaultCompletions = await db
+        .select({ count: sql`count(*)` })
+        .from(habit_entries)
+        .where(and(
+            eq(habit_entries.habit_id, habitId),
+            eq(habit_entries.user_id, userId),
+            sql`${habit_entries.tier_id} IS NULL`
+        ));
+    
+    const noTierCount = parseInt(defaultCompletions[0].count.toString());
+    
+    return {
+        tierStats,
+        defaultCompletionCount: noTierCount,
+        totalTiers: tiers.length
     };
 }

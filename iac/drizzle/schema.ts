@@ -35,11 +35,13 @@ export const habit_entries = pgTable("habit_entries", {
 	habit_id: integer("habit_id").notNull().references(() => habits.id),
 	completed_at: timestamp("completed_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	user_id: text("user_id"),
+	tier_id: integer("tier_id").references(() => habit_challenge_tiers.id),
 },
 	(table) => {
 		return {
 			idx_habit_entries_completed_at: index("idx_habit_entries_completed_at").using("btree", table.completed_at),
 			idx_habit_entries_habit_id: index("idx_habit_entries_habit_id").using("btree", table.habit_id),
+			idx_habit_entries_tier_id: index("idx_habit_entries_tier_id").using("btree", table.tier_id),
 		}
 	});
 
@@ -58,6 +60,25 @@ export const user_rewards = pgTable("user_rewards", {
 	updated_at: text("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
+// 添加习惯挑战阶梯表
+export const habit_challenge_tiers = pgTable("habit_challenge_tiers", {
+	id: serial("id").primaryKey().notNull(),
+	habit_id: integer("habit_id").notNull().references(() => habits.id, { onDelete: 'cascade' }),
+	name: text("name").notNull(),
+	level: integer("level").default(1).notNull(),
+	description: text("description"),
+	reward_points: integer("reward_points").notNull(),
+	completion_criteria: jsonb("completion_criteria").default({}),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	user_id: text("user_id").notNull(),
+},
+(table) => {
+	return {
+		idx_challenge_tiers_habit_id: index("idx_challenge_tiers_habit_id").using("btree", table.habit_id),
+		idx_challenge_tiers_level: index("idx_challenge_tiers_level").using("btree", table.level),
+	}
+});
+
 export const habit_targets = pgTable("habit_targets", {
 	id: serial("id").primaryKey().notNull(),
 	habit_id: integer("habit_id").notNull().references(() => habits.id),
@@ -67,6 +88,7 @@ export const habit_targets = pgTable("habit_targets", {
 	user_id: text("user_id").notNull(),
 });
 
+export const HabitTarget = habit_targets.$inferSelect
 export const goals = pgTable("goals", {
 	id: serial("id").primaryKey().notNull(),
 	title: text("title").notNull(),

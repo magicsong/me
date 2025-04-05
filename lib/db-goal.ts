@@ -1,70 +1,19 @@
-
 import 'server-only';
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import {
-    pgTable,
-    text,
-    integer,
-    jsonb,
-    primaryKey,
-    timestamp,
-    serial,
-} from 'drizzle-orm/pg-core';
-import { eq, desc } from 'drizzle-orm';
 
-// 使用与主数据库相同的连接池
-const pool = new Pool({
-    connectionString: process.env.POSTGRES_URL
-});
+import { goals, habit_targets, habits ,HabitTarget} from '@/iac/drizzle/schema';
+import { desc, eq } from 'drizzle-orm';
 
-const db = drizzle(pool);
 
-// 定义表结构
-export const goals = pgTable('goals', {
-    id: serial('id').primaryKey(),
-    title: text('title').notNull(),
-    description: text('description'),
-    type: text('type').notNull(),
-    startDate: timestamp('start_date').notNull(),
-    endDate: timestamp('end_date').notNull(),
-    userId: text('user_id').notNull(),
-    createdAt: timestamp('created_at').notNull().$default(() => new Date()),
-    status: text('status').notNull().$default('in_progress'),
-});
-
-export const habits = pgTable('habits', {
-    id: serial('id').primaryKey(),
-    name: text('name').notNull(),
-    userId: text('user_id').notNull(),
-});
-
-export const habitTargets = pgTable('habit_targets', {
-    id: serial('id').primaryKey(),
-    habitId: integer('habit_id').notNull(),
-    goalId: text('goal_id').notNull(),
-    targetCompletionRate: integer('target_completion_rate').notNull(),
-    currentCompletionRate: integer('current_completion_rate'),
-    userId: text('user_id').notNull(),
-});
-
-// 定义类型
-interface HabitTarget {
-    habitId: number;
-    goalId: string;
-    targetCompletionRate: number;
-    currentCompletionRate?: number;
-    userId: string;
-}
+import { db } from './db';
 
 // 目标相关数据库操作
 export async function getGoalsInDB(userId: string) {
     try {
         const result = await db.select().from(goals)
-            .where(eq(goals.userId, userId))
-            .orderBy(desc(goals.createdAt))
-            .innerJoin(habitTargets, eq(goals.id, habitTargets.goalId))
-            .innerJoin(habits, eq(habitTargets.habitId, habits.id));
+            .where(eq(goals.user_id, userId))
+            .orderBy(desc(goals.created_at))
+            .innerJoin(habit_targets, eq(goals.id, habit_targets.goal_id))
+            .innerJoin(habits, eq(habit_targets.habit_id, habits.id));
         return result;
     } catch (error) {
         console.error('获取目标失败:', error);
@@ -76,8 +25,8 @@ export async function getGoalByIdInDB(id: number) {
     try {
         const goal = await db.select().from(goals)
             .where(eq(goals.id, id))
-            .leftJoin(habitTargets, eq(goals.id, habitTargets.goalId))
-            .leftJoin(habits, eq(habitTargets.habitId, habits.id));
+            .leftJoin(habit_targets, eq(goals.id, habit_targets.goal_id))
+            .leftJoin(habits, eq(habit_targets.habit_id, habits.id));
 
         return goal;
     } catch (error) {

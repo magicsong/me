@@ -3,7 +3,7 @@ import { defaultModel } from '@/lib/ai/models';
 import { generateObject, generateText } from 'ai';
 import { auth } from '@/lib/auth';
 import { getHabitByIdDB, getHabitHistoryFromDB } from '@/lib/db/db-habit';
-import { trimLLMContentToJsonArray, trimLLMContentToJsonObject } from '@/lib/utils';
+import { trimLLMContentToJsonObject } from '@/lib/utils';
 
 // 习惯每日记录类型定义
 interface DailyRecord {
