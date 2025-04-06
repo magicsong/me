@@ -25,24 +25,24 @@ export const difficultyEnum = pgEnum('difficulty', ['easy', 'medium', 'hard']);
 
 // 习惯难度评价表
 export const habitDifficulties = pgTable('habit_difficulties', {
-  id: serial('id').primaryKey(),
-  habitId: integer('habit_id').references(() => habits.id).notNull(),
-  userId: text('user_id').notNull(),
-  completedAt: date('completed_at').defaultNow().notNull(),
-  difficulty: difficultyEnum('difficulty').notNull(),
-  comment: text('comment'), // 文本评价
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+    id: serial('id').primaryKey(),
+    habitId: integer('habit_id').references(() => habits.id).notNull(),
+    userId: text('user_id').notNull(),
+    completedAt: date('completed_at').defaultNow().notNull(),
+    difficulty: difficultyEnum('difficulty').notNull(),
+    comment: text('comment'), // 文本评价
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
 
 // 获取习惯及其挑战阶梯
 export async function getHabitByIdDB(id: number, userId: string) {
     // 获取习惯基本信息
     const habit = await db.select().from(habits).where(and(eq(habits.id, id), eq(habits.user_id, userId))).limit(1);
-    
+
     if (habit.length === 0) {
         return null;
     }
-    
+
     // 获取该习惯的所有挑战阶梯
     const tiers = await db.select()
         .from(habit_challenge_tiers)
@@ -51,11 +51,11 @@ export async function getHabitByIdDB(id: number, userId: string) {
             eq(habit_challenge_tiers.user_id, userId)
         ))
         .orderBy(habit_challenge_tiers.level);
-    
+
     // 获取今天的完成情况和挑战阶梯信息
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const dateEntries = await db
         .select({
             id: habit_entries.id,
@@ -77,9 +77,9 @@ export async function getHabitByIdDB(id: number, userId: string) {
             )
         )
         .limit(1);
-    
+
     const completedEntry = dateEntries.length > 0 ? dateEntries[0] : null;
-    
+
     // 返回包含挑战阶梯和当前完成状态的习惯信息
     return {
         ...habit[0],
@@ -182,7 +182,7 @@ export async function getHabitsFromDB(userId: string, targetDate?: Date) {
                 .orderBy(habit_challenge_tiers.level);
 
             const completedEntry = dateEntries.length > 0 ? dateEntries[0] : null;
-            
+
             return {
                 id: habit.id,
                 name: habit.name,
@@ -213,9 +213,9 @@ export async function createHabitInDB(name: string, description: string, frequen
         name,
         description: description || null,
         frequency: frequency as 'daily' | 'weekly' | 'monthly',
-        userId,
+        user_id: userId,
         category: category || null,
-        rewardPoints: rewardPoints || 1
+        reward_points: rewardPoints || 1
     }).returning();
 
     return result[0];
@@ -226,7 +226,6 @@ export async function deleteHabitFromDB(id: number, userId: string) {
     await db.delete(habitEntries).where(
         and(
             eq(habitEntries.habitId, id),
-            eq(habitEntries.userId, userId)
         )
     );
     // 然后删除习惯本身
@@ -771,7 +770,7 @@ export async function getHabitTiersFromDB(habitId: number, userId: string) {
             eq(habit_challenge_tiers.user_id, userId)
         ))
         .orderBy(habit_challenge_tiers.level);
-    
+
     return tiers;
 }
 
@@ -796,7 +795,7 @@ export async function updateHabitTierInDB(tierId: number, userId: string, tierDa
             eq(habit_challenge_tiers.user_id, userId)
         ))
         .returning();
-    
+
     return result[0];
 }
 
@@ -806,7 +805,7 @@ export async function deleteHabitTierFromDB(tierId: number, userId: string) {
     await db.update(habit_entries)
         .set({ tier_id: null })
         .where(eq(habit_entries.tier_id, tierId));
-    
+
     // 然后删除阶梯
     await db.delete(habit_challenge_tiers)
         .where(and(
@@ -819,7 +818,7 @@ export async function deleteHabitTierFromDB(tierId: number, userId: string) {
 export async function getHabitTierStatsFromDB(habitId: number, userId: string) {
     // 获取所有的挑战阶梯
     const tiers = await getHabitTiersFromDB(habitId, userId);
-    
+
     // 统计每个阶梯完成的次数
     const tierStats = await Promise.all(tiers.map(async tier => {
         const completions = await db
@@ -830,7 +829,7 @@ export async function getHabitTierStatsFromDB(habitId: number, userId: string) {
                 eq(habit_entries.user_id, userId),
                 eq(habit_entries.tier_id, tier.id)
             ));
-        
+
         return {
             id: tier.id,
             name: tier.name,
@@ -839,7 +838,7 @@ export async function getHabitTierStatsFromDB(habitId: number, userId: string) {
             completion_count: parseInt(completions[0].count.toString())
         };
     }));
-    
+
     // 获取没有指定阶梯的完成次数
     const defaultCompletions = await db
         .select({ count: sql`count(*)` })
@@ -849,9 +848,9 @@ export async function getHabitTierStatsFromDB(habitId: number, userId: string) {
             eq(habit_entries.user_id, userId),
             sql`${habit_entries.tier_id} IS NULL`
         ));
-    
+
     const noTierCount = parseInt(defaultCompletions[0].count.toString());
-    
+
     return {
         tierStats,
         defaultCompletionCount: noTierCount,

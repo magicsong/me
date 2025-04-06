@@ -26,7 +26,6 @@ import {
   getUserRewardsFromDB,
   updateUserRewardsInDB
 } from '@/lib/db-rewards';
-import OpenAI from 'openai';
 
 // 获取当前用户ID的辅助函数
 async function getCurrentUserId() {

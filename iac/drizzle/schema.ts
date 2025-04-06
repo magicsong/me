@@ -24,7 +24,7 @@ export const habits = pgTable("habits", {
 	description: text("description"),
 	frequency: frequency("frequency").default('daily').notNull(),
 	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
-	user_id: text("user_id"),
+	user_id: text("user_id").notNull(),
 	category: text("category"),
 	reward_points: integer("reward_points").default(1).notNull(),
 	status: status("status").default('active').notNull(),
@@ -34,7 +34,7 @@ export const habit_entries = pgTable("habit_entries", {
 	id: serial("id").primaryKey().notNull(),
 	habit_id: integer("habit_id").notNull().references(() => habits.id),
 	completed_at: timestamp("completed_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
-	user_id: text("user_id"),
+	user_id: text("user_id").notNull(),
 	tier_id: integer("tier_id").references(() => habit_challenge_tiers.id),
 },
 	(table) => {
