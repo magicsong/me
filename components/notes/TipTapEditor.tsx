@@ -6,7 +6,11 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import React from 'react'
 
-const MenuBar = ({ editor }) => {
+interface MenuBarProps {
+  editor: any;
+}
+
+const MenuBar = ({ editor }: MenuBarProps) => {
   if (!editor) {
     return null
   }
@@ -101,7 +105,14 @@ const MenuBar = ({ editor }) => {
   )
 }
 
-export default ({ content, onChange, placeholder }) => {
+interface TipTapEditorProps {
+  content: string;
+  onChange: (content: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+export default ({ content, onChange, placeholder, className }: TipTapEditorProps) => {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -116,7 +127,7 @@ export default ({ content, onChange, placeholder }) => {
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl focus:outline-none max-w-none min-h-[150px] p-4 border rounded-md',
+        class: `prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl focus:outline-none max-w-none min-h-[150px] p-4 border rounded-md ${className || ''}`,
         ...(placeholder ? {'data-placeholder': placeholder} : {}),
       },
     },
