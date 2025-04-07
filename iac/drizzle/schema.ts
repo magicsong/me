@@ -1,7 +1,7 @@
 import { relations, sql, InferSelectModel } from "drizzle-orm"
 import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar, uniqueIndex, uuid, boolean, foreignKey } from "drizzle-orm/pg-core"
 
-export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly'])
+export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly','scenario'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
 // 添加难度级别枚举
 export const difficulty = pgEnum("difficulty", ['easy', 'medium', 'hard'])
@@ -480,3 +480,34 @@ export const suggestion = pgTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+
+// 情景表定义
+export const scenarios = pgTable('scenarios', {
+	id: serial('id').primaryKey(),
+	name: text('name').notNull(),
+	description: text('description'),
+	user_id: text('user_id').notNull(),
+	icon: text('icon'),
+	color: text('color'),
+	created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});
+
+// 活跃情景表
+export const active_scenarios = pgTable('active_scenarios', {
+	id: serial('id').primaryKey(),
+	scenario_id: integer('scenario_id').references(() => scenarios.id).notNull(),
+	user_id: text('user_id').notNull(),
+	activated_at: timestamp('activated_at', { withTimezone: true }).defaultNow().notNull(),
+	deactivated_at: timestamp('deactivated_at', { withTimezone: true }),
+	is_active: boolean('is_active').default(true).notNull()
+});
+
+// 习惯-情景关联表
+export const habit_scenarios = pgTable('habit_scenarios', {
+	id: serial('id').primaryKey(),
+	habit_id: integer('habit_id').references(() => habits.id).notNull(),
+	scenario_id: integer('scenario_id').references(() => scenarios.id).notNull(),
+	user_id: text('user_id').notNull(),
+	created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+});

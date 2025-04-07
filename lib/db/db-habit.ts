@@ -7,7 +7,8 @@ import {
     pgTable,
     serial,
     text,
-    timestamp
+    timestamp,
+    boolean
 } from 'drizzle-orm/pg-core';
 import { db } from './pool';
 
@@ -24,37 +25,6 @@ export const habitEntries = pgTable('habit_entries', {
 export const difficultyEnum = pgEnum('difficulty', ['easy', 'medium', 'hard']);
 
 // 习惯难度评价表
-export const habitDifficulties = pgTable('habit_difficulties', {
-    id: serial('id').primaryKey(),
-    habitId: integer('habit_id').references(() => habits.id).notNull(),
-    userId: text('user_id').notNull(),
-    completedAt: date('completed_at').defaultNow().notNull(),
-    difficulty: difficultyEnum('difficulty').notNull(),
-    comment: text('comment'), // 文本评价
-    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
-});
-
-// 获取习惯及其挑战阶梯
-export async function getHabitByIdDB(id: number, userId: string) {
-    // 获取习惯基本信息
-    const habit = await db.select().from(habits).where(and(eq(habits.id, id), eq(habits.user_id, userId))).limit(1);
-
-    if (habit.length === 0) {
-        return null;
-    }
-
-    // 获取该习惯的所有挑战阶梯
-    const tiers = await db.select()
-        .from(habit_challenge_tiers)
-        .where(and(
-            eq(habit_challenge_tiers.habit_id, id),
-            eq(habit_challenge_tiers.user_id, userId)
-        ))
-        .orderBy(habit_challenge_tiers.level);
-
-    // 获取今天的完成情况和挑战阶梯信息
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     const dateEntries = await db
         .select({
