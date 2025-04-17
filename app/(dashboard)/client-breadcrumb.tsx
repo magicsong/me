@@ -78,6 +78,12 @@ export function ClientBreadcrumb() {
       name: 'AI Chat',
       page: 'AI聊天'
     };
+  } else if (pathname?.includes('/daily')) {
+    breadcrumbItems = {
+      link: '/daily',
+      name: 'Daily',
+      page: '日常'
+    };
   }
 
   return (

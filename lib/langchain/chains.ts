@@ -15,7 +15,9 @@ import { findLLMCachedResponse, saveLLMRecordToDB } from "@/lib/db/llm";
 import { createHash } from "crypto";
 import { AIMessage, AIMessageChunk, HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { load } from "@langchain/core/load";
-import { getCurrentDateString } from '../utils';
+import { getCurrentDateString, trimLLMContentToJsonObject, trimLLMContentToJsonArray } from '../utils';
+import { OperationType, EntityType, Operation, BatchOperation, LLMGenerationOptions, ApiResponse, BatchApiResponse } from './types';
+import { PromptTemplate } from "@langchain/core/prompts";
 
 // 创建带缓存支持的链（泛型版本）
 const createCachedChain = async <T>(chainFunc: () => Promise<T>, cacheKey: string, cacheTime: number = 60): Promise<T> => {
@@ -210,6 +212,21 @@ export async function generateTodoItemsPlan(prompt: string): Promise<any[]> {
     throw error;
   }
 }
+
+export const callLLMOnce = async function (promptTemplate: PromptTemplate, context: any, cacheKey: string): Promise<AIMessageChunk> {
+
+  const chain = RunnableSequence.from([
+    promptTemplate,
+    chatModel,
+  ]);
+  const result = await createCachedChain(
+    () => chain.invoke(context),
+    cacheKey,
+    240 // 缓存4小时
+  );
+  // 返回消息的content字段
+  return result as AIMessageChunk;
+};
 
 // 辅助函数：获取当前是一年中的第几周
 function getWeekNumber(date: Date): number {

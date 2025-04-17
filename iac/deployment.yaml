@@ -15,6 +15,28 @@ spec:
         app: me-app
     spec:
       containers:
+      - name: me-app2
+        image: ghcr.io/magicsong/magicsong-app2:latest  # 使用您的镜像仓库地址替换这里
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3001
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        envFrom:
+        - secretRef:
+            name: app-secret
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: AUTH_TRUST_HOST
+          value: "true"
+        - name: NEXT_PUBLIC_ALLOW_BACKFILL
+          value: "true"  
       - name: me-app
         image: ghcr.io/magicsong/magicsong-app:latest  # 使用您的镜像仓库地址替换这里
         imagePullPolicy: Always
@@ -51,5 +73,7 @@ spec:
   ports:
   - port: 80
     targetPort: 3000
+  - port: 81
+    targetPort: 3001
   type: LoadBalancer
 
