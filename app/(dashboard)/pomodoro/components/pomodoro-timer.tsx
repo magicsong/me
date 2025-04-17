@@ -12,7 +12,8 @@ import { updatePomodoroStatus } from '@/lib/db/pomodoro';
 import { useSearchParams } from 'next/navigation';
 // 引入倒计时组件
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
-
+import { PomodoroBO } from '@/app/api/types';
+import { BaseRequest } from '@/app/api/lib/types';
 // 预设时间选项（分钟）
 const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
 
@@ -81,7 +82,7 @@ export function PomodoroTimer({
   // 恢复活动中的番茄钟
   useEffect(() => {
     if (activePomodoro) {
-      const endTime = activePomodoro.startTime + activePomodoro.duration * 1000*60;
+      const endTime = activePomodoro.startTime + activePomodoro.duration * 1000 * 60;
       setTitle(activePomodoro.title || '');
       setDescription(activePomodoro.description || '');
       setDuration(activePomodoro.duration || 25);
@@ -102,11 +103,11 @@ export function PomodoroTimer({
     try {
       setIsLoadingTodo(true);
       const response = await fetch(`/api/todolist/todos/${todoId}`);
-      
+
       if (!response.ok) {
         throw new Error('获取待办事项失败');
       }
-      
+
       const todoData = await response.json();
       return todoData;
     } catch (error) {
@@ -125,10 +126,10 @@ export function PomodoroTimer({
   // 从URL参数获取todo信息
   useEffect(() => {
     const todoId = searchParams.get('todoId');
-    
+
     if (todoId) {
       setRelatedTodoId(todoId);
-      
+
       // 从API获取完整的待办事项信息
       (async () => {
         const todoDetails = await fetchTodoDetails(todoId);
@@ -147,11 +148,11 @@ export function PomodoroTimer({
     try {
       setIsLoadingTodos(true);
       const response = await fetch('/api/todolist/todos');
-      
+
       if (!response.ok) {
         throw new Error('获取待办事项列表失败');
       }
-      
+
       const todosData = await response.json();
       // 只获取未完成的任务
       const serverTodos = todosData.filter((todo: any) => !todo.completed);
@@ -161,7 +162,7 @@ export function PomodoroTimer({
         ...todo.todo,
       }));
       setTodos(activeTodos);
-      
+
       // 如果有活动任务且当前没有选定的任务，默认选择第一个
       if (activeTodos.length > 0 && !relatedTodoId && !title) {
         setRelatedTodoId(activeTodos[0].id);
@@ -207,7 +208,7 @@ export function PomodoroTimer({
             // 修改：计时结束时不自动完成
             setIsRunning(false);
             setIsFinished(true); // 设置为已结束状态
-            
+
             // 播放提示音但不完成番茄钟
             if (playSoundOnComplete && audioRef.current) {
               try {
@@ -221,7 +222,7 @@ export function PomodoroTimer({
                 console.error('播放完成提示音失败:', error);
               }
             }
-            
+
             return 0;
           }
           return newTime;
@@ -350,7 +351,14 @@ export function PomodoroTimer({
       const durationInSeconds = durationInMinutes * 60;
       const startTime = Date.now();
       const endTime = startTime + durationInSeconds * 1000;
-
+      const requst = {} as BaseRequest<Partial<PomodoroBO>>;
+      requst.data = {
+        title,
+        description,
+        duration: durationInMinutes,
+        tagIds: selectedTag ? [Number(selectedTag)] : [],
+        todoId: Number(relatedTodoId)  // 添加关联的todoId
+      }
       // 先创建服务器端番茄钟
       try {
         const response = await fetch('/api/pomodoro', {
@@ -358,13 +366,7 @@ export function PomodoroTimer({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            title,
-            description,
-            duration: durationInMinutes,
-            tagIds: selectedTag ? [selectedTag] : [],
-            todoId: relatedTodoId  // 添加关联的todoId
-          }),
+          body: JSON.stringify(requst),
         });
 
         if (response.ok) {
@@ -467,10 +469,10 @@ export function PomodoroTimer({
     if (remainingTime === 0) {
       return <div className="text-3xl font-bold">00:00</div>;
     }
-    
+
     const minutes = Math.floor(remainingTime / 60);
     const seconds = remainingTime % 60;
-    
+
     return (
       <div className="text-center">
         <div className="text-3xl font-bold">

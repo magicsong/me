@@ -1,6 +1,6 @@
 import { tags } from '@/lib/db/schema';
 import { eq, ilike } from 'drizzle-orm';
-import { BaseRepository } from '../db';
+import { BaseRepository } from '../db/';
 
 // Tag数据类型定义
 export type TagData = typeof tags.$inferSelect;

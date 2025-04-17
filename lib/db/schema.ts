@@ -142,6 +142,7 @@ export const pomodoros = pgTable("pomodoros", {
 	habit_id: integer("habit_id").references(() => habits.id),
 	goal_id: integer("goal_id").references(() => goals.id),
 	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	todo_id: integer("todo_id").references(() => todos.id),
 },
 	(table) => {
 		return {
@@ -151,19 +152,10 @@ export const pomodoros = pgTable("pomodoros", {
 		}
 	});
 
-// 番茄钟标签表
-export const pomodoro_tags = pgTable("pomodoro_tags", {
-	id: serial("id").primaryKey().notNull(),
-	name: text("name").notNull(),
-	color: text("color").default('#FF5722').notNull(), // 默认番茄红色
-	user_id: text("user_id").notNull(),
-	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
-});
-
 // 番茄钟与标签的关联表
 export const pomodoro_tag_relations = pgTable("pomodoro_tag_relations", {
 	pomodoro_id: integer("pomodoro_id").notNull().references(() => pomodoros.id),
-	tag_id: integer("tag_id").notNull().references(() => pomodoro_tags.id),
+	tag_id: integer("tag_id").notNull().references(() => tags.id),
 },
 	(table) => {
 		return {

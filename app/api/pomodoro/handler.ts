@@ -33,7 +33,7 @@ export class PomodoroApiHandler extends BaseApiHandler<PomodoroData, PomodoroBO>
     if (!isUpdate) {
       businessObject.createdAt = now.toISOString();
       businessObject.startTime = businessObject.startTime || now.toISOString();
-      
+
       // 设置默认的状态和时长
       if (!businessObject.status) {
         businessObject.status = 'running';
@@ -42,23 +42,13 @@ export class PomodoroApiHandler extends BaseApiHandler<PomodoroData, PomodoroBO>
         businessObject.duration = 25; // 默认25分钟
       }
     }
-    
+
     // 如果状态改为completed，设置结束时间
     if (businessObject.status === 'completed' && !businessObject.endTime) {
       businessObject.endTime = now.toISOString();
     }
-    
+
     return businessObject;
-  }
-
-  protected async getExistingData(id: string): Promise<PomodoroData> {
-    const pomodoro = await this.persistenceService.findById(id);
-
-    if (!pomodoro) {
-      throw new Error(`未找到 ID 为 ${id} 的番茄钟`);
-    }
-
-    return pomodoro;
   }
 
   protected generateId(): string {
@@ -75,13 +65,14 @@ export class PomodoroApiHandler extends BaseApiHandler<PomodoroData, PomodoroBO>
       id: dataObject.id,
       userId: dataObject.user_id,
       title: dataObject.title,
-      description: dataObject.description,
+      description: dataObject.description ?? undefined,
       duration: dataObject.duration,
       status: dataObject.status,
       startTime: dataObject.start_time,
-      endTime: dataObject.end_time,
-      habitId: dataObject.habit_id,
-      goalId: dataObject.goal_id,
+      endTime: dataObject.end_time ?? undefined,
+      habitId: dataObject.habit_id ?? undefined,
+      goalId: dataObject.goal_id ?? undefined,
+      todoId: dataObject.todo_id ?? undefined,
       createdAt: dataObject.created_at,
       tags: dataObject.tags,
     };
@@ -123,7 +114,7 @@ export class PomodoroApiHandler extends BaseApiHandler<PomodoroData, PomodoroBO>
         status: 'completed',
         end_time: now
       });
-      
+
       return this.toBusinessObject(updatedPomodoro);
     } catch (error) {
       console.error('完成番茄钟失败:', error);

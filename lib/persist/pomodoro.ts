@@ -1,6 +1,6 @@
-import { pomodoro_tags, pomodoro_tag_relations, pomodoros } from '@/lib/db/schema';
+import { tags, pomodoro_tag_relations, pomodoros } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
-import { BaseRepository } from '../db/index';
+import { BaseRepository } from '../db/';
 
 // Pomodoro数据类型定义
 export type PomodoroData = typeof pomodoros.$inferSelect & {
@@ -9,6 +9,7 @@ export type PomodoroData = typeof pomodoros.$inferSelect & {
     name: string;
     color: string;
   }>;
+  tagIds?: number[];
 };
 
 // 创建输入类型
@@ -36,6 +37,13 @@ export class PomodoroPersistenceService extends BaseRepository<typeof pomodoros,
 
     // 设置钩子，在查询后自动加载关联的标签
     this.setHooks({
+      // 添加afterCreate钩子，处理tagIds
+      afterCreate: async (createData, pomodoro) => {
+        if (createData.tagIds && Array.isArray(createData.tagIds) && createData.tagIds.length > 0) {
+          await this.associateTagsWithPomodoro(pomodoro.id, createData.tagIds);
+        }
+        return pomodoro;
+      },
       afterQuery: async (data) => {
         if (!data) return data;
 
@@ -49,7 +57,19 @@ export class PomodoroPersistenceService extends BaseRepository<typeof pomodoros,
       }
     });
   }
+  /**
+ * 关联标签到Pomodoro
+ */
+  private async associateTagsWithPomodoro(pomodoroId: number, tagIds: number[]): Promise<void> {
+    // 创建要插入的数据数组
+    const relations = tagIds.map(tagId => ({
+      pomodoro_id: pomodoroId,
+      tag_id: tagId
+    }));
 
+    // 批量插入关联记录
+    await this.db.insert(pomodoro_tag_relations).values(relations);
+  }
   /**
    * 重写create方法，添加时间戳
    */
@@ -66,12 +86,12 @@ export class PomodoroPersistenceService extends BaseRepository<typeof pomodoros,
    */
   async update(id: string | number, data: Partial<PomodoroData>): Promise<PomodoroData> {
     const updateData = { ...data };
-    
+
     // 如果状态更改为completed且没有提供end_time，则自动设置end_time
     if (data.status === 'completed' && !data.end_time) {
       updateData.end_time = new Date().toISOString();
     }
-    
+
     return super.update(id, updateData);
   }
 
@@ -114,15 +134,15 @@ export class PomodoroPersistenceService extends BaseRepository<typeof pomodoros,
     const allPomodoroTags = await this.db
       .select({
         pomodoro_id: pomodoro_tag_relations.pomodoro_id,
-        tag_id: pomodoro_tags.id,
-        name: pomodoro_tags.name,
-        color: pomodoro_tags.color
+        tag_id: tags.id,
+        name: tags.name,
+        color: tags.color
       })
       .from(pomodoro_tag_relations)
       .where(inArray(pomodoro_tag_relations.pomodoro_id, pomodoroIds))
       .innerJoin(
-        pomodoro_tags,
-        eq(pomodoro_tag_relations.tag_id, pomodoro_tags.id)
+        tags,
+        eq(pomodoro_tag_relations.tag_id, tags.id)
       );
 
     // 为每个 pomodoro 分配其对应的标签
@@ -144,15 +164,15 @@ export class PomodoroPersistenceService extends BaseRepository<typeof pomodoros,
   private async getTagsForPomodoro(pomodoroId: number): Promise<Array<{ id: number; name: string; color: string; }>> {
     return this.db
       .select({
-        id: pomodoro_tags.id,
-        name: pomodoro_tags.name,
-        color: pomodoro_tags.color
+        id: tags.id,
+        name: tags.name,
+        color: tags.color
       })
       .from(pomodoro_tag_relations)
       .where(eq(pomodoro_tag_relations.pomodoro_id, pomodoroId))
       .innerJoin(
-        pomodoro_tags,
-        eq(pomodoro_tag_relations.tag_id, pomodoro_tags.id)
+        tags,
+        eq(pomodoro_tag_relations.tag_id, tags.id)
       );
   }
 
@@ -161,15 +181,9 @@ export class PomodoroPersistenceService extends BaseRepository<typeof pomodoros,
    */
   async findRunningPomodoros(userId: string): Promise<PomodoroData[]> {
     return this.findMany({
-      where: {
-        user_id: userId,
-        status: 'running'
-      }
-    });
-  }
-
-  // 为了兼容旧接口，添加getById方法
-  async getById(id: string | number): Promise<PomodoroData | null> {
-    return this.findById(id);
+      user_id: userId,
+      status: 'running'
+    }
+    );
   }
 }

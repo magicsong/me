@@ -1,4 +1,4 @@
-import { habit_challenge_tiers, habit_entries, habits } from "@/lib/db/schema";
+import { habit_challenge_tiers, habit_entries, habits,habit_difficulties as habitDifficulties } from "@/lib/db/schema";
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
     date,
@@ -357,9 +357,9 @@ export async function getHabitHistoryFromDB(habitId: number, userId: string): Pr
         .leftJoin(
             habitDifficulties,
             and(
-                eq(habit_entries.habit_id, habitDifficulties.habitId),
-                eq(habit_entries.user_id, habitDifficulties.userId),
-                eq(habit_entries.completed_at, habitDifficulties.completedAt)
+                eq(habit_entries.habit_id, habitDifficulties.habit_id),
+                eq(habit_entries.user_id, habitDifficulties.user_id),
+                eq(habit_entries.completed_at, habitDifficulties.completed_at)
             )
         )
         .leftJoin(

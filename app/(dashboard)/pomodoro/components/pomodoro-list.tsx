@@ -15,12 +15,13 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/hooks/use-toast';
+import { PomodoroBO } from '@/app/api/types';
 
 // 简化状态类型，只保留当前和已完成
 type PomodoroStatus = 'current' | 'completed';
 
 export function PomodoroList() {
-  const [pomodoros, setPomodoros] = useState<any[]>([]);
+  const [pomodoros, setPomodoros] = useState<PomodoroBO[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
@@ -50,12 +51,12 @@ export function PomodoroList() {
         const data = await response.json();
         
         if (reset) {
-          setPomodoros(data);
+          setPomodoros(data.data);
         } else {
           setPomodoros(prev => [...prev, ...data]);
         }
         
-        setHasMore(data.length === PAGE_SIZE);
+        setHasMore(data.data.length === PAGE_SIZE);
         setPage(currentPage + 1);
       }
     } catch (error) {
@@ -110,25 +111,22 @@ export function PomodoroList() {
           </div>
         ) : (
           pomodoros.map((pomodoro) => (
-            <Card key={pomodoro.pomodoro.id} className="hover:shadow-md transition-shadow">
+            <Card key={pomodoro.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{pomodoro.pomodoro.title}</CardTitle>
-                  {getStatusBadge(pomodoro.pomodoro.status)}
+                  <CardTitle className="text-lg">{pomodoro.title}</CardTitle>
+                  {getStatusBadge(pomodoro.status)}
                 </div>
                 <CardDescription>
-                  {formatDateTime(pomodoro.pomodoro.created_at)}
+                  {formatDateTime(pomodoro.createdAt)}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pb-2">
-                {pomodoro.pomodoro.description && (
-                  <p className="text-sm text-muted-foreground mb-2">{pomodoro.pomodoro.description}</p>
+                {pomodoro.description && (
+                  <p className="text-sm text-muted-foreground mb-2">{pomodoro.description}</p>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span>时长: {pomodoro.pomodoro.duration} 分钟</span>
-                  {pomodoro.tagsCount > 0 && (
-                    <span className="text-muted-foreground">标签: {pomodoro.tagsCount} 个</span>
-                  )}
+                  <span>时长: {pomodoro.duration} 分钟</span>
                 </div>
               </CardContent>
               <CardFooter className="pt-2">

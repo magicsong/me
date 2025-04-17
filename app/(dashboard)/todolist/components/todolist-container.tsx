@@ -12,34 +12,7 @@ import { TodoTagManager } from './todo-tag-manager';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { TodoAutoPlan } from './todo-auto-plan';
 import { DailyTimelineView } from './daily-timeline-view';
-
-// 定义待办事项类型
-export interface Todo {
-  id: number;
-  title: string;
-  description?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'archived';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  due_date?: string;
-  created_at: string;
-  updated_at: string;
-  completed_at?: string;
-  planned_start_time?: string; // 新增：计划开始时间
-  planned_end_time?: string;   // 新增：计划结束时间
-}
-
-// 定义标签类型
-export interface TodoTag {
-  id: number;
-  name: string;
-  color: string;
-}
-
-// 定义带标签的待办事项
-export interface TodoWithTags {
-  todo: Todo;
-  tags: TodoTag[];
-}
+import { TagBO, TodoBO } from '@/app/api/types';
 
 // 新增：番茄钟会话记录类型
 export interface PomodoroSession {
@@ -54,11 +27,11 @@ export interface PomodoroSession {
 
 export function TodoListContainer() {
   const { toast } = useToast();
-  const [todos, setTodos] = useState<TodoWithTags[]>([]);
-  const [filteredTodos, setFilteredTodos] = useState<TodoWithTags[]>([]);
+  const [todos, setTodos] = useState<TodoBO[]>([]);
+  const [filteredTodos, setFilteredTodos] = useState<TodoBO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const [editingTodo, setEditingTodo] = useState<TodoBO | null>(null);
   const [filters, setFilters] = useState({
     status: '',
     priority: '',
@@ -67,11 +40,11 @@ export function TodoListContainer() {
   });
   // 添加自动规划相关状态
   const [isAutoPlanOpen, setIsAutoPlanOpen] = useState(false);
-  const [availableTags, setAvailableTags] = useState<TodoTag[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagBO[]>([]);
   // 新增：时间视图相关状态
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [pomodoroSessions, setPomodoroSessions] = useState<PomodoroSession[]>([]);
-  const [timeViewTodos, setTimeViewTodos] = useState<TodoWithTags[]>([]);
+  const [timeViewTodos, setTimeViewTodos] = useState<TodoBO[]>([]);
 
   const fetchTodos = async () => {
     try {
@@ -83,15 +56,15 @@ export function TodoListContainer() {
       if (filters.search) searchParams.append('search', filters.search);
       if (filters.tagId) searchParams.append('tagId', filters.tagId.toString());
       
-      const response = await fetch(`/api/todolist/todos?${searchParams.toString()}`);
+      const response = await fetch(`/api/todos?${searchParams.toString()}`);
       
       if (!response.ok) {
         throw new Error('获取待办事项失败');
       }
       
       const data = await response.json();
-      setTodos(data);
-      setFilteredTodos(data);
+      setTodos(data.data);
+      setFilteredTodos(data.data);
     } catch (error) {
       console.error('获取待办事项失败:', error);
       toast({
@@ -107,7 +80,7 @@ export function TodoListContainer() {
   // 添加获取所有标签的方法
   const fetchAllTags = async () => {
     try {
-      const response = await fetch('/api/todolist/tags');
+      const response = await fetch('/api/tag');
       if (!response.ok) {
         throw new Error('获取标签失败');
       }
@@ -129,10 +102,10 @@ export function TodoListContainer() {
     fetchAllTags();
   }, [filters]);
 
-  const handleCreateTodo = async (todo: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>, tagIds: number[]) => {
+  const handleCreateTodo = async (todo: Omit<TodoBO, 'id' | 'created_at' | 'updated_at' | 'completed_at'>, tagIds: number[]) => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/todolist/todos', {
+      const response = await fetch('/api/todo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -191,7 +164,7 @@ export function TodoListContainer() {
   const handleUpdateTodo = async (todoId: number, todoData: Partial<Todo>, tagIds?: number[]) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/todolist/todos/${todoId}`, {
+      const response = await fetch(`/api/todo/${todoId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -244,7 +217,7 @@ export function TodoListContainer() {
 
   const handleDeleteTodo = async (todoId: number) => {
     try {
-      const response = await fetch(`/api/todolist/todos/${todoId}`, {
+      const response = await fetch(`/api/todos/${todoId}`, {
         method: 'DELETE',
       });
       
@@ -271,7 +244,7 @@ export function TodoListContainer() {
     await handleUpdateTodo(todoId, { status: newStatus });
   };
 
-  const openEditForm = (todo: Todo) => {
+  const openEditForm = (todo: TodoBO) => {
     setEditingTodo(todo);
     setIsFormOpen(true);
   };
@@ -296,7 +269,7 @@ export function TodoListContainer() {
 
   // 添加批量创建待办事项功能
   const handleBatchCreateTodos = async (
-    todos: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>[],
+    todos: Omit<TodoBO, 'id' | 'created_at' | 'updated_at' | 'completed_at'>[],
     tagNamesArray: string[][]
   ) => {
     try {
@@ -311,7 +284,7 @@ export function TodoListContainer() {
         const tagNames = tagNamesArray[i];
         
         // 创建待办事项
-        const todoResponse = await fetch('/api/todolist/todos', {
+        const todoResponse = await fetch('/api/todo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(todo),
@@ -337,7 +310,7 @@ export function TodoListContainer() {
               tagIds.push(existingTag.id);
             } else {
               // 创建新标签
-              const tagResponse = await fetch('/api/todolist/tags', {
+              const tagResponse = await fetch('/api/tag', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: tagName, color: generateRandomColor() }),
@@ -352,7 +325,7 @@ export function TodoListContainer() {
           
           // 关联标签到待办事项
           if (tagIds.length > 0) {
-            await fetch(`/api/todolist/todos/${newTodo.id}/tags`, {
+            await fetch(`/api/todo/${newTodo.id}/tag`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tagIds }),
@@ -397,7 +370,11 @@ export function TodoListContainer() {
   const fetchPomodoroSessions = async (date: Date) => {
     try {
       const formattedDate = date.toISOString().split('T')[0];
-      const response = await fetch(`/api/pomodoro?date=${formattedDate}`);
+      // Get next day for date range
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextDayFormatted = nextDay.toISOString().split('T')[0];
+      const response = await fetch(`/api/pomodoro?createdAt_gte=${formattedDate}&createdAt_lt=${nextDayFormatted}`);
       
       if (!response.ok) {
         throw new Error('获取番茄钟记录失败');
@@ -422,7 +399,7 @@ export function TodoListContainer() {
       const searchParams = new URLSearchParams();
       searchParams.append('date', formattedDate);
       
-      const response = await fetch(`/api/todolist/todos?${searchParams.toString()}`);
+      const response = await fetch(`/api/todo?${searchParams.toString()}`);
       
       if (!response.ok) {
         throw new Error('获取日程待办事项失败');
@@ -566,11 +543,11 @@ export function TodoListContainer() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredTodos.map(({ todo, tags }) => (
+                  {filteredTodos.map((todo) => (
                     <TodoItem 
                       key={todo.id} 
                       todo={todo} 
-                      tags={tags}
+                      tags={todo.tags}
                       onEdit={() => openEditForm(todo)}
                       onDelete={() => handleDeleteTodo(todo.id)}
                       onToggleStatus={(status) => handleToggleStatus(todo.id, status)}

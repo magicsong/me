@@ -37,7 +37,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         let createdData = result[0] as I;
 
         if (this.hooks.afterCreate) {
-            createdData = await Promise.resolve(this.hooks.afterCreate(createdData));
+            createdData = await Promise.resolve(this.hooks.afterCreate(data, createdData));
         }
 
         return createdData;
@@ -46,16 +46,16 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     // 批量创建记录
     async createMany(data: Partial<I>[]): Promise<I[]> {
         let processedData = [...data];
-        
+
         // 移除所有数据中的 id 字段，让数据库自动生成
         processedData = processedData.map(item => {
-            const newItem = {...item};
+            const newItem = { ...item };
             if ('id' in newItem) {
                 delete newItem.id;
             }
             return newItem;
         });
-        
+
         if (this.hooks.beforeCreate) {
             processedData = await Promise.all(
                 processedData.map(item => Promise.resolve(this.hooks.beforeCreate!(item)))
@@ -77,7 +77,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     // 通过ID查找记录
     async findById(id: string | number): Promise<I | null> {
         let filter = { [this.primaryKey]: id } as FilterCondition<I>;
-        
+
         if (this.hooks.beforeQuery) {
             filter = await Promise.resolve(this.hooks.beforeQuery(filter));
         }
@@ -101,11 +101,11 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     // 获取所有记录
     async getAll(userId?: string): Promise<I[]> {
         let filter = {} as FilterCondition<I>;
-        
+
         if (userId) {
             filter = { user_id: userId } as unknown as FilterCondition<I>;
         }
-        
+
         return this.findMany(filter);
     }
 
@@ -164,7 +164,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     // 内部更新方法，保留原有逻辑
     private async _update(id: any, data: Partial<I>): Promise<I | null> {
         let processedData = { ...data };
-        
+
         if (this.hooks.beforeUpdate) {
             processedData = await Promise.resolve(this.hooks.beforeUpdate(id, processedData));
         }
@@ -187,19 +187,19 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     // 批量更新记录
     async updateMany(data: Partial<I>[]): Promise<I[]> {
         const results: I[] = [];
-        
+
         for (const item of data) {
             const id = item[this.primaryKey];
             if (!id) {
                 throw new Error(`更新数据必须包含主键 ${String(this.primaryKey)}`);
             }
-            
+
             const result = await this._update(id, item);
             if (result) {
                 results.push(result);
             }
         }
-        
+
         return results;
     }
 
@@ -319,13 +319,13 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         metadata?: Record<string, any>;
     }> {
         const actualFilter = filter || {};
-        console.log("db",actualFilter)
+        console.log("db", actualFilter)
         if (userId) {
             actualFilter.user_id = userId as any;
         }
 
         const result = await this.findWithPagination(actualFilter, page);
-        
+
         return {
             items: result.data,
             total: result.total,
@@ -343,7 +343,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         if (this.hooks.beforeQuery) {
             filter = await Promise.resolve(this.hooks.beforeQuery(filter));
         }
-        console.log("db",filter)
+        console.log("db", filter)
         const { page = 1, pageSize = 10, sortBy, sortOrder = 'asc' } = options;
         const offset = (page - 1) * pageSize;
         const condition = this.buildWhereCondition(filter);
@@ -398,7 +398,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
 
         for (const [key, value] of Object.entries(filter)) {
             if (value === null || value === undefined) continue;
-            
+
             // 检查字段是否存在于表结构中
             if (!(key in this.table)) {
                 throw new Error(`字段 ${key} 在表 ${this.table.name} 中不存在`);
@@ -406,7 +406,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
 
             if (typeof value === 'object' && !Array.isArray(value)) {
                 const complexFilter = value as any;
-                
+
                 if (complexFilter.eq !== undefined) {
                     conditions.push(eq(this.table[key] as any, complexFilter.eq));
                 }
@@ -449,10 +449,10 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
             // 如果序列化失败，使用浅拷贝作为备选方案
             const cleanObject: any = {};
             for (const key in result) {
-                if (Object.prototype.hasOwnProperty.call(result, key) && 
-                    typeof result[key] !== 'function' && 
-                    key !== 'db' && 
-                    key !== 'session' && 
+                if (Object.prototype.hasOwnProperty.call(result, key) &&
+                    typeof result[key] !== 'function' &&
+                    key !== 'db' &&
+                    key !== 'session' &&
                     key !== 'client') {
                     cleanObject[key] = result[key];
                 }

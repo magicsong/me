@@ -1,17 +1,8 @@
+import { tags as pomodoro_tags, todo_pomodoro_relations, todo_tag_relations, todos } from "@../../lib/db/schema";
 import { db } from "@/lib/db";
-import { todos, todoStatus, todoPriority, todo_tag_relations, todo_pomodoro_relations, pomodoro_tags } from "@../../lib/db/schema";
-import { and, eq, sql, desc, asc, like, isNull, isNotNull, or } from "drizzle-orm";
-import { v4 as uuidv4 } from "uuid";
-import { auth } from "@/lib/auth";
+import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { getCurrentUserId } from "./utils";
 
-// 获取当前用户ID
-export const getCurrentUserId = async () => {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("用户未登录");
-  }
-  return session.user.id;
-};
 
 // Todo类型定义
 export type Todo = typeof todos.$inferSelect;

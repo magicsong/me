@@ -15,7 +15,7 @@ export interface TodoBO extends BusinessObject {
     createdAt: string;
     updatedAt: string;
     tagIds?: number[];
-    tags: { id: number; name: string; color: string }[];
+    tags: TagBO[];
 }
 
 // 批量处理Todo请求
@@ -61,13 +61,17 @@ export interface PomodoroBO extends BusinessObject {
     status: 'running' | 'completed' | 'canceled' | 'paused';
     startTime: string;
     endTime?: string;
+    todoId?: number;
     habitId?: number;
     goalId?: number;
     createdAt: string;
-    tags?: Array<{
-      id: number;
-      name: string;
-      color: string;
-    }>;
-  }
+    tagIds?: number[];
+    tags?: Array<TagBO>;
+}
 
+export interface TagBO {
+    id: number;
+    name: string;
+    color: string;
+    kind?: string;
+}

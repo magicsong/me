@@ -1,6 +1,6 @@
 import { tags, todo_tag_relations, todos } from '@/lib/db/schema';
 import { eq, inArray, and } from 'drizzle-orm';
-import { BaseRepository } from '../db';
+import { BaseRepository } from '../db/';
 
 // Todo数据类型定义
 export type TodoData = typeof todos.$inferSelect & {

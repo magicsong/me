@@ -21,7 +21,7 @@ export interface PaginationOptions {
 // 钩子类型定义
 export interface RepositoryHooks<T> {
     beforeCreate?: (data: Partial<T>) => Promise<Partial<T>> | Partial<T>;
-    afterCreate?: (data: T) => Promise<T> | T;
+    afterCreate?: (createInput: Partial<T>, data: T) => Promise<T> | T;
     beforeUpdate?: (id: any, data: Partial<T>) => Promise<Partial<T>> | Partial<T>;
     afterUpdate?: (data: T) => Promise<T> | T;
     beforeDelete?: (id: any) => Promise<boolean> | boolean;
