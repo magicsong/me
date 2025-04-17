@@ -1,4 +1,4 @@
-import { insightKind } from '@../../iac/drizzle/schema';
+import { insightKind } from '@../../lib/db/schema';
 
 /**
  * AI 洞察数据类型

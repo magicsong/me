@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { todos, todoStatus, todoPriority, todo_tag_relations, todo_pomodoro_relations, pomodoro_tags } from "@../../iac/drizzle/schema";
+import { todos, todoStatus, todoPriority, todo_tag_relations, todo_pomodoro_relations, pomodoro_tags } from "@../../lib/db/schema";
 import { and, eq, sql, desc, asc, like, isNull, isNotNull, or } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { auth } from "@/lib/auth";

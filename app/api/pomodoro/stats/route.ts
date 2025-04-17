@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { pomodoros } from '@../../iac/drizzle/schema'; // 修复导入路径
+import { pomodoros } from '@../../lib/db/schema'; // 修复导入路径
 import { and, eq, gte, sql } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {

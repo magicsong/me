@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { goals, habit_targets, habits ,HabitTarget} from '@/iac/drizzle/schema';
+import { goals, habit_targets, habits ,HabitTarget} from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 
 

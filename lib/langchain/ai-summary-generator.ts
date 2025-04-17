@@ -14,7 +14,7 @@ import {
   BaseSummaryItem
 } from './types';
 
-import {daily_summaries} from '../../iac/drizzle/schema'
+import {daily_summaries} from '../../lib/db/schema'
 import { JournalEntry } from '../types/jsonb';
 
 // 定义从数据库 schema 推导出的类型

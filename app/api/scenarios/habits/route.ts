@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db/pool';
-import { habit_scenarios, habits, scenarios } from '@/iac/drizzle/schema';
+import { habit_scenarios, habits, scenarios } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 // 获取情景中的所有习惯

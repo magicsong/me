@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { generateTodoItemsPlan } from '@/lib/langchain/chains';
 import { createTodo, addTagToTodo } from '@/lib/db-todolist';
 import { db } from '@/lib/db';
-import { pomodoro_tags } from '@/iac/drizzle/schema';
+import { pomodoro_tags } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 // 示例输出格式与字段描述

@@ -1,6 +1,6 @@
 import { db } from './db';
 import { eq, and, ilike, or, desc, asc } from 'drizzle-orm';
-import { notes, tags, notesTags } from '../iac/drizzle/schema';
+import { notes, tags, notesTags } from '../lib/db/schema';
 
 // 笔记查询选项接口
 interface NoteQueryOptions {

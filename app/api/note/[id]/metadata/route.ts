@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { notes, tags, notesTags } from '@/iac/drizzle/schema';
+import { notes, tags, notesTags } from '@/lib/db/schema';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { 
   ApiErrorResponse, 

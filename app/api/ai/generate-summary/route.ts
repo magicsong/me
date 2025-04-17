@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from "@/lib/auth";
 import { generateAISummary } from '@/lib/langchain/ai-summary-generator';
 import { createAiInsight, updateAiInsight } from '@/lib/db/ai-insight';
-import { insightKind } from '@../../iac/drizzle/schema';
+import { insightKind } from '@../../lib/db/schema';
 import { sub, parseISO } from 'date-fns';
 
 // 将summaryType映射到insightKind

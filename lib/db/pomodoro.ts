@@ -5,7 +5,7 @@ import {
   pomodoros, 
   pomodoro_tags, 
   pomodoro_tag_relations 
-} from '../../iac/drizzle/schema';
+} from '../../lib/db/schema';
 import { count, eq, ilike, and, sql, desc, between, gt, lt, isNull } from 'drizzle-orm';
 
 // 创建新的番茄钟

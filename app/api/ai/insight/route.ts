@@ -7,7 +7,7 @@ import {
   createAiInsight 
 } from '@/lib/db/ai-insight';
 import { InsightData } from '@/lib/types/ai-insight';
-import { insightKind } from '@../../iac/drizzle/schema';
+import { insightKind } from '@../../lib/db/schema';
 import { parseISO } from 'date-fns';
 
 // 获取 AI 洞察列表

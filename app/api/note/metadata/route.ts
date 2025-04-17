@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { notes, tags } from '@/iac/drizzle/schema';
+import { notes, tags } from '@/lib/db/schema';
 import { desc, eq, SQL } from 'drizzle-orm';
 import { ApiErrorResponse, NoteMetadataResponse } from '../../types/note';
 import { getCurrentUserId } from '@/lib/utils';

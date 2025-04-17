@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { daily_summaries } from '@../../iac/drizzle/schema';
+import { daily_summaries } from '@../../lib/db/schema';
 import { eq, and, desc, sql, gte } from 'drizzle-orm';
 import { auth } from '../auth';
 import { getCurrentUserId } from '../utils';

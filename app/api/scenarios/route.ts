@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db/pool';
-import { scenarios } from '@/iac/drizzle/schema';
+import { scenarios } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 // 获取用户所有情景

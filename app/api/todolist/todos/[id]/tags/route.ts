@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { todo_tag_relations, todos } from '@../../iac/drizzle/schema';
+import { todo_tag_relations, todos } from '@../../lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { getCurrentUserId } from '@/lib/utils';
 

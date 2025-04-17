@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { pomodoro_tags, todo_tag_relations } from '@../../iac/drizzle/schema';
+import { pomodoro_tags, todo_tag_relations } from '@../../lib/db/schema';
 import { and, eq } from 'drizzle-orm';
 
 export async function PATCH(

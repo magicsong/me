@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { ai_insights, insightKind } from '@../../iac/drizzle/schema';
+import { ai_insights, insightKind } from '@../../lib/db/schema';
 import { and, asc, desc, eq, gte, lte } from 'drizzle-orm';
 import { InsightData, UpdateInsightData } from '../types/ai-insight';
 

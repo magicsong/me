@@ -19,7 +19,6 @@
     "paths": {
       "@/components/*": ["components/*"],
       "@/lib/*": ["lib/*"],
-      "@/iac/*": ["iac/*"],
       "@/artifacts/*": ["artifacts/*"],
       "@/tests/*": ["tests/*"],
       "@/app/*": ["app/*"],

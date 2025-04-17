@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     // 从项目中的iac目录读取SQL文件
-    await migrate(db, { migrationsFolder: "./iac/drizzle" });
+    await migrate(db, { migrationsFolder: "./drizzle" });
     console.log("Migrations applied!");
     
     return Response.json({

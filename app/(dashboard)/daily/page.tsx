@@ -19,13 +19,9 @@ export default function DailyStartPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    } else if (status === "authenticated") {
       fetchTodos();
       fetchYesterdayTodos();
-    }
-  }, [status, router, selectedDate]);
+  }, [router, selectedDate]);
 
   // 检查是否已经显示过今天的欢迎页
   useEffect(() => {

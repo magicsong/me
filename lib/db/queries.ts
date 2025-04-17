@@ -14,7 +14,7 @@ import {
   message,
   vote,
   type DBMessage,
-} from '@/iac/drizzle/schema';
+} from '@/lib/db/schema';
 import { ArtifactKind } from '@/components/ai/artifact';
 
 // Optionally, if not using email/pass login, you can

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db/pool';
-import { active_scenarios, scenarios } from '@/iac/drizzle/schema';
+import { active_scenarios, scenarios } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 // 获取用户当前激活的情景

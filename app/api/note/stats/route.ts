@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { notes, tags, notesTags } from '@../../iac/drizzle/schema';
+import { notes, tags, notesTags } from '@../../lib/db/schema';
 import { eq, and, countDistinct, count, isNotNull, ne } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
