@@ -244,7 +244,7 @@ export function PomodoroTimer({
 
     try {
       // 使用pomodoro.ts中的函数来更新状态，而不是直接调用API
-      const updatedPomodoro = await fetch(`/api/pomodoro/${id}/status`, {
+      const updatedPomodoro = await fetch(`/api/pomodoro/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
