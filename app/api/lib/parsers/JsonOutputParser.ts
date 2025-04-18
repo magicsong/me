@@ -1,5 +1,5 @@
 import { OutputParser } from '../types';
-import { extractJsonFromLLMContent, trimLLMContentToJsonArray, trimLLMContentToJsonObject } from '@/lib/langchain/utils';
+import { trimLLMContentToJsonArray, trimLLMContentToJsonObject } from '@/lib/utils';
 
 /**
  * 默认的JSON输出解析器
@@ -80,7 +80,7 @@ export class JsonOutputParser<T> implements OutputParser<T> {
    */
   private extractJson(text: string): Partial<T> {
     try {
-      const jsonString = extractJsonFromLLMContent(text);
+      const jsonString = trimLLMContentToJsonObject(text);
       return JSON.parse(jsonString) as Partial<T>;
     } catch (e) {
       console.error('JSON解析失败:', e);
