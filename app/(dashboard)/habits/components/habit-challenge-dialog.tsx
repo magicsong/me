@@ -13,7 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { completeHabit, getHabitDetail } from '../actions';
+import { completeHabit} from '../client-actions';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 

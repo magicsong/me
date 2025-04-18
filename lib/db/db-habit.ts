@@ -690,11 +690,11 @@ export async function getHabitDifficultyHistoryFromDB(habitId: number, userId: s
         .from(habitDifficulties)
         .where(
             and(
-                eq(habitDifficulties.habitId, habitId),
-                eq(habitDifficulties.userId, userId)
+                eq(habitDifficulties.habit_id, habitId),
+                eq(habitDifficulties.user_id, userId)
             )
         )
-        .orderBy(desc(habitDifficulties.completedAt))
+        .orderBy(desc(habitDifficulties.completed_at))
         .limit(20);
 
     // 统计各难度次数

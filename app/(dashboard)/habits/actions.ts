@@ -1,26 +1,24 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth'; // 导入auth函数
 import {
-  getHabitsFromDB,
-  createHabitInDB,
-  deleteHabitFromDB,
   completeHabitInDB,
-  getHabitHistoryFromDB,
-  getHabitStatsFromDB,
-  updateHabitInDB,
-  saveHabitDifficultyInDB,  // 添加此导入
-  getHabitDifficultyHistoryFromDB,  // 添加此导入
-  completeHabitOnDateInDB, // 添加此导入用于补打卡
-  HabitHistoryEntry,
-  getHabitByIdDB, 
-  createHabitTierInDB, 
-  getHabitTiersFromDB, 
-  updateHabitTierInDB, 
+  createHabitInDB,
+  createHabitTierInDB,
+  deleteHabitFromDB,
   deleteHabitTierFromDB,
-  getHabitTierStatsFromDB 
+  getHabitByIdDB, // 添加此导入
+  getHabitDifficultyHistoryFromDB,
+  getHabitHistoryFromDB,
+  getHabitsFromDB,
+  getHabitStatsFromDB,
+  getHabitTiersFromDB,
+  getHabitTierStatsFromDB, // 添加此导入用于补打卡
+  HabitHistoryEntry,
+  updateHabitInDB,
+  updateHabitTierInDB
 } from '@/lib/db/db-habit';
+import { revalidatePath } from 'next/cache';
 // 从新文件导入奖励相关函数
 import {
   getUserRewardsFromDB,
@@ -78,67 +76,6 @@ export async function deleteHabit(id: number) {
 
 // 定义难度类型
 export type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
-
-// 更新 completeHabit 不再处理难度评估
-export async function completeHabit(habitId: number, tierId?: number) {
-  const userId = await getCurrentUserId();
-  // 首先获取当前习惯状态
-  const habit= await getHabitByIdDB(habitId, userId);
-
-  if (!habit) {
-    throw new Error('习惯不存在');
-  }
-
-  // 切换完成状态
-  const newCompletedState = !habit.completedToday;
-  await completeHabitInDB(habitId, newCompletedState, userId, tierId);
-
-  // 如果是完成习惯(从未完成到完成)，添加奖励
-  if (newCompletedState) {
-    // 如果指定了挑战阶梯，获取对应的奖励点数
-    let rewardPoints = habit.rewardPoints || 10;
-    
-    if (tierId) {
-      const tier = habit?.challenge_tiers?.find(t => t.id === tierId);
-      if (tier) {
-        rewardPoints = tier.reward_points;
-      }
-    }
-    
-    await updateUserRewardsInDB(userId, rewardPoints, habit.category);
-  } else {
-    // 如果是取消完成，减去奖励
-    const rewardPoints = habit.rewardPoints || 10;
-    await updateUserRewardsInDB(userId, -rewardPoints, habit.category);
-  }
-
-  revalidatePath('/habits');
-  return { success: true };
-}
-
-// 新增：单独的难度评价保存函数
-export async function saveHabitDifficulty(
-  habitId: string,
-  difficulty: DifficultyLevel,
-  comment?: string
-) {
-  const userId = await getCurrentUserId();
-
-  if (!difficulty) {
-    throw new Error('难度评估不能为空');
-  }
-
-  // 保存难度评估到数据库
-  await saveHabitDifficultyInDB(
-    Number(habitId),
-    userId,
-    difficulty,
-    comment
-  );
-
-  revalidatePath('/habits');
-  return { success: true };
-}
 
 export async function getHabitHistory(id: string): Promise<HabitHistoryEntry[]> {
   const userId = await getCurrentUserId();
@@ -198,41 +135,6 @@ export async function getHabitDifficultyHistory(habitId: number) {
 
   // 从数据库获取该习惯的难度评估历史
   return getHabitDifficultyHistoryFromDB(habitId, userId);
-}
-
-// 新增：在特定日期补打卡的函数
-export async function completeHabitOnDate(habitId: number, date: string) {
-  // 检查环境变量是否允许补打卡
-  if (process.env.NEXT_PUBLIC_ALLOW_BACKFILL !== 'true') {
-    throw new Error('补打卡功能未启用');
-  }
-
-  const userId = await getCurrentUserId();
-
-  // 解析日期
-  const targetDate = new Date(date);
-  // 确保日期有效
-  if (isNaN(targetDate.getTime())) {
-    throw new Error('无效的日期格式');
-  }
-
-  // 获取当前习惯
-  const habits = await getHabitsFromDB(userId);
-  const habit = habits.find(h => h.id === habitId);
-
-  if (!habit) {
-    throw new Error('习惯不存在');
-  }
-
-  // 在特定日期完成习惯
-  await completeHabitOnDateInDB(habitId, userId, targetDate);
-
-  // 添加奖励
-  const rewardPoints = habit.rewardPoints || 10;
-  await updateUserRewardsInDB(userId, rewardPoints, habit.category);
-
-  revalidatePath('/habits');
-  return { success: true };
 }
 
 // 获取指定日期的习惯列表

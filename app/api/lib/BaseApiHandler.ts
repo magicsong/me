@@ -108,8 +108,8 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
     protected supportAutoGenerate(): boolean {
         return this.promptBuilder !== undefined;
     }
-    // 抽象方法：生成ID
-    protected abstract generateId?(): string;
+    // 可选方法：生成ID
+    protected generateId?(): string;
 
     // 抽象方法：资源名称
     abstract getResourceName(): string;
@@ -291,7 +291,7 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
 
             // 使用LLM增强更新数据
             if (request.autoGenerate && request.userPrompt) {
-                const existingData = await this.getExistingData(String(item.id));
+                const existingData = await this.getById(String(item.id));
                 if (!existingData) {
                     return { success: false, error: '资源未找到' };
                 }
@@ -381,7 +381,7 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
             }
 
             // 先检查资源是否存在
-            const existingItem = await this.getExistingData(String(request.id));
+            const existingItem = await this.getById(String(request.id));
             if (!existingItem) {
                 return { success: false, error: '资源未找到' };
             }

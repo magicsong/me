@@ -46,17 +46,6 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
     }
     return businessObject;
   }
-
-  protected async getExistingData(id: string): Promise<TodoData> {
-    const todo = await this.persistenceService.findById(id);
-
-    if (!todo) {
-      throw new Error(`未找到 ID 为 ${id} 的待办事项`);
-    }
-
-    return todo;
-  }
-
   protected generateId(): string {
     // 在这个实现中，我们依赖于数据库来生成 ID
     return '';

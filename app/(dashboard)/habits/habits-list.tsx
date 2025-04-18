@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,24 +10,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "@/components/ui/dialog";
-import { CalendarCheck, CheckCircle2, Trash2, Award, BookOpen, Brain, Heart, Users, Pencil, BarChart, Trophy } from 'lucide-react';
-import { deleteHabit, completeHabit, updateHabit, getHabitDetail, completeHabitWithTier } from './actions';
-import { useRouter } from 'next/navigation';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { EditHabitForm } from './edit-habit-form';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Award, BarChart, BookOpen, Brain, CalendarCheck, CheckCircle2, Heart, Pencil, Trash2, Trophy, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { deleteHabit, getHabitDetail } from './actions';
+import { completeHabit } from './client-actions';
 import { HabitChallengeDialog } from './components/habit-challenge-dialog';
+import { EditHabitForm } from './edit-habit-form';
 
 type Habit = {
   id: number;

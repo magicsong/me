@@ -75,3 +75,29 @@ export interface TagBO {
     color: string;
     kind?: string;
 }
+
+/**
+ * 习惯业务对象类型，一般包含今日数据
+ */
+export interface HabitBO extends BusinessObject {
+    id?: number;
+    name: string;
+    description?: string;
+    frequency: 'daily' | 'weekly' | 'monthly' | 'scenario';
+    createdAt?: string;
+    userId: string;
+    category?: string;
+    rewardPoints: number;
+    status: 'active' | 'inactive' | 'archived';
+    challengeTiers?: ChallengeTierBO[];
+    completedToday?: boolean;
+    completedTier?: number | null;
+}
+
+export interface ChallengeTierBO extends BusinessObject {
+    id: number;
+    name: string;
+    level: number;
+    description?: string;
+    reward_points: number;
+}

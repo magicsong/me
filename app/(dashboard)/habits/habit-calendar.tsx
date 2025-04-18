@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Cone, X } from 'lucide-react';
-import { getHabitHistory, completeHabitOnDate } from './actions';
+import { getHabitHistory } from './actions';
+import { completeHabitOnDate} from './client-actions';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {

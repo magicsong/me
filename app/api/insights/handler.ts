@@ -34,14 +34,6 @@ export class AIInsightHandler extends BaseApiHandler<AIInsightDO, AIInsightBO> {
     );
   }
 
-  protected async getExistingData(id: string): Promise<AIInsightDO> {
-    const result = await this.persistenceService.get(id);
-    if (!result) {
-      throw new Error(`找不到ID为${id}的AI洞察记录`);
-    }
-    return result;
-  }
-
   protected generateId(): string {
     return Date.now().toString();
   }

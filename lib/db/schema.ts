@@ -1,5 +1,6 @@
 import { relations, sql, InferSelectModel } from "drizzle-orm"
 import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar, uniqueIndex, uuid, boolean, foreignKey } from "drizzle-orm/pg-core"
+import { comment } from "postcss"
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly','scenario'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
@@ -26,6 +27,8 @@ export const habit_entries = pgTable("habit_entries", {
 	completed_at: timestamp("completed_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
 	user_id: text("user_id").notNull(),
 	tier_id: integer("tier_id").references(() => habit_challenge_tiers.id),
+	comment: text("comment"),
+	difficulty: difficulty("difficulty"),
 },
 	(table) => {
 		return {
