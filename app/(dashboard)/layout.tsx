@@ -75,6 +75,9 @@ function DesktopNav() {
         <NavItem href="/" label="Dashboard">
           <Home className="h-5 w-5" />
         </NavItem>
+        <NavItem href="/daily" label="Daily">
+          <History className="h-5 w-5" />
+        </NavItem>
         <NavItem href="/chat" label="AI Chat">
           <MessageSquare className="h-5 w-5" />
         </NavItem>
@@ -96,9 +99,7 @@ function DesktopNav() {
         <NavItem href="/ai-history" label="AI History">
           <Brain className="h-5 w-5" />
         </NavItem>
-        <NavItem href="/daily" label="Daily">
-          <History className="h-5 w-5" />
-        </NavItem>
+        
       </nav>
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <Tooltip>

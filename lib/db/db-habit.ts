@@ -646,9 +646,9 @@ export async function saveHabitDifficultyInDB(
         .from(habitDifficulties)
         .where(
             and(
-                eq(habitDifficulties.habitId, habitId),
-                eq(habitDifficulties.userId, userId),
-                eq(habitDifficulties.completedAt, today)
+                eq(habitDifficulties.habit_id, habitId),
+                eq(habitDifficulties.user_id, userId),
+                eq(habitDifficulties.completed_at, today)
             )
         )
         .limit(1);
@@ -662,9 +662,9 @@ export async function saveHabitDifficultyInDB(
             })
             .where(
                 and(
-                    eq(habitDifficulties.habitId, habitId),
-                    eq(habitDifficulties.userId, userId),
-                    eq(habitDifficulties.completedAt, today)
+                    eq(habitDifficulties.habit_id, habitId),
+                    eq(habitDifficulties.user_id, userId),
+                    eq(habitDifficulties.completed_at, today)
                 )
             );
         return existingDifficulty[0].id;

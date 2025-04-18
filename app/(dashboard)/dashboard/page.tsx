@@ -1,4 +1,5 @@
-import { CalendarCheck2, LineChart } from 'lucide-react';
+import { CalendarCheck2, LineChart, ClipboardList } from 'lucide-react';
+import Link from 'next/link';
 import { HabitCheckInCard } from './habit-check-in-card';
 import { getHabits, getHabitStats } from '../habits/actions';
 import { UserProfileCard } from '@/components/user-profile-card';
@@ -47,7 +48,23 @@ export default async function DashboardPage() {
           <h1 className="text-xl font-semibold">今日概览</h1>
         </div>
       </div>
-      
+       {/* 每日规划快速入口 */}
+       <Link href="/daily" className="block mb-4">
+        <Card className="hover:bg-accent/50 transition-colors cursor-pointer border-dashed">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-2 rounded-full">
+                <ClipboardList className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-medium">前往每日规划</h3>
+                <p className="text-sm text-muted-foreground">安排今日任务，规划时间分配</p>
+              </div>
+            </div>
+            <div className="text-primary text-sm font-medium">立即前往 →</div>
+          </CardContent>
+        </Card>
+      </Link>
       {/* 添加日常总结查看器 */}
       <DailySummaryViewer />
       
