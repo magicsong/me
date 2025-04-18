@@ -40,7 +40,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/iac ./iac
+COPY --from=builder /app/drizzle ./drizzle
 
 # 创建非 root 用户并设置权限
 RUN addgroup --system --gid 1001 nodejs \
