@@ -18,43 +18,17 @@ import {
   Trophy,
 } from "lucide-react";
 import { getHabitDetail } from "../../habits/actions";
+import { HabitBO } from "@/app/api/types";
+import { ChallengeTier } from "@/app/api/types/habit";
 
 // 类型定义
 type DifficultyLevel = "easy" | "medium" | "hard" | null;
-
-type Habit = {
-  id: number;
-  name: string;
-  description?: string;
-  frequency: "daily" | "weekly" | "monthly";
-  createdAt: string;
-  completedToday: boolean;
-  streak: number;
-  challenge_tiers?: ChallengeTier[];
-  completed_tier?: CompletedTier | null;
-  rewardPoints?: number;
-};
-
-type ChallengeTier = {
-  id: number;
-  name: string;
-  level: number;
-  description?: string;
-  reward_points: number;
-};
-
-type CompletedTier = {
-  id: number;
-  name: string;
-  level: number;
-  reward_points: number;
-};
 
 // 修改Props类型定义，合并两个回调为一个
 type HabitCompletionDialogProps = {
   isOpen: boolean;
   onClose: () => void;
-  habit: Habit | null;
+  habit: HabitBO | null;
   onSubmit: (data: {
     habitId: number;
     tierId?: number;

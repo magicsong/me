@@ -2,6 +2,7 @@ import { BaseApiHandler } from '@/app/api/lib/BaseApiHandler';
 import { HabitData, HabitPersistenceService } from '@/lib/persist/habit';
 import { HabitPromptBuilder, HabitOutputParser } from './ai';
 import { HabitBO } from '../types';
+import { FilterOptions } from '../lib/types';
 
 /**
  * 习惯API处理器
@@ -14,11 +15,10 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
   ) {
     super(persistenceService, promptBuilder, outputParser);
   }
-
+  
   getResourceName(): string {
     return 'habit';
   }
-
   validateBO(businessObject: Partial<HabitBO>, isUpdate: boolean): boolean {
     if (!businessObject) return false;
 
@@ -181,7 +181,10 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       challengeTiers: dataObject.challengeTiers,
     };
   }
-
+  fieldsMoveToExtraOptionsWhenGet(): string[] {
+      return ["date"]
+  }
+  
   toDataObject(businessObject: HabitBO): Partial<HabitData> {
     return {
       id: businessObject.id,

@@ -92,7 +92,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         let data = result.length > 0 ? this.purifyResult(result[0]) : null;
 
         if (this.hooks.afterQuery && data) {
-            data = await Promise.resolve(this.hooks.afterQuery(data) as I | null);
+            data = await Promise.resolve(this.hooks.afterQuery(data, filter) as I | null);
         }
 
         return data;
@@ -125,7 +125,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         let data = result.length > 0 ? this.purifyResult(result[0]) : null;
 
         if (this.hooks.afterQuery && data) {
-            data = await Promise.resolve(this.hooks.afterQuery(data) as I | null);
+            data = await Promise.resolve(this.hooks.afterQuery(data, filter) as I | null);
         }
 
         return data;
@@ -146,7 +146,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         let data = this.purifyResults(result);
 
         if (this.hooks.afterQuery) {
-            data = await Promise.resolve(this.hooks.afterQuery(data) as I[]);
+            data = await Promise.resolve(this.hooks.afterQuery(data, filter) as I[]);
         }
 
         return data;
@@ -302,7 +302,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         let data = await this.findMany(filter);
         if (limit && limit > 0) {
             data = data.slice(0, limit);
-        }   
+        }
         return {
             items: data,
             total: data.length
@@ -378,7 +378,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         let data = this.purifyResults(resultData);
 
         if (this.hooks.afterQuery) {
-            data = await Promise.resolve(this.hooks.afterQuery(data) as I[]);
+            data = await Promise.resolve(this.hooks.afterQuery(data, filter) as I[]);
         }
 
         let result: PaginatedResult<I> = {
@@ -402,7 +402,9 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
 
         for (const [key, value] of Object.entries(filter)) {
             if (value === null || value === undefined) continue;
-
+            if (key === 'extraOptions') {
+                continue;
+            }
             // 检查字段是否存在于表结构中
             if (!(key in this.table)) {
                 throw new Error(`字段 ${key} 在表 ${this.table.name} 中不存在`);

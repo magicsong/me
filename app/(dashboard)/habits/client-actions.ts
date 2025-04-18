@@ -1,12 +1,15 @@
 "use client";
 
+import { HabitBO } from "@/app/api/types";
+import { format } from "date-fns";
+
 // 更新 completeHabit 函数，使用API而不是直接访问数据库
 export async function completeHabit(
     habitId: number,
     options?: {
         tierId?: number;
         comment?: string;
-        difficulty?: number;
+        difficulty?: string;
         completedAt?: string;
     }
 ) {
@@ -47,4 +50,21 @@ export async function completeHabitOnDate(habitId: number, date: string) {
 
     // 使用 completeHabit 进行补打卡
     return completeHabit(habitId, { completedAt: date });
+}
+
+
+export async function getHabits(date?: Date): Promise<HabitBO[]> {
+    let url = '/api/habit'
+    if (date) {
+        url = url + '?date=' + format(date, 'yyyy-MM-dd');
+    }
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error('获取习惯数据失败');
+    }
+    const data = await response.json();
+    if (data.success) {
+        return data.data
+    }
+    throw new Error(data.error);
 }

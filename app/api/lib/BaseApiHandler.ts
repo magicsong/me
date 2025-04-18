@@ -7,7 +7,6 @@ import {
 import { IApiHandler } from './interfaces/IApiHandler';
 import { FilterCondition, PaginationOptions, PersistenceService } from '@/lib/db/intf';
 import { PromptTemplate } from '@langchain/core/prompts';
-import { th } from 'date-fns/locale';
 
 /**
  * 通用API处理基类，实现IApiHandler接口
@@ -19,6 +18,9 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
         protected promptBuilder?: PromptBuilder<BO> | undefined,
         protected outputParser?: OutputParser<BO>
     ) { }
+    fieldsMoveToExtraOptionsWhenGet(): string[] {
+        return [];
+    }
     /**
      * 处理删除请求 - 通过ID删除单个资源
      * @param request 包含id和可选userId的请求对象
@@ -59,7 +61,6 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
             };
         }
     }
-
     /**
      * 处理批量删除请求 - 通过ID数组删除多个资源
      * @param request 包含ids数组和可选userId的请求对象
@@ -854,8 +855,9 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
             if (typeof this.persistenceService.getWithFilters !== 'function') {
                 throw new Error(`${this.getResourceName()}持久化服务不支持过滤查询`);
             }
-
-            const dbFilters = this.convertFilters(filters)
+            const fields = this.fieldsMoveToExtraOptionsWhenGet()
+            console.log("debug1111", filters, fields)
+            const dbFilters = this.convertFilters(filters, fields)
             const result = await this.persistenceService.getWithFilters(dbFilters, userId, filters.limit);
 
             return {
@@ -904,7 +906,6 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
 
             // 转换为持久层的过滤条件
             const filterCondition: FilterCondition<T> = this.convertFilters(filters);
-            console.log(filterCondition)
             // 如果提供了userId，添加到过滤条件
             if (userId) {
                 (filterCondition as any).userId = userId;
@@ -956,13 +957,19 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
      * @param filters API过滤选项
      * @returns 持久层过滤条件
      */
-    protected convertFilters(filters: FilterOptions): FilterCondition<T> {
+    protected convertFilters(filters: FilterOptions, fields: string[]): FilterCondition<T> {
         const result: FilterCondition<T> = {} as FilterCondition<T>;
         if (filters.conditions && filters.conditions.length > 0) {
             for (const condition of filters.conditions) {
+                if (fields.includes(condition.field)) {
+                    if (!result.extraOptions) {
+                        result.extraOptions = {}
+                    }
+                    result.extraOptions[condition.field] = condition.value;
+                    continue;
+                }
                 // 转换字段名
                 const dbFieldName = this.convertFieldName(condition.field);
-
                 // 处理eq操作符，这会覆盖之前的任何条件
                 if (condition.operator === 'eq') {
                     result[dbFieldName] = condition.value;

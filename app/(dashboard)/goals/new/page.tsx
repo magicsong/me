@@ -1,5 +1,7 @@
+"use client";
+
+import { getHabits } from '../../habits/client-actions';
 import { GoalForm } from './goal-form';
-import { getHabits } from '../../habits/actions';
 import { auth } from '@/lib/auth';
 
 export default async function NewGoalPage() {

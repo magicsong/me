@@ -8,7 +8,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { HabitsList } from './habits-list';
-import { getHabits } from './actions';
+import { getHabits } from './client-actions';
 import { AddHabitButton } from './add-habit-button';
 import { HabitStats } from './habit-stats';
 import { RewardsStats } from './rewards-stats';

@@ -17,6 +17,7 @@ import { HabitCalendar } from '../habits/habit-calendar';
 import { DifficultyFeedback } from './components/difficulty-feedback';
 import { HabitCompletionDialog } from './components/habit-completion-dialog';
 import { toast } from 'sonner'; // 导入 sonner 的 toast
+import { HabitBO } from '@/app/api/types';
 
 // 难度评估类型
 type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
@@ -24,10 +25,10 @@ type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
 // 习惯打卡卡片组件
 export function HabitCheckInCard() {
   const [animatingHabitId, setAnimatingHabitId] = useState<number | null>(null);
-  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+  const [selectedHabit, setSelectedHabit] = useState<HabitBO | null>(null);
 
   // 添加 habits 状态及相关计数
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habits, setHabits] = useState<HabitBO[]>([]);
   const [loading, setLoading] = useState(true);
   const completedCount = habits.filter(h => h.completedToday).length;
   const totalCount = habits.length;
@@ -35,7 +36,7 @@ export function HabitCheckInCard() {
 
   // 合并对话框状态
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
-  const [currentHabit, setCurrentHabit] = useState<Habit | null>(null);
+  const [currentHabit, setCurrentHabit] = useState<HabitBO | null>(null);
 
   // 获取习惯数据
   async function fetchHabits() {
@@ -68,7 +69,7 @@ export function HabitCheckInCard() {
   }, [habits, selectedHabit]);
 
   // 处理习惯点击 - 显示日历
-  const handleHabitClick = (habit: Habit) => {
+  const handleHabitClick = (habit: HabitBO) => {
     setSelectedHabit(habit);
   };
 
@@ -188,14 +189,14 @@ export function HabitCheckInCard() {
                     )}
 
                     {/* 显示已完成的挑战级别 */}
-                    {habit.completedToday && habit.completed_tier && (
+                    {habit.completedToday && habit.completedTier && (
                       <div className="flex items-center gap-1 mt-1">
                         <Trophy className="h-3 w-3 text-amber-500" />
                         <span className="text-xs font-medium text-amber-600">
-                          挑战已完成: {habit.completed_tier.name}
+                          挑战已完成: {habit.challengeTiers?.find(tier => tier.id === habit.completedTier)?.name || 'Unknown'}
                         </span>
                         <Badge variant="outline" className="text-xs ml-1 h-5 px-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100">
-                          +{habit.completed_tier.reward_points}
+                          +{habit.challengeTiers?.find(tier => tier.id === habit.completedTier)?.reward_points || 'Unknown'}
                         </Badge>
                       </div>
                     )}

@@ -32,16 +32,16 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
 
     // 设置钩子，在查询后自动加载关联数据
     this.setHooks({
-      afterQuery: async (data) => {
+      afterQuery: async (data, filter) => {
         if (!data) return data;
-
+        const targetDate = filter?.extraOptions?.date || format(new Date(), 'yyyy-MM-dd');
         // 处理单个习惯对象
         if (!Array.isArray(data)) {
-          return this.loadAssociatedDataForSingleHabit(data);
+          return this.loadAssociatedDataForSingleHabit(data, targetDate);
         }
 
         // 处理习惯数组
-        return this.loadAssociatedDataForMultipleHabits(data);
+        return this.loadAssociatedDataForMultipleHabits(data, targetDate);
       }
     });
   }
@@ -49,12 +49,12 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
   /**
    * 为单个习惯加载关联数据
    */
-  private async loadAssociatedDataForSingleHabit(habit: HabitData): Promise<HabitData> {
+  private async loadAssociatedDataForSingleHabit(habit: HabitData, targetDate: string): Promise<HabitData> {
     // 加载挑战等级
     habit.challengeTiers = await this.getChallengeTiersForHabit(habit.id);
-    
+
     // 检查今日是否已打卡
-    const todayCheckIn = await this.getTodayCheckInForHabit(habit.id, habit.user_id);
+    const todayCheckIn = await this.getTodayCheckInForHabit(habit.id, habit.user_id, targetDate);
     habit.completedToday = !!todayCheckIn;
     habit.completedTier = todayCheckIn?.tier_id || null;
 
@@ -64,12 +64,12 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
   /**
    * 为多个习惯批量加载关联数据
    */
-  private async loadAssociatedDataForMultipleHabits(habits: HabitData[]): Promise<HabitData[]> {
+  private async loadAssociatedDataForMultipleHabits(habits: HabitData[], targetDate: string): Promise<HabitData[]> {
     if (habits.length === 0) return habits;
 
     const habitIds = habits.map(habit => habit.id);
     const userIds = [...new Set(habits.map(habit => habit.user_id))];
-    const today = format(new Date(), 'yyyy-MM-dd');
+    const today = targetDate;
 
     // 批量获取所有关联的挑战等级
     const allChallengeTiers = await this.db
@@ -140,9 +140,9 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
   /**
    * 获取单个习惯的今日打卡记录
    */
-  private async getTodayCheckInForHabit(habitId: number, userId: string) {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    
+  private async getTodayCheckInForHabit(habitId: number, userId: string, targetDate: string) {
+    const today = targetDate;
+
     const [checkIn] = await this.db
       .select()
       .from(habit_entries)
@@ -167,71 +167,71 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
  * @param options.difficulty 完成难度评分
  * @param options.completedAt 指定完成时间，用于补打卡
  */
-async checkInHabit(
-  habitId: number, 
-  userId: string, 
-  options?: {
-    tierId?: number;
-    comment?: string;
-    difficulty?: string;
-    completedAt?: Date | string;
-  }
-): Promise<{
-  success: boolean;
-  habitEntry?: typeof habit_entries.$inferSelect;
-}> {
-  try {
-    const { tierId, comment, difficulty, completedAt } = options || {};
-    const checkInDate = completedAt ? new Date(completedAt) : new Date();
-    const dateStr = format(checkInDate, 'yyyy-MM-dd');
-    
-    // 检查指定日期是否已打卡
-    const existingCheckIn = await this.db
-      .select()
-      .from(habit_entries)
-      .where(
-        and(
-          eq(habit_entries.habit_id, habitId),
-          eq(habit_entries.user_id, userId),
-          sql`DATE(${habit_entries.completed_at}) = ${dateStr}`
+  async checkInHabit(
+    habitId: number,
+    userId: string,
+    options?: {
+      tierId?: number;
+      comment?: string;
+      difficulty?: string;
+      completedAt?: Date | string;
+    }
+  ): Promise<{
+    success: boolean;
+    habitEntry?: typeof habit_entries.$inferSelect;
+  }> {
+    try {
+      const { tierId, comment, difficulty, completedAt } = options || {};
+      const checkInDate = completedAt ? new Date(completedAt) : new Date();
+      const dateStr = format(checkInDate, 'yyyy-MM-dd');
+
+      // 检查指定日期是否已打卡
+      const existingCheckIn = await this.db
+        .select()
+        .from(habit_entries)
+        .where(
+          and(
+            eq(habit_entries.habit_id, habitId),
+            eq(habit_entries.user_id, userId),
+            sql`DATE(${habit_entries.completed_at}) = ${dateStr}`
+          )
         )
-      )
-      .limit(1);
-    
-    if (existingCheckIn.length > 0) {
-      // 已打卡，返回现有记录
+        .limit(1);
+
+      if (existingCheckIn.length > 0) {
+        // 已打卡，返回现有记录
+        return {
+          success: true,
+          habitEntry: existingCheckIn[0]
+        };
+      }
+
+      // 创建新打卡记录
+      const [newEntry] = await this.db.insert(habit_entries).values({
+        habit_id: habitId,
+        user_id: userId,
+        tier_id: tierId,
+        comment: comment,
+        difficulty: difficulty,
+        completed_at: checkInDate.toISOString()
+      }).returning();
+
       return {
         success: true,
-        habitEntry: existingCheckIn[0]
+        habitEntry: newEntry
       };
+    } catch (error) {
+      console.error('Failed to check in habit:', error);
+      return { success: false };
     }
-
-    // 创建新打卡记录
-    const [newEntry] = await this.db.insert(habit_entries).values({
-      habit_id: habitId,
-      user_id: userId,
-      tier_id: tierId,
-      comment: comment,
-      difficulty: difficulty,
-      completed_at: checkInDate.toISOString()
-    }).returning();
-
-    return {
-      success: true,
-      habitEntry: newEntry
-    };
-  } catch (error) {
-    console.error('Failed to check in habit:', error);
-    return { success: false };
   }
-}
 
   /**
    * 取消今日打卡
    */
   async cancelCheckInHabit(habitId: number, userId: string): Promise<boolean> {
     const today = format(new Date(), 'yyyy-MM-dd');
-    
+
     try {
       await this.db
         .delete(habit_entries)
@@ -242,7 +242,7 @@ async checkInHabit(
             sql`DATE(${habit_entries.completed_at}) = ${today}`
           )
         );
-      
+
       return true;
     } catch (error) {
       console.error('Failed to cancel habit check in:', error);

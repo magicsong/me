@@ -199,14 +199,13 @@ export function createNextRouteHandlers<T, BO extends BusinessObject>(handler: I
       const id = searchParams.get('id');
       const page = searchParams.has('page') ? parseInt(searchParams.get('page') as string) : undefined;
       const pageSize = searchParams.has('pageSize') ? parseInt(searchParams.get('pageSize') as string) : undefined;
-      
+
       // 使用从身份验证获取的userId，而不是从参数中获取
       const userIdFromParam = searchParams.get('userId') || undefined;
       const effectiveUserId = userId || userIdFromParam;
 
       // 解析URL中的所有查询参数作为一般过滤条件
-      const queryFilters = parseQueryParams(searchParams);
-
+      let queryFilters = parseQueryParams(searchParams);
       // 判断是否有除id/page/pageSize/userId之外的过滤参数
       const hasFilters = Object.keys(queryFilters).length > 0;
 
@@ -250,7 +249,7 @@ export function createNextRouteHandlers<T, BO extends BusinessObject>(handler: I
       if (!userId) {
         return createApiResponse(false, undefined, '用户未登录', 401);
       }
-      
+
       const body = await request.json();
       const { isAIGeneration, isBatch, ...data } = body;
 

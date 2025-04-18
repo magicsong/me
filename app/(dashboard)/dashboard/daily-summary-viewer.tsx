@@ -42,7 +42,7 @@ import { useEffect, useState ,useMemo } from 'react';
 import { fetchDailySummary, saveDailySummary } from './actions';
 import { AISummarySection } from './components/ai-summary-section';
 import { DailySummaryForm } from './daily-summary-form';
-import { getHabits } from '../habits/actions';
+import { getHabits } from '../habits/client-actions';
 
 type SummaryData = {
   date: string;

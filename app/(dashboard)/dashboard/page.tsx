@@ -1,25 +1,57 @@
+"use client";
+
+import { useState, useEffect } from 'react';
 import { CalendarCheck2, LineChart, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { HabitCheckInCard } from './habit-check-in-card';
-import { getHabits, getHabitStats } from '../habits/actions';
+import { getHabitStats } from '../habits/actions';
+import { getHabits} from '../habits/client-actions';
 import { UserProfileCard } from '@/components/user-profile-card';
 import { auth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DailyQuote } from '@/components/DailyQuote'; 
 import { DailySummaryViewer } from './daily-summary-viewer';
 
-export default async function DashboardPage() {
-  // 获取用户会话
-  const session = await auth();
-  const user = session?.user;
+export default function DashboardPage() {
+  // 使用 useState 保存数据
+  const [user, setUser] = useState(null);
+  const [habits, setHabits] = useState([]);
+  const [habitStats, setHabitStats] = useState({ overallCompletionRate: 0, periodLabel: '' });
+  const [loading, setLoading] = useState(true);
   
-  // 获取习惯数据
-  const habits = await getHabits();
+  // 计算习惯完成数据
   const completedHabits = habits.filter(habit => habit.completedToday).length;
   const totalHabits = habits.length;
   
-  // 获取习惯统计信息
-  const habitStats = await getHabitStats('week');
+  // 使用 useEffect 获取数据
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // 获取用户会话
+        const session = await auth();
+        setUser(session?.user || null);
+        
+        // 获取习惯数据
+        const habitsData = await getHabits();
+        setHabits(habitsData);
+        
+        // 获取习惯统计信息
+        const stats = await getHabitStats('week');
+        setHabitStats(stats);
+      } catch (error) {
+        console.error('获取数据失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, []);
+  
+  // 加载状态
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-[50vh]">正在加载数据...</div>;
+  }
   
   return (
     <>

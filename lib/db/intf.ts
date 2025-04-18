@@ -27,14 +27,16 @@ export interface RepositoryHooks<T> {
     beforeDelete?: (id: any) => Promise<boolean> | boolean;
     afterDelete?: (data: T) => Promise<T> | T;
     beforeQuery?: (filter: FilterCondition<T>) => Promise<FilterCondition<T>> | FilterCondition<T>;
-    afterQuery?: (data: T | T[] | null) => Promise<T | T[] | null> | T | T[] | null;
+    afterQuery?: (data: T | T[] | null, filter?: FilterCondition<T>) => Promise<T | T[] | null> | T | T[] | null;
     afterPagination?: (result: PaginatedResult<T>) => Promise<PaginatedResult<T>> | PaginatedResult<T>;
 }
 
 // 过滤条件
 export type FilterCondition<T> = Partial<{
     [K in keyof T]: T[K] | { eq?: T[K]; neq?: T[K]; gt?: T[K]; gte?: T[K]; lt?: T[K]; lte?: T[K]; in?: T[K][]; like?: string }
-}>;
+}> & {
+    extraOptions?: Record<string, any>;
+};
 
 
 /**

@@ -34,12 +34,6 @@ async function getCurrentUserId() {
   return session.user.id;
 }
 
-export async function getHabits(date?: Date) {
-  // 获取当前用户ID
-  const userId = await getCurrentUserId();
-  return getHabitsFromDB(userId, date);
-}
-
 export async function createHabit(formData: FormData) {
   const userId = await getCurrentUserId();
   const name = formData.get('name') as string;
@@ -170,7 +164,7 @@ export async function getHabitTiers(habitId: number) {
 }
 
 // 创建习惯挑战阶梯
-export async function createHabitTier(habitId: number , tierData: {
+export async function createHabitTier(habitId: number, tierData: {
   name: string;
   level: number;
   description?: string;
@@ -178,16 +172,16 @@ export async function createHabitTier(habitId: number , tierData: {
   completion_criteria?: any;
 }) {
   const userId = await getCurrentUserId();
-  
+
   if (!tierData.name) throw new Error('挑战名称不能为空');
   if (tierData.reward_points < 1) throw new Error('奖励点数不能小于1');
-  
+
   const result = await createHabitTierInDB(
     Number(habitId),
     userId,
     tierData
   );
-  
+
   revalidatePath('/habits');
   return result;
 }
@@ -201,13 +195,13 @@ export async function updateHabitTier(tierId: number, tierData: {
   completion_criteria?: any;
 }) {
   const userId = await getCurrentUserId();
-  
+
   const result = await updateHabitTierInDB(
     Number(tierId),
     userId,
     tierData
   );
-  
+
   revalidatePath('/habits');
   return result;
 }
@@ -216,7 +210,7 @@ export async function updateHabitTier(tierId: number, tierData: {
 export async function deleteHabitTier(tierId: number) {
   const userId = await getCurrentUserId();
   await deleteHabitTierFromDB(Number(tierId), userId);
-  
+
   revalidatePath('/habits');
   return { success: true };
 }
@@ -230,26 +224,26 @@ export async function getHabitTierStats(habitId: number) {
 // 使用特定挑战阶梯完成习惯
 export async function completeHabitWithTier(habitId: number, tierId: number) {
   const userId = await getCurrentUserId();
-  
+
   // 获取当前习惯状态
   const habit = await getHabitByIdDB(habitId, userId);
-  
+
   if (!habit) {
     throw new Error('习惯不存在');
   }
-  
+
   // 完成习惯，并指定挑战阶梯
   await completeHabitInDB(habitId, true, userId, tierId);
-  
+
   // 获取该阶梯的奖励点数
   const tier = habit.challenge_tiers.find(t => t.id === tierId);
   if (!tier) {
     throw new Error('挑战阶梯不存在');
   }
-  
+
   // 添加奖励
   await updateUserRewardsInDB(userId, tier.reward_points, habit.category);
-  
+
   revalidatePath('/habits');
   return { success: true };
 }
