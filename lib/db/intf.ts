@@ -107,7 +107,8 @@ export interface PersistenceService<T> {
      */
     getWithFilters?(
         filter: FilterCondition<T>,
-        userId?: string
+        userId?: string,
+        limit?: number,
     ): Promise<{
         items: T[];
         total: number;

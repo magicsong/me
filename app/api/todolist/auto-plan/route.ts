@@ -44,12 +44,9 @@ export async function POST(request: NextRequest) {
     // 调用Langchain生成任务计划
     const todoItems = await generateTodoItems(description);
 
-    // 保存生成的待办事项到数据库
-    const savedTasks = await saveTodoItems(todoItems, userId);
-
     return NextResponse.json({
       success: true,
-      todoItems: savedTasks,
+      todoItems: todoItems,
       message: '待办事项已成功生成并保存'
     });
   } catch (error) {

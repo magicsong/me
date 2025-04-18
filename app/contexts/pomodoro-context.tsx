@@ -85,15 +85,20 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error('获取番茄钟数据失败');
+        }
+        const data = result.data;
         if (data && data.length > 0) {
           const pomodoro = {
-            id: data[0].pomodoro.id,
-            startTime: new Date(data[0].pomodoro.start_time).getTime(),
-            duration: data[0].pomodoro.duration,
-            tag: data[0].pomodoro.tag,
-            endTime: new Date(data[0].pomodoro.end_time).getTime(),
-            title: data[0].pomodoro.title
+            id: data[0].id,
+            startTime: new Date(data[0].startTime).getTime(),
+            duration: data[0].duration,
+            tag: data[0].tag,
+            title: data[0].title,
+            description: data[0].description,
+            endTime: undefined,
           };
           saveToCache(pomodoro);
           setActivePomodoro(pomodoro);

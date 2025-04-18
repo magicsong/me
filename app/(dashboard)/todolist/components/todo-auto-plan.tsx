@@ -65,7 +65,7 @@ export function TodoAutoPlan({ onCreateTodos, onCancel, availableTags }: TodoAut
         selected: true,
         editing: false,
       }));
-      
+      console.log('[debug]生成的待办事项:', todos);
       setGeneratedTodos(todos);
     } catch (err) {
       setError('生成待办事项计划失败，请重试');

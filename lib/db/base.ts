@@ -288,7 +288,8 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     // 通用过滤方法
     async getWithFilters(
         filter: FilterCondition<I>,
-        userId?: string
+        userId?: string,
+        limit?: number,
     ): Promise<{
         items: I[];
         total: number;
@@ -298,11 +299,14 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
             filter = { ...filter, user_id: userId } as unknown as FilterCondition<I>;
         }
 
-        const data = await this.findMany(filter);
+        let data = await this.findMany(filter);
+        if (limit && limit > 0) {
+            data = data.slice(0, limit);
+        }   
         return {
             items: data,
             total: data.length
-        };
+        }
     }
 
     // 带分页的通用过滤方法

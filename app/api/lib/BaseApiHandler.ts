@@ -24,7 +24,7 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
      * @param request 包含id和可选userId的请求对象
      * @returns 删除操作结果
      */
-    async handleDelete(request: { id: string; userId?: string; [key: string]: any; }): Promise<BaseResponse<{ success: boolean; }>> {
+    async handleDelete(request: { id: string; userId?: string;[key: string]: any; }): Promise<BaseResponse<{ success: boolean; }>> {
         try {
             if (!request.id) {
                 return { success: false, error: '删除操作需要提供ID' };
@@ -45,9 +45,9 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
 
             // 执行删除操作
             const result = await this.persistenceService.delete(request.id);
-            
-            return { 
-                success: !!result, 
+
+            return {
+                success: !!result,
                 data: { success: !!result },
                 error: result ? undefined : `删除${this.getResourceName()}失败`
             };
@@ -65,13 +65,13 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
      * @param request 包含ids数组和可选userId的请求对象
      * @returns 删除操作结果，包含成功状态和删除数量
      */
-    async handleBatchDelete(request: { ids: string[]; userId?: string; [key: string]: any; }): Promise<BaseResponse<{ success: boolean; count: number; }>> {
+    async handleBatchDelete(request: { ids: string[]; userId?: string;[key: string]: any; }): Promise<BaseResponse<{ success: boolean; count: number; }>> {
         try {
             if (!request.ids || !Array.isArray(request.ids) || request.ids.length === 0) {
-                return { 
-                    success: false, 
+                return {
+                    success: false,
                     data: { success: false, count: 0 },
-                    error: '批量删除需要提供有效的ID数组' 
+                    error: '批量删除需要提供有效的ID数组'
                 };
             }
 
@@ -87,12 +87,12 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
 
             // 执行批量删除操作
             const count = await this.persistenceService.deleteMany(filter);
-            
-            return { 
-                success: count > 0, 
-                data: { 
-                    success: count > 0, 
-                    count: count 
+
+            return {
+                success: count > 0,
+                data: {
+                    success: count > 0,
+                    count: count
                 },
                 error: count === 0 ? `未能删除任何${this.getResourceName()}` : undefined
             };
@@ -105,8 +105,8 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
         }
     }
 
-    protected supportAutoGenerate(): boolean { 
-        return this.promptBuilder !== undefined; 
+    protected supportAutoGenerate(): boolean {
+        return this.promptBuilder !== undefined;
     }
     // 抽象方法：生成ID
     protected abstract generateId?(): string;
@@ -856,8 +856,7 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
             }
 
             const dbFilters = this.convertFilters(filters)
-            console.log(dbFilters)
-            const result = await this.persistenceService.getWithFilters(dbFilters, userId);
+            const result = await this.persistenceService.getWithFilters(dbFilters, userId, filters.limit);
 
             return {
                 items: this.toBusinessObjects(result.items),
