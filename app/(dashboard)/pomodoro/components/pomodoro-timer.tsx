@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, Pause, RotateCcw, Check } from 'lucide-react';
-import { updatePomodoroStatus } from '@/lib/db/pomodoro';
 import { useSearchParams } from 'next/navigation';
 // 引入倒计时组件
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';

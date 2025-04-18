@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { TodoAutoPlan } from './todo-auto-plan';
 import { DailyTimelineView } from './daily-timeline-view';
 import { TagBO, TodoBO } from '@/app/api/types';
+import { fetchTodosByDate } from '../../actions';
+import { BaseResponse } from '@/lib/types';
 
 // 新增：番茄钟会话记录类型
 export interface PomodoroSession {
@@ -50,18 +52,18 @@ export function TodoListContainer() {
     try {
       setIsLoading(true);
       const searchParams = new URLSearchParams();
-      
+
       if (filters.status) searchParams.append('status', filters.status);
       if (filters.priority) searchParams.append('priority', filters.priority);
       if (filters.search) searchParams.append('search', filters.search);
       if (filters.tagId) searchParams.append('tagId', filters.tagId.toString());
-      
-      const response = await fetch(`/api/todos?${searchParams.toString()}`);
-      
+
+      const response = await fetch(`/api/todo?${searchParams.toString()}`);
+
       if (!response.ok) {
         throw new Error('获取待办事项失败');
       }
-      
+
       const data = await response.json();
       setTodos(data.data);
       setFilteredTodos(data.data);
@@ -112,14 +114,14 @@ export function TodoListContainer() {
         },
         body: JSON.stringify(todo),
       });
-      
+
       if (!response.ok) {
         throw new Error('创建待办事项失败');
       }
-      
+
       // 获取新创建的待办事项ID
       const newTodo = await response.json();
-      
+
       // 确保有待办事项ID才进行标签关联
       if (newTodo && newTodo.id) {
         // 如果有选择标签，则关联标签
@@ -131,7 +133,7 @@ export function TodoListContainer() {
             },
             body: JSON.stringify({ tagIds }),
           });
-          
+
           if (!tagResponse.ok) {
             console.error('标签关联失败');
             toast({
@@ -142,7 +144,7 @@ export function TodoListContainer() {
           }
         }
       }
-      
+
       await fetchTodos();
       setIsFormOpen(false);
       toast({
@@ -171,11 +173,11 @@ export function TodoListContainer() {
         },
         body: JSON.stringify(todoData),
       });
-      
+
       if (!response.ok) {
         throw new Error('更新待办事项失败');
       }
-      
+
       // 如果提供了标签IDs，则更新标签关联
       if (tagIds !== undefined) {
         const tagResponse = await fetch(`/api/todolist/todos/${todoId}/tags`, {
@@ -185,7 +187,7 @@ export function TodoListContainer() {
           },
           body: JSON.stringify({ tagIds }),
         });
-        
+
         if (!tagResponse.ok) {
           console.error('标签关联更新失败');
           toast({
@@ -195,7 +197,7 @@ export function TodoListContainer() {
           });
         }
       }
-      
+
       await fetchTodos();
       setEditingTodo(null);
       setIsFormOpen(false);
@@ -220,11 +222,11 @@ export function TodoListContainer() {
       const response = await fetch(`/api/todos/${todoId}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         throw new Error('删除待办事项失败');
       }
-      
+
       await fetchTodos();
       toast({
         title: "成功",
@@ -274,38 +276,38 @@ export function TodoListContainer() {
   ) => {
     try {
       setIsLoading(true);
-      
+
       // 存储创建的待办事项和对应的标签
       const createdTodos = [];
-      
+
       // 逐个创建待办事项
       for (let i = 0; i < todos.length; i++) {
         const todo = todos[i];
         const tagNames = tagNamesArray[i];
-        
+
         // 创建待办事项
         const todoResponse = await fetch('/api/todo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(todo),
         });
-        
+
         if (!todoResponse.ok) {
-          throw new Error(`创建第 ${i+1} 个待办事项失败`);
+          throw new Error(`创建第 ${i + 1} 个待办事项失败`);
         }
-        
+
         const newTodo = await todoResponse.json();
         createdTodos.push(newTodo);
-        
+
         // 处理标签（如果有）
         if (tagNames && tagNames.length > 0) {
           // 为每个新标签名创建标签
           const tagIds = [];
-          
+
           for (const tagName of tagNames) {
             // 检查标签是否已存在
             const existingTag = availableTags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
-            
+
             if (existingTag) {
               tagIds.push(existingTag.id);
             } else {
@@ -315,14 +317,14 @@ export function TodoListContainer() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: tagName, color: generateRandomColor() }),
               });
-              
+
               if (tagResponse.ok) {
                 const newTag = await tagResponse.json();
                 tagIds.push(newTag.id);
               }
             }
           }
-          
+
           // 关联标签到待办事项
           if (tagIds.length > 0) {
             await fetch(`/api/todo/${newTodo.id}/tag`, {
@@ -333,14 +335,14 @@ export function TodoListContainer() {
           }
         }
       }
-      
+
       // 刷新待办事项列表
       await fetchTodos();
       // 刷新标签列表
       await fetchAllTags();
       // 关闭自动规划界面
       setIsAutoPlanOpen(false);
-      
+
       toast({
         title: "成功",
         description: `成功创建了 ${createdTodos.length} 个待办事项`,
@@ -360,7 +362,7 @@ export function TodoListContainer() {
   // 生成随机颜色
   const generateRandomColor = () => {
     const colors = [
-      'red', 'blue', 'green', 'yellow', 'purple', 
+      'red', 'blue', 'green', 'yellow', 'purple',
       'pink', 'orange', 'cyan', 'teal', 'indigo'
     ];
     return colors[Math.floor(Math.random() * colors.length)];
@@ -375,11 +377,11 @@ export function TodoListContainer() {
       nextDay.setDate(nextDay.getDate() + 1);
       const nextDayFormatted = nextDay.toISOString().split('T')[0];
       const response = await fetch(`/api/pomodoro?createdAt_gte=${formattedDate}&createdAt_lt=${nextDayFormatted}`);
-      
+
       if (!response.ok) {
         throw new Error('获取番茄钟记录失败');
       }
-      
+
       const data = await response.json();
       setPomodoroSessions(data);
     } catch (error) {
@@ -395,18 +397,12 @@ export function TodoListContainer() {
   // 新增：获取指定日期的待办事项（用于时间视图）
   const fetchTimeViewTodos = async (date: Date) => {
     try {
-      const formattedDate = date.toISOString().split('T')[0];
-      const searchParams = new URLSearchParams();
-      searchParams.append('date', formattedDate);
-      
-      const response = await fetch(`/api/todo?${searchParams.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error('获取日程待办事项失败');
+      const response: BaseResponse<TodoBO> = await fetchTodosByDate(date);
+      if (response.success) {
+        setTimeViewTodos(response.data);
+      } else {
+        throw new Error(response.error);
       }
-      
-      const data = await response.json();
-      setTimeViewTodos(data);
     } catch (error) {
       console.error('获取日程待办事项失败:', error);
       toast({
@@ -424,7 +420,7 @@ export function TodoListContainer() {
         planned_start_time: startTime,
         planned_end_time: endTime
       });
-      
+
       // 重新获取时间视图所需数据
       fetchTimeViewTodos(selectedDate);
     } catch (error) {
@@ -469,7 +465,7 @@ export function TodoListContainer() {
             标签管理
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="list" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold flex items-center gap-2">
@@ -477,7 +473,7 @@ export function TodoListContainer() {
               我的待办事项
             </h2>
             <div className="flex gap-2">
-              <Button 
+              <Button
                 onClick={() => { setIsAutoPlanOpen(true); setIsFormOpen(false); setEditingTodo(null); }}
                 variant="outline"
               >
@@ -488,7 +484,7 @@ export function TodoListContainer() {
               </Button>
             </div>
           </div>
-          
+
           <Card className="bg-card shadow">
             <CardHeader className="pt-6">
               <TodoFilter onFilterChange={applyFilters} />
@@ -496,19 +492,19 @@ export function TodoListContainer() {
             <CardContent className="pt-0 space-y-6">
               {isAutoPlanOpen && (
                 <div className="pt-4 pb-4 border-b">
-                  <TodoAutoPlan 
+                  <TodoAutoPlan
                     onCreateTodos={handleBatchCreateTodos}
                     onCancel={() => setIsAutoPlanOpen(false)}
                     availableTags={availableTags}
                   />
                 </div>
               )}
-            
+
               {isFormOpen && (
                 <div className="pt-4 pb-4 border-b">
-                  <TodoForm 
-                    onSubmit={editingTodo ? 
-                      (data, tagIds) => handleUpdateTodo(editingTodo.id, data, tagIds) : 
+                  <TodoForm
+                    onSubmit={editingTodo ?
+                      (data, tagIds) => handleUpdateTodo(editingTodo.id, data, tagIds) :
                       handleCreateTodo
                     }
                     onCancel={() => { setIsFormOpen(false); setEditingTodo(null); }}
@@ -516,7 +512,7 @@ export function TodoListContainer() {
                   />
                 </div>
               )}
-              
+
               {isLoading ? (
                 <div className="py-20 text-center flex flex-col items-center justify-center">
                   <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
@@ -533,8 +529,8 @@ export function TodoListContainer() {
                       点击上方的"添加待办事项"按钮开始创建您的第一个任务
                     </p>
                   </div>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => { setIsFormOpen(true); setEditingTodo(null); }}
                     className="mt-4"
                   >
@@ -544,9 +540,9 @@ export function TodoListContainer() {
               ) : (
                 <div className="space-y-4">
                   {filteredTodos.map((todo) => (
-                    <TodoItem 
-                      key={todo.id} 
-                      todo={todo} 
+                    <TodoItem
+                      key={todo.id}
+                      todo={todo}
                       tags={todo.tags}
                       onEdit={() => openEditForm(todo)}
                       onDelete={() => handleDeleteTodo(todo.id)}
@@ -559,7 +555,7 @@ export function TodoListContainer() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* 新增的时间视图标签内容 */}
         <TabsContent value="timeline" className="space-y-4">
           <div className="flex justify-between items-center">
@@ -568,10 +564,10 @@ export function TodoListContainer() {
               每日时间规划
             </h2>
           </div>
-          
+
           <Card className="bg-card shadow">
             <CardContent className="pt-6">
-              <DailyTimelineView 
+              <DailyTimelineView
                 todos={timeViewTodos}
                 pomodoroSessions={pomodoroSessions}
                 selectedDate={selectedDate}
@@ -583,7 +579,7 @@ export function TodoListContainer() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="tags">
           <Card>
             <CardContent className="pt-6">

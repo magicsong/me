@@ -242,9 +242,9 @@ export const notes = pgTable("notes", {
 	title: varchar("title", { length: 255 }).notNull(),
 	content: text("content").notNull(),
 	category: varchar("category", { length: 100 }),
-	userId: varchar("user_id", { length: 255 }).notNull(),
-	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
-	updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
+	user_id: varchar("user_id", { length: 255 }).notNull(),
+	created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+	updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
 });
 
 // 标签表
@@ -253,20 +253,20 @@ export const tags = pgTable("tags", {
 	name: varchar("name", { length: 100 }).notNull(),
 	color: varchar("color", { length: 50 }),
 	kind:  varchar("kind", { length: 50 }),
-	userId: varchar("user_id", { length: 255 }).notNull(),
+	user_id: varchar("user_id", { length: 255 }).notNull(),
 }, (table) => {
 	return {
-		nameUserIdIdx: uniqueIndex("nameUserIdIdx").on(table.name, table.userId),
+		nameUserIdIdx: uniqueIndex("nameUserIdIdx").on(table.name, table.user_id),
 	};
 });
 
 // 笔记-标签关联表
 export const notesTags = pgTable("notes_tags", {
-	noteId: serial("note_id").references(() => notes.id).notNull(),
-	tagId: serial("tag_id").references(() => tags.id).notNull(),
+	note_id: serial("note_id").references(() => notes.id).notNull(),
+	tag_id: serial("tag_id").references(() => tags.id).notNull(),
 }, (table) => {
 	return {
-		pk: primaryKey({ columns: [table.noteId, table.tagId] }),
+		pk: primaryKey({ columns: [table.note_id, table.tag_id] }),
 	};
 });
 
@@ -281,11 +281,11 @@ export const tagsRelations = relations(tags, ({ many }) => ({
 
 export const notesTagsRelations = relations(notesTags, ({ one }) => ({
 	note: one(notes, {
-		fields: [notesTags.noteId],
+		fields: [notesTags.note_id],
 		references: [notes.id],
 	}),
 	tag: one(tags, {
-		fields: [notesTags.tagId],
+		fields: [notesTags.tag_id],
 		references: [tags.id],
 	}),
 }));
