@@ -24,7 +24,7 @@ import { ChallengeTier } from "@/app/api/types/habit";
 // 类型定义
 type DifficultyLevel = "easy" | "medium" | "hard" | null;
 
-// 修改Props类型定义，合并两个回调为一个
+// 修改组件 props，添加标记失败的功能
 type HabitCompletionDialogProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -34,7 +34,9 @@ type HabitCompletionDialogProps = {
     tierId?: number;
     difficulty: DifficultyLevel;
     comment: string;
-  }) => Promise<void>;
+    status: 'completed' | 'failed'; // 添加状态字段
+    failureReason?: string; // 添加失败原因字段
+  }) => void;
 };
 
 export function HabitCompletionDialog({
@@ -50,6 +52,8 @@ export function HabitCompletionDialog({
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel>(null);
   const [comment, setComment] = useState("");
   const [selectedTierId, setSelectedTierId] = useState<number | undefined>(undefined);
+  const [status, setStatus] = useState<'completed' | 'failed'>('completed'); // 默认为完成状态
+  const [failureReason, setFailureReason] = useState('');
 
   // 当对话框打开时加载习惯详情
   useEffect(() => {
@@ -98,7 +102,14 @@ export function HabitCompletionDialog({
     setSelectedTierId(undefined);
     onClose();
   };
-
+  
+  function resetForm() {
+    setSelectedDifficulty(null);
+    setSelectedTierId(undefined);
+    setComment('');
+    setStatus('completed');
+    setFailureReason('');
+  }
   // 处理提交
   const handleSubmit = async () => {
     if (!habit || !selectedDifficulty) return;
@@ -111,7 +122,9 @@ export function HabitCompletionDialog({
         habitId: habit.id,
         tierId: selectedTierId,
         difficulty: selectedDifficulty,
-        comment
+        comment,
+        status,
+      failureReason: status === 'failed' ? failureReason : undefined
       });
       
       handleClose();

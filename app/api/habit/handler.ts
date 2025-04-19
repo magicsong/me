@@ -14,7 +14,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
   ) {
     super(persistenceService, promptBuilder, outputParser);
   }
-  
+
   getResourceName(): string {
     return 'habit';
   }
@@ -116,12 +116,14 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       completedTier: dataObject.completedTier,
       challengeTiers: dataObject.challengeTiers,
       streak: dataObject.streak || 0,
+      failedToday: dataObject.checkinStatus === 'failed',
+      failureReason: dataObject.failureReason,
     };
   }
   fieldsMoveToExtraOptionsWhenGet(): string[] {
-      return ["date"]
+    return ["date"]
   }
-  
+
   toDataObject(businessObject: HabitBO): Partial<HabitData> {
     return {
       id: businessObject.id,
@@ -137,11 +139,11 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
     };
   }
 
-  toBusinessObjects(dataObjects: Habit[]): HabitBO[] {
+  toBusinessObjects(dataObjects: HabitData[]): HabitBO[] {
     return dataObjects.map(dataObject => this.toBusinessObject(dataObject));
   }
 
-  toDataObjects(businessObjects: HabitBO[]): Partial<Habit>[] {
+  toDataObjects(businessObjects: HabitBO[]): Partial<HabitData>[] {
     return businessObjects.map(businessObject => this.toDataObject(businessObject));
   }
 }

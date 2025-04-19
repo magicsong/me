@@ -24,6 +24,7 @@ import {
   getUserRewardsFromDB,
   updateUserRewardsInDB
 } from '@/lib/db-rewards';
+import { HabitEntry } from '@/lib/persist/habit-entry';
 
 // 获取当前用户ID的辅助函数
 async function getCurrentUserId() {
@@ -71,7 +72,7 @@ export async function deleteHabit(id: number) {
 // 定义难度类型
 export type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
 
-export async function getHabitHistory(id: string): Promise<HabitHistoryEntry[]> {
+export async function getHabitHistory(id: string): Promise<HabitEntry[]> {
   const userId = await getCurrentUserId();
   // 获取特定习惯的历史记录，传入用户ID确保只能查看自己的习惯
   return getHabitHistoryFromDB(Number(id), userId);

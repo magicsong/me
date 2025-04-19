@@ -9,6 +9,7 @@ import {
     text
 } from 'drizzle-orm/pg-core';
 import { db } from './pool';
+import { HabitEntry, HabitEntryService } from "../persist/habit-entry";
 
 // todo: remove this
 export const habitEntries = pgTable('habit_entries', {
@@ -342,51 +343,10 @@ export interface HabitHistoryEntry {
 }
 
 // 获取习惯历史记录
-export async function getHabitHistoryFromDB(habitId: number, userId: string): Promise<HabitHistoryEntry[]> {
+export async function getHabitHistoryFromDB(habitId: number, userId: string): Promise<HabitEntry[]> {
     // 使用JOIN查询同时获取完成记录、挑战阶梯和难度评价
-    const entries = await db
-        .select({
-            completedAt: habit_entries.completed_at,
-            difficulty: habitDifficulties.difficulty,
-            comment: habitDifficulties.comment,
-            tierId: habit_entries.tier_id,
-            tierName: habit_challenge_tiers.name,
-            tierRewardPoints: habit_challenge_tiers.reward_points
-        })
-        .from(habit_entries)
-        .leftJoin(
-            habitDifficulties,
-            and(
-                eq(habit_entries.habit_id, habitDifficulties.habit_id),
-                eq(habit_entries.user_id, habitDifficulties.user_id),
-                eq(habit_entries.completed_at, habitDifficulties.completed_at)
-            )
-        )
-        .leftJoin(
-            habit_challenge_tiers,
-            eq(habit_entries.tier_id, habit_challenge_tiers.id)
-        )
-        .where(
-            and(
-                eq(habit_entries.habit_id, habitId),
-                eq(habit_entries.user_id, userId)
-            )
-        )
-        .orderBy(desc(habit_entries.completed_at))
-        .limit(30); // 限制返回最多30条记录
-
-    // 将查询结果转换为前端需要的格式
-    return entries.map(entry => ({
-        date: new Date(entry.completedAt),
-        completed: true,
-        difficulty: entry.difficulty || null,
-        comment: entry.comment || null,
-        tier: entry.tierId ? {
-            id: entry.tierId,
-            name: entry.tierName,
-            rewardPoints: entry.tierRewardPoints
-        } : null
-    }));
+    const service = new HabitEntryService();
+    return await service.getEntriesByHabitId(habitId,userId)
 }
 
 export async function updateHabitInDB(id: number, userId: string, data: {

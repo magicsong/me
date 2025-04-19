@@ -16,6 +16,8 @@ export type HabitData = typeof habits.$inferSelect & {
   }>;
   completedToday?: boolean;
   completedTier?: number | null;
+  failureReason?: string,
+  checkinStatus?: string,
 };
 
 // 习惯创建输入类型
@@ -55,9 +57,12 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
 
     // 检查今日是否已打卡
     const todayCheckIn = await this.getTodayCheckInForHabit(habit.id, habit.user_id, targetDate);
-    habit.completedToday = !!todayCheckIn;
-    habit.completedTier = todayCheckIn?.tier_id || null;
-
+    if (todayCheckIn) {
+      habit.completedToday = todayCheckIn.status !== 'failed'
+      habit.completedTier = todayCheckIn.tier_id || null;
+      habit.failureReason = todayCheckIn.failure_reason || undefined
+      habit.checkinStatus = todayCheckIn.status || undefined
+    }
     return habit;
   }
 
@@ -108,8 +113,10 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
       return {
         ...habit,
         challengeTiers: habitChallengeTiers,
-        completedToday: !!todayCheckIn,
-        completedTier: todayCheckIn?.tier_id || null
+        completedToday: !!todayCheckIn && todayCheckIn?.status !== 'failed',
+        completedTier: todayCheckIn?.tier_id || null,
+        failureReason: todayCheckIn?.failure_reason || undefined,
+        checkinStatus: todayCheckIn?.status || undefined,
       };
     });
   }
@@ -175,6 +182,8 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
       comment?: string;
       difficulty?: string;
       completedAt?: Date | string;
+      status?: string,
+      failureReason?: string,
     }
   ): Promise<{
     success: boolean;
@@ -213,7 +222,9 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
         tier_id: tierId,
         comment: comment,
         difficulty: difficulty,
-        completed_at: checkInDate.toISOString()
+        completed_at: checkInDate.toISOString(),
+        failure_reason: options?.failureReason,
+        status: options?.status,
       }).returning();
 
       return {

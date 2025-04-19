@@ -31,6 +31,8 @@ export const habit_entries = pgTable("habit_entries", {
 	tier_id: integer("tier_id").references(() => habit_challenge_tiers.id),
 	comment: text("comment"),
 	difficulty: difficulty("difficulty"),
+	status: text('status'),
+	failure_reason: text('failure_reason'),
 },
 	(table) => {
 		return {

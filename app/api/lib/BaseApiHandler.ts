@@ -856,7 +856,6 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
                 throw new Error(`${this.getResourceName()}持久化服务不支持过滤查询`);
             }
             const fields = this.fieldsMoveToExtraOptionsWhenGet()
-            console.log("debug1111", filters, fields)
             const dbFilters = this.convertFilters(filters, fields)
             const result = await this.persistenceService.getWithFilters(dbFilters, userId, filters.limit);
 

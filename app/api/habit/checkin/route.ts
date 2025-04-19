@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
     }
 
-    const { habitId, tierId, comment, difficulty, completedAt } = await request.json();
+    const { habitId, tierId, comment, difficulty, completedAt,status,failureReason } = await request.json();
 
     if (!habitId) {
       return NextResponse.json(
@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
         tierId: tierId ? Number(tierId) : undefined,
         comment,
         difficulty: difficulty,
-        completedAt: completedAt || undefined
+        completedAt: completedAt || undefined,
+        status: status || "successful",
+        failureReason: failureReason,
       }
     );
 

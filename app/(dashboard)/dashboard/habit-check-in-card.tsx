@@ -1,21 +1,21 @@
 "use client";
-
-import { Habit } from '@/app/api/types/habit';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { AnimatePresence, motion } from 'framer-motion';
+
 import {
   CalendarIcon, CheckCheck,
   CheckCircle2, Circle,
-  Trophy
+  Trophy, XCircle, BookOpen
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { completeHabit } from '../habits/client-actions';
 import { HabitCalendar } from '../habits/habit-calendar';
 import { DifficultyFeedback } from './components/difficulty-feedback';
 import { HabitCompletionDialog } from './components/habit-completion-dialog';
+import { HabitFailureDialog } from './components/habit-failure-dialog';
 import { toast } from 'sonner'; // 导入 sonner 的 toast
 import { HabitBO } from '@/app/api/types';
 
@@ -37,6 +37,9 @@ export function HabitCheckInCard() {
   // 合并对话框状态
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [currentHabit, setCurrentHabit] = useState<HabitBO | null>(null);
+
+  // 添加失败对话框状态
+  const [failureDialogOpen, setFailureDialogOpen] = useState(false);
 
   // 获取习惯数据
   async function fetchHabits() {
@@ -74,7 +77,7 @@ export function HabitCheckInCard() {
   };
 
   // 处理打卡开始
-  function handleCheckInStart(e: React.MouseEvent, habit: Habit) {
+  function handleCheckInStart(e: React.MouseEvent, habit: HabitBO) {
     e.stopPropagation(); // 阻止冒泡，避免同时触发打开日历
     if (habit.completedToday) return;
 
@@ -113,6 +116,40 @@ export function HabitCheckInCard() {
     }
   }
 
+  // 处理习惯失败记录提交
+  async function handleFailureSubmit(data: {
+    habitId: number;
+    failureReason: string;
+    comment: string;
+    status: 'failed';
+  }) {
+    setAnimatingHabitId(data.habitId);
+
+    try {
+      // 完成打卡或记录失败
+      await completeHabit(data.habitId, {
+        comment: data.comment,
+        failureReason: data.failureReason,
+        status: data.status
+      });
+
+      toast.info("📝 已记录。每次反思都是成长的机会！", {
+        duration: 4000,
+      });
+
+      // 刷新习惯数据
+      fetchHabits();
+    } catch (error) {
+      console.error('习惯失败记录提交失败:', error);
+      toast.error('提交失败，请重试');
+    } finally {
+      // 动画结束后清除状态
+      setTimeout(() => {
+        setAnimatingHabitId(null);
+      }, 500);
+    }
+  }
+
   return (
     <>
       {/* 合并的习惯完成对话框 */}
@@ -121,6 +158,14 @@ export function HabitCheckInCard() {
         onClose={() => setCompletionDialogOpen(false)}
         habit={currentHabit}
         onSubmit={handleSubmit}
+      />
+
+      {/* 习惯失败对话框 */}
+      <HabitFailureDialog
+        isOpen={failureDialogOpen}
+        onClose={() => setFailureDialogOpen(false)}
+        habit={currentHabit}
+        onSubmit={handleFailureSubmit}
       />
 
       <div className="flex flex-col md:flex-row gap-4 w-full">
@@ -158,13 +203,15 @@ export function HabitCheckInCard() {
                   initial={{ scale: 1 }}
                   animate={{
                     scale: animatingHabitId === habit.id ? [1, 1.05, 1] : 1,
-                    opacity: habit.completedToday ? 0.7 : 1
+                    opacity: habit.completedToday || habit.failedToday ? 0.7 : 1  // 同时处理完成和失败状态
                   }}
                   transition={{ duration: 0.3 }}
                   className={`flex items-center p-3 rounded-md cursor-pointer border ${selectedHabit?.id === habit.id ? 'border-primary bg-primary/5' :
-                    habit.completedToday
-                      ? 'bg-muted border-muted text-muted-foreground'
-                      : 'hover:bg-muted/50'
+                      habit.completedToday
+                        ? 'bg-muted border-muted text-muted-foreground'  // 成功完成的样式
+                        : habit.failedToday
+                          ? 'bg-red-50/50 border-red-100 text-muted-foreground'  // 失败的样式
+                          : 'hover:bg-muted/50'
                     }`}
                   onClick={() => handleHabitClick(habit)}
                 >
@@ -177,18 +224,27 @@ export function HabitCheckInCard() {
                       >
                         <CheckCircle2 className="h-6 w-6 text-green-500" />
                       </motion.div>
+                    ) : habit.failedToday ? (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <BookOpen className="h-6 w-6 text-amber-500" />
+                      </motion.div>
                     ) : (
                       <Circle className="h-6 w-6 text-muted-foreground" />
                     )}
                   </div>
 
+                  {/* 在列表项中显示完成或失败状态 */}
                   <div className="flex-1">
                     <div className="font-medium">{habit.name}</div>
                     {habit.description && (
                       <div className="text-xs text-muted-foreground">{habit.description}</div>
                     )}
 
-                    {/* 显示已完成的挑战级别 */}
+                    {/* 显示成功完成 */}
                     {habit.completedToday && habit.completedTier && (
                       <div className="flex items-center gap-1 mt-1">
                         <Trophy className="h-3 w-3 text-amber-500" />
@@ -197,6 +253,22 @@ export function HabitCheckInCard() {
                         </span>
                         <Badge variant="outline" className="text-xs ml-1 h-5 px-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100">
                           +{habit.challengeTiers?.find(tier => tier.id === habit.completedTier)?.reward_points || 'Unknown'}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* 显示失败记录 */}
+                    {habit.failedToday && (
+                      <div className="flex flex-wrap items-center gap-1 mt-1">
+                        <div className="bg-blue-50 text-blue-700 rounded-md px-2 py-0.5 text-xs flex items-center gap-1">
+                          <BookOpen className="h-3 w-3" />
+                          <span className="font-medium">已记录</span>
+                          {habit.failureReason && (
+                            <span className="ml-1 text-blue-600/70">- {habit.failureReason}</span>
+                          )}
+                        </div>
+                        <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700">
+                          成长机会
                         </Badge>
                       </div>
                     )}
@@ -213,16 +285,30 @@ export function HabitCheckInCard() {
                     </div>
                     <CalendarIcon className="h-4 w-4 text-muted-foreground" />
 
-                    {!habit.completedToday && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="ml-2 h-8"
-                        onClick={(e) => handleCheckInStart(e, habit)}
-                      >
-                        <CheckCheck className="h-4 w-4 mr-1" />
-                        打卡
-                      </Button>
+                    {!habit.completedToday && !habit.failedToday && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8"
+                          onClick={(e) => handleCheckInStart(e, habit)}
+                        >
+                          <CheckCheck className="h-4 w-4 mr-1" />
+                          打卡
+                        </Button>
+                        <Button
+                          variant="destructive"  // 使用更醒目的样式
+                          size="sm"
+                          className="h-8"
+                          onClick={(e) => {
+                            e.stopPropagation(); // 阻止冒泡
+                            setCurrentHabit(habit);
+                            setFailureDialogOpen(true);
+                          }}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />失败了
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </motion.div>

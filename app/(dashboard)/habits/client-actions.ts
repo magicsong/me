@@ -11,6 +11,8 @@ export async function completeHabit(
         comment?: string;
         difficulty?: string;
         completedAt?: string;
+        status?: string;
+        failureReason?: string;
     }
 ) {
     // 执行打卡 - 调用 API
@@ -24,7 +26,10 @@ export async function completeHabit(
             tierId: options?.tierId,
             comment: options?.comment,
             difficulty: options?.difficulty,
-            completedAt: options?.completedAt
+            completedAt: options?.completedAt,
+            status: options?.status,
+            failureReason: options?.failureReason
+            
         }),
     });
 

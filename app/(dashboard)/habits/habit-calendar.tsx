@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Cone, X } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Cone, X } from 'lucide-react';
 import { getHabitHistory } from './actions';
 import { completeHabitOnDate} from './client-actions';
 import { cn } from '@/lib/utils';
@@ -19,18 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/hooks/use-toast";
-
-type Habit = {
-  id: string;
-  name: string;
-  description?: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  createdAt: string;
-  completedToday: boolean;
-  streak: number;
-};
-
-type DateValue = string | Date;
+import { HabitBO } from '@/app/api/types';
 
 // 日历组件
 export function HabitCalendar({
@@ -38,13 +27,14 @@ export function HabitCalendar({
   onClose,
   className
 }: {
-  habit: Habit;
+  habit: HabitBO;
   onClose: () => void;
   className?: string;
 }) {
   const [viewMode, setViewMode] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [completedDates, setCompletedDates] = useState<Date[]>([]);
+  const [failedDates, setFailedDates] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [backfillDialogOpen, setBackfillDialogOpen] = useState(false);
@@ -53,14 +43,32 @@ export function HabitCalendar({
 
   // 检查是否开启了补打卡功能
   const isBackfillEnabled = process.env.NEXT_PUBLIC_ALLOW_BACKFILL === 'true';
-
+  const isDateFailed = (date: Date) => {
+    return failedDates.some(failedDate => {
+      return failedDate.getFullYear() === date.getFullYear() &&
+        failedDate.getMonth() === date.getMonth() &&
+        failedDate.getDate() === date.getDate();
+    });
+  };
   async function loadHabitHistory(id: string) {
     setIsLoading(true);
     try {
       const history = await getHabitHistory(id);
-      setCompletedDates(history.map((data) =>
-        data.date
-      ));
+      
+      // 分离完成和失败的记录
+      const completed: Date[] = [];
+      const failed: Date[] = [];
+      
+      history.forEach(record => {
+        if (record.status === 'failed') {
+          failed.push(new Date(record.completed_at));
+        } else {
+          completed.push(new Date(record.completed_at));
+        }
+      });
+      
+      setCompletedDates(completed);
+      setFailedDates(failed);
     } catch (error) {
       console.error('Error loading habit history:', error);
     } finally {
@@ -370,9 +378,10 @@ export function HabitCalendar({
   // 渲染单个日期格子
   const renderDayCell = (date: Date) => {
     const isCompleted = isDateCompleted(date);
+    const isFailed = isDateFailed(date);
     const isToday = date.toDateString() === new Date().toDateString();
     const isFutureDate = date > new Date();
-    const isClickable = isBackfillEnabled && !isCompleted && !isFutureDate;
+    const isClickable = isBackfillEnabled && !isCompleted && !isFailed && !isFutureDate;
 
     return (
       <div
@@ -393,6 +402,14 @@ export function HabitCalendar({
               </svg>
             </div>
             <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{date.getDate()}</span>
+          </div>
+        ) : isFailed ? (
+          // 失败记录的显示样式
+          <div className="flex flex-col items-center justify-center w-full h-full rounded-md bg-amber-50/70 dark:bg-amber-900/30">
+            <div className="mb-1">
+              <BookOpen className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+            </div>
+            <span className="text-xs font-medium text-amber-700 dark:text-amber-300">{date.getDate()}</span>
           </div>
         ) : (
           <span className={cn(isClickable && "hover:text-primary")}>
