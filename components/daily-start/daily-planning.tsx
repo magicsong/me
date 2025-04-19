@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { TodoPriority } from "@/components/daily-start/todo-priority";
 import { TodoItem } from "@/components/daily-start/todo-item";
 import { DailyPlanningSteps } from "@/components/daily-start/daily-planning-steps";
@@ -31,6 +33,16 @@ export function DailyPlanning({
 }: DailyPlanningProps) {
   const [selectedTodos, setSelectedTodos] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState("today");
+  const [showCompleted, setShowCompleted] = useState(false);
+
+  // 根据showCompleted状态过滤任务
+  const filteredTodos = useMemo(() => {
+    if (showCompleted) {
+      return todos;
+    } else {
+      return todos.filter(todo => todo.status !== "completed");
+    }
+  }, [todos, showCompleted]);
 
   // 过滤未完成的昨日任务
   const incompleteTodos = yesterdayTodos.filter(
@@ -64,10 +76,10 @@ export function DailyPlanning({
         setSelectedTodos(incompleteTodos.map((todo) => todo.id));
       }
     } else {
-      if (selectedTodos.length === todos.length) {
+      if (selectedTodos.length === filteredTodos.length) {
         setSelectedTodos([]);
       } else {
-        setSelectedTodos(todos.map((todo) => todo.id));
+        setSelectedTodos(filteredTodos.map((todo) => todo.id));
       }
     }
   }
@@ -82,9 +94,9 @@ export function DailyPlanning({
         },
         body: JSON.stringify({ todo }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success("待办事项已更新");
         return true;
@@ -99,7 +111,7 @@ export function DailyPlanning({
     }
   }
 
-const handleDelete = async (todoId: number): Promise<boolean> => {
+  const handleDelete = async (todoId: number): Promise<boolean> => {
 
     try {
       const result = await deleteTodo(todoId)
@@ -120,24 +132,24 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
     try {
       // 提取所有ID
       const ids = updates.map(update => update.id);
-      
+
       // 创建字段对象 - 注意：这假设所有记录更新为相同的值
       // 如果每个记录值不同，后端需要支持这种格式
       const fields = { [field]: updates[0].value };
-      
+
       const response = await fetch('/api/todo', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           id: ids,       // 批量更新的ID数组
           fields: fields  // 要更新的字段和值
         }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success(result.message || "批量更新成功");
         return true;
@@ -184,14 +196,14 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          status, 
-          todoIds 
+        body: JSON.stringify({
+          status,
+          todoIds
         }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         toast.success(result.message || "批量更新状态成功");
         return true;
@@ -222,7 +234,7 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
 
     // 更新计划日期
     const success = await batchUpdateField("plannedDate", todosToUpdate);
-    
+
     if (success) {
       // 调用数据刷新回调，更新今日和昨日的任务数据
       onDataRefresh();
@@ -238,13 +250,13 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
     }
 
     // 批量更新优先级
-    const success = await batchUpdateField("priority", 
+    const success = await batchUpdateField("priority",
       selectedTodos.map(id => ({
         id: String(id),
         value: priority
       }))
     );
-    
+
     if (success) {
       setSelectedTodos([]);
     }
@@ -258,12 +270,12 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
 
     // 批量更新状态为已完成
     const success = await batchUpdateStatus(true, selectedTodos.map(id => String(id)));
-    
+
     if (success) {
       setSelectedTodos([]);
     }
   }
-  
+
   function handleStartFocusing() {
     // 进入时间轴视图
     onChangeTab();
@@ -272,8 +284,8 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
   return (
     <div className="space-y-6">
       {/* 每日规划步骤组件 - 传递todos和onDataRefresh */}
-      <DailyPlanningSteps 
-        onStartFocusing={handleStartFocusing} 
+      <DailyPlanningSteps
+        onStartFocusing={handleStartFocusing}
         todos={todos}
         onDataRefresh={onDataRefresh}
       />
@@ -281,15 +293,25 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
       {/* 待办事项管理 */}
       <Card>
         <CardHeader>
+        <div className="flex justify-between items-center">
           <CardTitle className="flex items-center gap-2">
             <ClockIcon className="h-5 w-5 text-blue-500" />
             任务管理
           </CardTitle>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show-completed"
+                checked={showCompleted}
+                onCheckedChange={setShowCompleted}
+              />
+              <Label htmlFor="show-completed">显示已完成任务</Label>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="today">
+              <TabsTrigger value="today">
                 <SunIcon className="mr-2 h-4 w-4" />
                 今日任务 ({todos.length})
               </TabsTrigger>
@@ -297,7 +319,7 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 昨日任务 ({incompleteTodos.length})
               </TabsTrigger>
-              </TabsList>
+            </TabsList>
 
             <TabsContent value="yesterday" className="space-y-4">
               {incompleteTodos.length > 0 ? (
@@ -324,9 +346,9 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                         return (
                           <TabsTrigger key={priority} value={priority} className="flex items-center gap-1">
                             <TodoPriority priority={priority} showLabel={false} />
-                            {priority === 'urgent' ? '紧急' : 
-                             priority === 'high' ? '重要' : 
-                             priority === 'medium' ? '普通' : '低优先级'} 
+                            {priority === 'urgent' ? '紧急' :
+                              priority === 'high' ? '重要' :
+                                priority === 'medium' ? '普通' : '低优先级'}
                             ({count})
                           </TabsTrigger>
                         );
@@ -337,19 +359,19 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                       {['urgent', 'high', 'medium', 'low'].map(priority => {
                         const priorityTodos = incompleteTodos.filter(todo => todo.priority === priority);
                         if (priorityTodos.length === 0) return null;
-                        
+
                         return (
                           <div key={priority} className="space-y-2">
                             <div className="flex justify-between items-center">
                               <h3 className={`text-sm font-medium px-3 py-2 rounded-md inline-flex items-center gap-2
-                                ${priority === 'urgent' ? 'bg-red-100 text-red-800' : 
-                                  priority === 'high' ? 'bg-orange-100 text-orange-800' : 
-                                  priority === 'medium' ? 'bg-blue-100 text-blue-800' : 
-                                  'bg-gray-100 text-gray-800'}`}>
+                                ${priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                                  priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                    priority === 'medium' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-800'}`}>
                                 <TodoPriority priority={priority} showLabel={false} />
-                                {priority === 'urgent' ? '紧急' : 
-                                 priority === 'high' ? '重要' : 
-                                 priority === 'medium' ? '普通' : '低优先级'} 
+                                {priority === 'urgent' ? '紧急' :
+                                  priority === 'high' ? '重要' :
+                                    priority === 'medium' ? '普通' : '低优先级'}
                                 ({priorityTodos.length})
                               </h3>
                               <Button
@@ -383,7 +405,7 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                     {['urgent', 'high', 'medium', 'low'].map(priority => {
                       const priorityTodos = incompleteTodos.filter(todo => todo.priority === priority);
                       if (priorityTodos.length === 0) return null;
-                      
+
                       return (
                         <TabsContent key={priority} value={priority} className="space-y-4">
                           <div className="flex justify-between items-center mb-4">
@@ -401,7 +423,7 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                             >
                               {priorityTodos.every(todo => selectedTodos.includes(todo.id)) ? "取消全选" : "全选"}
                             </Button>
-                            
+
                             <Button
                               variant="outline"
                               size="sm"
@@ -473,7 +495,7 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                 </Card>
               </div>
 
-              {todos.length > 0 ? (
+              {filteredTodos.length > 0 ? (
                 <>
                   <div className="flex justify-between items-center mb-4">
                     <Button
@@ -481,7 +503,7 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                       size="sm"
                       onClick={handleSelectAll}
                     >
-                      {selectedTodos.length === todos.length ? "取消全选" : "全选"}
+                      {selectedTodos.length === filteredTodos.length ? "取消全选" : "全选"}
                     </Button>
 
                     <div className="flex items-center gap-2">
@@ -527,19 +549,19 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                   <div className="space-y-4">
                     {/* 按优先级分组展示 */}
                     {['urgent', 'high', 'medium', 'low'].map(priority => {
-                      const priorityTodos = todos.filter(todo => todo.priority === priority);
+                      const priorityTodos = filteredTodos.filter(todo => todo.priority === priority);
                       if (priorityTodos.length === 0) return null;
-                      
+
                       return (
                         <div key={priority} className="space-y-2">
                           <h3 className={`text-sm font-medium px-2 py-1 rounded-md inline-block
-                            ${priority === 'urgent' ? 'bg-red-100 text-red-800' : 
-                              priority === 'high' ? 'bg-orange-100 text-orange-800' : 
-                              priority === 'medium' ? 'bg-blue-100 text-blue-800' : 
-                              'bg-gray-100 text-gray-800'}`}>
-                            {priority === 'urgent' ? '紧急' : 
-                             priority === 'high' ? '重要' : 
-                             priority === 'medium' ? '普通' : '低优先级'} 
+                            ${priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                              priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                                priority === 'medium' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'}`}>
+                            {priority === 'urgent' ? '紧急' :
+                              priority === 'high' ? '重要' :
+                                priority === 'medium' ? '普通' : '低优先级'}
                             ({priorityTodos.length})
                           </h3>
                           <div className="space-y-2 ml-2">
@@ -563,8 +585,16 @@ const handleDelete = async (todoId: number): Promise<boolean> => {
                 </>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
-                  <XIcon className="mx-auto h-12 w-12 mb-4 text-muted-foreground" />
-                  <p className="text-lg">还没有今天的任务，从昨天的任务添加一些吧！</p>
+                  {showCompleted ? (
+                    <XIcon className="mx-auto h-12 w-12 mb-4 text-muted-foreground" />
+                  ) : (
+                    <CheckIcon className="mx-auto h-12 w-12 mb-4 text-green-500" />
+                  )}
+                  <p className="text-lg">
+                    {showCompleted
+                      ? "还没有今天的任务，从昨天的任务添加一些吧！"
+                      : "太好了！今天的任务全部完成了。"}
+                  </p>
                 </div>
               )}
             </TabsContent>
