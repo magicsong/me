@@ -1,5 +1,5 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CalendarCheck2 } from 'lucide-react';
+"use client"
+
 import {
   Card,
   CardContent,
@@ -7,14 +7,36 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { HabitsList } from './habits-list';
-import { getHabits } from './client-actions';
+import { CalendarCheck2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { AddHabitButton } from './add-habit-button';
+import { getHabits } from './client-actions';
 import { HabitStats } from './habit-stats';
+import { HabitsList } from './habits-list';
 import { RewardsStats } from './rewards-stats';
 
-export default async function HabitsPage() {
-  const habits = await getHabits();
+export default function HabitsPage() {
+  const [habits, setHabits] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHabits = async () => {
+      try {
+        const data = await getHabits();
+        setHabits(data);
+      } catch (error) {
+        console.error("获取习惯数据失败:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHabits();
+  }, []);
+
+  if (loading) {
+    return <div className="flex justify-center items-center p-8">加载中...</div>;
+  }
 
   return (
     <>
