@@ -1,8 +1,7 @@
 import { BaseApiHandler } from '@/app/api/lib/BaseApiHandler';
 import { HabitData, HabitPersistenceService } from '@/lib/persist/habit';
-import { HabitPromptBuilder, HabitOutputParser } from './ai';
 import { HabitBO } from '../types';
-import { FilterOptions } from '../lib/types';
+import { HabitOutputParser, HabitPromptBuilder } from './ai';
 
 /**
  * 习惯API处理器
@@ -101,69 +100,6 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
     return this.persistenceService as HabitPersistenceService;
   }
 
-  // 打卡功能
-  async checkIn(habitId: string, date: string, comment?: string, tierId?: number, difficultyLevel?: string): Promise<HabitBO> {
-    const habit = await this.getById(habitId);
-
-    if (!habit) {
-      throw new Error("failed to get habit by id")
-    }
-    // 如果没有check_ins字段，初始化它
-    if (!habit.completedToday) {
-      habit.completedToday = true
-    }
-
-    // 添加或更新打卡记录
-    habit.check_ins[date] = true;
-
-    const updatedHabit = await this.persistenceService.update(habitId, { check_ins: habit.check_ins });
-    return this.toBusinessObject(updatedHabit);
-  }
-
-  // 取消打卡功能
-  async cancelCheckIn(habitId: string, date: string): Promise<HabitBO> {
-    const habit = await this.getById(habitId);
-
-    // 如果已经存在check_ins并且有指定日期的记录，则删除它
-    if (habit.check_ins && habit.check_ins[date]) {
-      delete habit.check_ins[date];
-
-      const updatedHabit = await this.persistenceService.update(habitId, { check_ins: habit.check_ins });
-      return this.toBusinessObject(updatedHabit);
-    }
-
-    return this.toBusinessObject(habit);
-  }
-
-  // 获取用户所有习惯的打卡统计
-  async getCheckInStats(userId: string): Promise<any> {
-    const habits = await this.persistenceService.getByUserId(userId);
-
-    const stats = {
-      totalCheckins: 0,
-      totalPoints: 0,
-      streaks: {},
-      habitStats: {}
-    };
-
-    habits.forEach(habit => {
-      const checkins = habit.check_ins || {};
-      const checkinDates = Object.keys(checkins);
-
-      stats.habitStats[habit.id] = {
-        name: habit.name,
-        category: habit.category,
-        totalCheckins: checkinDates.length,
-        points: checkinDates.length * (habit.reward_points || 1)
-      };
-
-      stats.totalCheckins += checkinDates.length;
-      stats.totalPoints += stats.habitStats[habit.id].points;
-    });
-
-    return stats;
-  }
-
   // 实现业务对象和数据对象转换方法
   toBusinessObject(dataObject: HabitData): HabitBO {
     return {
@@ -179,6 +115,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       completedToday: dataObject.completedToday,
       completedTier: dataObject.completedTier,
       challengeTiers: dataObject.challengeTiers,
+      streak: dataObject.streak || 0,
     };
   }
   fieldsMoveToExtraOptionsWhenGet(): string[] {
@@ -196,6 +133,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       category: businessObject.category,
       reward_points: businessObject.rewardPoints || 0, // 确保有默认值
       status: businessObject.status,
+      streak: businessObject.streak,
     };
   }
 

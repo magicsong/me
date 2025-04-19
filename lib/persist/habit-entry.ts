@@ -1,4 +1,3 @@
-import { PersistenceService } from '@/app/api/lib/types';
 import { habit_entries, habits, habit_challenge_tiers } from '@/lib/db/schema';
 import { eq, and, desc, gte, sql, count, between } from 'drizzle-orm';
 import { db } from '../db';
@@ -22,7 +21,7 @@ export interface HabitCheckInStats {
 /**
  * 习惯打卡持久化服务
  */
-export class HabitEntryService implements PersistenceService<HabitEntry> {
+export class HabitEntryService {
   private db;
 
   constructor() {

@@ -92,6 +92,7 @@ export interface HabitBO extends BusinessObject {
     challengeTiers?: ChallengeTierBO[];
     completedToday?: boolean;
     completedTier?: number | null;
+    streak: number;
 }
 
 export interface ChallengeTierBO extends BusinessObject {

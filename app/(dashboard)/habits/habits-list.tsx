@@ -30,35 +30,18 @@ import { deleteHabit, getHabitDetail } from './actions';
 import { completeHabit } from './client-actions';
 import { HabitChallengeDialog } from './components/habit-challenge-dialog';
 import { EditHabitForm } from './edit-habit-form';
+import { HabitBO } from "@/app/api/types";
 
-type Habit = {
-  id: number;
-  name: string;
-  description?: string;
-  frequency: 'daily' | 'weekly' | 'monthly';
-  createdAt: string;
-  completedToday: boolean;
-  streak: number;
-  category?: 'health' | 'productivity' | 'mindfulness' | 'learning' | 'social';
-  rewardPoints?: number;
-  challenge_tiers?: any[];
-  completed_tier?: {
-    id: number;
-    name: string;
-    level: number;
-    reward_points: number;
-  } | null;
-};
 
-export function HabitsList({ habits }: { habits: Habit[] }) {
+export function HabitsList({ habits }: { habits: HabitBO[] }) {
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<number | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [habitToEdit, setHabitToEdit] = useState<Habit | null>(null);
-  const [habitDetail, setHabitDetail] = useState<Habit | null>(null);
+  const [habitToEdit, setHabitToEdit] = useState<HabitBO | null>(null);
+  const [habitDetail, setHabitDetail] = useState<HabitBO | null>(null);
   const [challengeDialogOpen, setChallengeDialogOpen] = useState(false);
-  
+
   async function handleDeleteHabit() {
     if (habitToDelete) {
       await deleteHabit(habitToDelete);
@@ -66,18 +49,21 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
       setDeleteDialogOpen(false);
     }
   }
-  
+
   async function handleCompleteHabit(id: number) {
     await completeHabit(id);
     router.refresh();
   }
-  
+
   function openDeleteDialog(id: number) {
+    if (!id) {
+      console.log("empty id");
+    }
     setHabitToDelete(id);
     setDeleteDialogOpen(true);
   }
 
-  function openEditDialog(habit: Habit) {
+  function openEditDialog(habit: HabitBO) {
     setHabitToEdit(habit);
     setEditDialogOpen(true);
   }
@@ -161,10 +147,10 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
         {habits.map((habit) => {
           const categoryStyles = getCategoryStyles(habit.category);
           const progress = calculateProgress(habit.streak);
-          
+
           return (
-            <Card 
-              key={habit.id} 
+            <Card
+              key={habit.id}
               className={`overflow-hidden ${categoryStyles.color} border-l-4 hover:shadow-md transition-shadow`}
             >
               <CardHeader className={`${categoryStyles.bgColor} pb-2`}>
@@ -250,17 +236,17 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
                     </Button>
                   </div>
                 </div>
-                
+
                 {/* 添加已完成挑战显示 */}
-                {habit.completedToday && habit.completed_tier && (
+                {habit.completedToday && habit.completedTier && (
                   <div className="mt-2 flex items-center gap-2 bg-amber-50 rounded-md p-2 border border-amber-200 animate-pulse">
                     <div className="flex items-center gap-1">
                       <Trophy className="h-4 w-4 text-amber-500" />
                       <span className="text-sm font-medium text-amber-700">
-                        已完成挑战: {habit.completed_tier.name}
+                        已完成挑战: {habit.challengeTiers?.find(tier => tier.id === habit.completedTier)?.name || 'Unknown'}
                       </span>
                     </div>
-                    <Badge className="bg-amber-500">+{habit.completed_tier.reward_points}分</Badge>
+                    <Badge className="bg-amber-500">+{habit.challengeTiers?.find(tier => tier.id === habit.completedTier)?.reward_points || 'Unknown'}分</Badge>
                   </div>
                 )}
               </CardContent>
@@ -270,9 +256,9 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
                     <span>习惯养成进度</span>
                     <span>{progress}%</span>
                   </div>
-                  <Progress 
-                    value={progress} 
-                    className={`h-2 ${categoryStyles.color.replace('border', 'bg')}`} 
+                  <Progress
+                    value={progress}
+                    className={`h-2 ${categoryStyles.color.replace('border', 'bg')}`}
                   />
                 </div>
               </CardFooter>
@@ -280,7 +266,7 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
           );
         })}
       </div>
-      
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -307,18 +293,18 @@ export function HabitsList({ habits }: { habits: Habit[] }) {
             </DialogDescription>
           </DialogHeader>
           {habitToEdit && (
-            <EditHabitForm 
-              habit={habitToEdit} 
+            <EditHabitForm
+              habit={habitToEdit}
               onSuccess={() => {
                 setEditDialogOpen(false);
                 router.refresh();
-              }} 
+              }}
             />
           )}
         </DialogContent>
       </Dialog>
 
-      <HabitChallengeDialog 
+      <HabitChallengeDialog
         isOpen={challengeDialogOpen}
         habitDetail={habitDetail}
         onClose={() => setChallengeDialogOpen(false)}

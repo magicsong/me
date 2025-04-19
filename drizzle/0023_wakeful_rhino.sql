@@ -1,0 +1,1 @@
+ALTER TABLE "habits" ADD COLUMN "streak" integer DEFAULT 0;

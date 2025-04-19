@@ -13,28 +13,28 @@ export async function POST(request: NextRequest) {
     }
 
     const { habitId, tierId, comment, difficulty, completedAt } = await request.json();
-    
+
     if (!habitId) {
       return NextResponse.json(
-        { success: false, error: '缺少习惯ID' }, 
+        { success: false, error: '缺少习惯ID' },
         { status: 400 }
       );
     }
-    
+
     const habitService = new HabitPersistenceService();
-    
+
     // 验证习惯是否存在并属于当前用户
     const habit = await habitService.findById(habitId);
     if (!habit || habit.user_id !== userId) {
       return NextResponse.json(
-        { success: false, error: '习惯不存在或不属于当前用户' }, 
+        { success: false, error: '习惯不存在或不属于当前用户' },
         { status: 404 }
       );
     }
-    
+
     // 使用增强的 checkInHabit 方法创建打卡记录
     const result = await habitService.checkInHabit(
-      Number(habitId), 
+      Number(habitId),
       userId,
       {
         tierId: tierId ? Number(tierId) : undefined,
@@ -46,21 +46,25 @@ export async function POST(request: NextRequest) {
 
     if (!result.success || !result.habitEntry) {
       return NextResponse.json(
-        { success: false, error: '打卡失败' }, 
+        { success: false, error: '打卡失败' },
         { status: 500 }
       );
     }
-    
-    // 获取更新后的统计信息
-    const habitEntryService = new HabitEntryService();
-    const stats = await habitEntryService.getCheckInStats(Number(habitId), userId);
-    
+    if (!habit.streak || habit.streak <= 0) {
+      // 获取更新后的统计信息
+      const habitEntryService = new HabitEntryService();
+      const stats = await habitEntryService.getCheckInStats(Number(habitId), userId);
+      habit.streak = stats.currentStreak
+    } else {
+      habit.streak = habit.streak + 1;
+    }
+    await habitService.update(habit.id, habit)
     revalidatePath('/habits');
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       data: result.habitEntry,
-      stats: stats
+      streak: habit.streak,
     });
   } catch (error: any) {
     console.error('打卡失败:', error);
@@ -82,9 +86,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const habitId = searchParams.get('habitId');
     const action = searchParams.get('action');
-    
+
     const habitEntryService = new HabitEntryService();
-    
+
     if (action === 'stats' && habitId) {
       // 获取统计信息
       const stats = await habitEntryService.getCheckInStats(Number(habitId), userId);
@@ -122,22 +126,22 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const habitId = searchParams.get('habitId');
     const entryId = searchParams.get('entryId');
-    
+
     if (!habitId && !entryId) {
       return NextResponse.json(
-        { success: false, error: '缺少必要参数' }, 
+        { success: false, error: '缺少必要参数' },
         { status: 400 }
       );
     }
-    
+
     if (habitId) {
       // 使用 HabitPersistenceService 的 cancelCheckInHabit 方法取消今天的打卡
       const habitService = new HabitPersistenceService();
       const result = await habitService.cancelCheckInHabit(Number(habitId), userId);
-      
+
       if (!result) {
         return NextResponse.json(
-          { success: false, error: '取消打卡失败' }, 
+          { success: false, error: '取消打卡失败' },
           { status: 500 }
         );
       }
@@ -146,9 +150,9 @@ export async function DELETE(request: NextRequest) {
       const habitEntryService = new HabitEntryService();
       await habitEntryService.delete(entryId);
     }
-    
+
     revalidatePath('/habits');
-    
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('删除打卡记录失败:', error);

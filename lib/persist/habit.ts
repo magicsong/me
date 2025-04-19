@@ -2,6 +2,7 @@ import { habit_challenge_tiers, habit_entries, habits } from '@/lib/db/schema';
 import { format } from 'date-fns';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { BaseRepository } from '../db/';
+import { HabitEntryService } from './habit-entry';
 
 // 习惯类型定义
 // 习惯数据类型定义
@@ -29,7 +30,6 @@ export type HabitUpdateInput = Partial<HabitData> & { id: number };
 export class HabitPersistenceService extends BaseRepository<typeof habits, HabitData> {
   constructor(connectionString?: string) {
     super(habits);
-
     // 设置钩子，在查询后自动加载关联数据
     this.setHooks({
       afterQuery: async (data, filter) => {

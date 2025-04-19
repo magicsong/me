@@ -164,7 +164,10 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     // 内部更新方法，保留原有逻辑
     private async _update(id: any, data: Partial<I>): Promise<I | null> {
         let processedData = { ...data };
-
+        // Remove id from the update data
+        if ('id' in processedData) {
+            delete processedData.id;
+        }
         if (this.hooks.beforeUpdate) {
             processedData = await Promise.resolve(this.hooks.beforeUpdate(id, processedData));
         }

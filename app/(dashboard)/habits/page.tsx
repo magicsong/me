@@ -14,9 +14,10 @@ import { getHabits } from './client-actions';
 import { HabitStats } from './habit-stats';
 import { HabitsList } from './habits-list';
 import { RewardsStats } from './rewards-stats';
+import { HabitBO } from '@/app/api/types';
 
 export default function HabitsPage() {
-  const [habits, setHabits] = useState([]);
+  const [habits, setHabits] = useState<HabitBO[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

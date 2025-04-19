@@ -1,6 +1,7 @@
 import { relations, sql, InferSelectModel } from "drizzle-orm"
 import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar, uniqueIndex, uuid, boolean, foreignKey } from "drizzle-orm/pg-core"
 import { comment } from "postcss"
+import { number } from "zod"
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly','scenario'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
@@ -19,6 +20,7 @@ export const habits = pgTable("habits", {
 	category: text("category"),
 	reward_points: integer("reward_points").default(1).notNull(),
 	status: status("status").default('active').notNull(),
+	streak: integer("streak").default(0),
 });
 
 export const habit_entries = pgTable("habit_entries", {
