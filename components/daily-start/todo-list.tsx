@@ -5,13 +5,14 @@ import { TodoFilter } from "./todo-filter";
 import { TodoCreationForm } from "./todo-creation-form";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { deleteTodo } from '@/app/(dashboard)/habits/client-actions';
 
 interface Tag {
   id: number;
@@ -26,8 +27,8 @@ interface TodoListProps {
   onCreateTodo?: (todo: Partial<TodoBO>) => Promise<boolean>;
 }
 
-export function TodoList({ 
-  tags, 
+export function TodoList({
+  tags,
   onUpdateTodo,
   onCompleteTodo,
   onCreateTodo
@@ -79,15 +80,15 @@ export function TodoList({
 
       if (result.success) {
         // 更新本地状态
-        setTodos(prevTodos => 
+        setTodos(prevTodos =>
           prevTodos.map(item => item.id === todo.id ? result.data : item)
         );
-        
+
         // 如果有外部处理器，也调用它
         if (onUpdateTodo) {
           await onUpdateTodo(todo);
         }
-        
+
         toast.success("更新成功");
         return true;
       } else {
@@ -108,14 +109,14 @@ export function TodoList({
       if (!todoToUpdate) return false;
 
       const updatedTodo = { ...todoToUpdate, status: 'completed' };
-      
+
       const success = await handleUpdateTodoInternal(updatedTodo);
-      
+
       // 如果有外部处理器，也调用它
       if (success && onCompleteTodo) {
         await onCompleteTodo(todoId);
       }
-      
+
       return success;
     } catch (error) {
       console.error('完成待办事项出错:', error);
@@ -123,14 +124,23 @@ export function TodoList({
       return false;
     }
   };
-
+  const handleDelete = async (todoId: number): Promise<boolean> => {
+    try {
+      const result = await deleteTodo(todoId)
+      return result
+    } catch (error) {
+      console.error('删除待办事项出错:', error);
+      toast.error("删除出错");
+      return false;
+    }
+  }
   // 处理创建待办事项
   const handleCreateTodoInternal = async (todo: Partial<TodoBO>): Promise<boolean> => {
     try {
       const response = await fetch('/api/todo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           data: {
             ...todo,
             status: 'pending',
@@ -145,12 +155,12 @@ export function TodoList({
       if (result.success) {
         // 刷新数据而不是直接添加，以获取服务器的完整响应
         fetchTodos();
-        
+
         // 如果有外部处理器，也调用它
         if (onCreateTodo) {
           await onCreateTodo(todo);
         }
-        
+
         toast.success("创建成功");
         return true;
       } else {
@@ -166,9 +176,9 @@ export function TodoList({
 
   // 处理标签筛选
   const handleTagSelect = (tagId: number) => {
-    setSelectedTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId) 
+    setSelectedTags(prev =>
+      prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
         : [...prev, tagId]
     );
   };
@@ -180,9 +190,9 @@ export function TodoList({
 
   // 处理任务选择
   const handleTodoSelect = (todoId: number, selected: boolean) => {
-    setSelectedTodos(prev => 
-      selected 
-        ? [...prev, todoId] 
+    setSelectedTodos(prev =>
+      selected
+        ? [...prev, todoId]
         : prev.filter(id => id !== todoId)
     );
   };
@@ -190,16 +200,16 @@ export function TodoList({
   // 筛选匹配的任务
   const filteredTodos = todos.filter(todo => {
     // 搜索文本匹配
-    const matchesSearch = 
-      !searchQuery || 
+    const matchesSearch =
+      !searchQuery ||
       todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (todo.description && todo.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+
     // 标签匹配
-    const matchesTags = 
-      selectedTags.length === 0 || 
+    const matchesTags =
+      selectedTags.length === 0 ||
       (todo.tagIds && todo.tagIds.some(id => selectedTags.includes(id)));
-    
+
     return matchesSearch && matchesTags;
   });
 
@@ -219,7 +229,7 @@ export function TodoList({
   // 渲染分组的待办事项
   const renderTodoGroup = (title: string, groupTodos: TodoBO[]) => {
     if (groupTodos.length === 0) return null;
-    
+
     return (
       <div className="mb-6">
         <h3 className="text-md font-medium mb-2">{title}</h3>
@@ -233,6 +243,7 @@ export function TodoList({
               onSelect={(selected) => handleTodoSelect(todo.id, selected)}
               onUpdate={handleUpdateTodoInternal}
               onComplete={handleCompleteTodoInternal}
+              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -251,21 +262,21 @@ export function TodoList({
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
-              <TodoCreationForm 
-                tags={tags} 
+              <TodoCreationForm
+                tags={tags}
                 onCreateTodo={async (todo) => {
                   const result = await handleCreateTodoInternal(todo);
                   if (result) {
                     setShowCreateForm(false);
                   }
                   return result;
-                }} 
+                }}
               />
             </DialogContent>
           </Dialog>
         </div>
-        
-        <TodoFilter 
+
+        <TodoFilter
           tags={tags}
           selectedTags={selectedTags}
           searchQuery={searchQuery}
@@ -273,10 +284,10 @@ export function TodoList({
           onSearchChange={handleSearch}
         />
       </div>
-      
+
       <div className="col-span-3">
         <h2 className="text-xl font-bold mb-4">任务列表</h2>
-        
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
           <TabsList>
             <TabsTrigger value="pending">未完成</TabsTrigger>
@@ -284,7 +295,7 @@ export function TodoList({
             <TabsTrigger value="archived">已取消</TabsTrigger>
           </TabsList>
         </Tabs>
-        
+
         {isLoading ? (
           <div className="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-md">
             <p className="text-muted-foreground">加载中...</p>

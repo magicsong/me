@@ -47,7 +47,7 @@ interface TodoItemProps {
   onSelect: (selected: boolean) => void;
   onUpdate: (todo: TodoBO) => Promise<boolean>;
   onComplete?: (todoId: number) => Promise<boolean>;
-  onDelete?: (todoId: number) => Promise<boolean>;
+  onDelete: (todoId: number) => Promise<boolean>;
   onUpdateTags: (todoId: number, tagIds: number[]) => Promise<boolean>;
   onStartPomodoro?: (todoId: number) => void;
   onCreateTag: (name: string, color: string) => Promise<{ id: number; name: string; color: string }>;
@@ -100,9 +100,7 @@ export function TodoItem({
   };
   
   const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!onDelete) return;
-    
+    e.stopPropagation(); 
     if (confirm('确定要删除此任务吗？')) {
       await onDelete(todo.id);
     }

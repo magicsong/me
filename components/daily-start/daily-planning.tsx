@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { TodoBO } from "@/app/api/todo/types";
+import { deleteTodo } from "@/app/(dashboard)/habits/client-actions";
 
 interface DailyPlanningProps {
   todos: TodoBO[];
@@ -94,6 +95,22 @@ export function DailyPlanning({
     } catch (error) {
       console.error("更新待办事项失败:", error);
       toast.error("更新待办事项时出错");
+      return false;
+    }
+  }
+
+const handleDelete = async (todoId: number): Promise<boolean> => {
+
+    try {
+      const result = await deleteTodo(todoId)
+      if (result) {
+        toast.success("待办事项已删除");
+        onDataRefresh()
+      }
+      return result
+    } catch (error) {
+      console.error('删除待办事项出错:', error);
+      toast.error("删除出错");
       return false;
     }
   }
@@ -354,6 +371,7 @@ export function DailyPlanning({
                                   selected={selectedTodos.includes(todo.id)}
                                   onSelect={(selected) => handleSelectTodo(todo.id, selected)}
                                   onUpdate={updateTodo}
+                                  onDelete={handleDelete}
                                 />
                               ))}
                             </div>
@@ -404,6 +422,7 @@ export function DailyPlanning({
                                 selected={selectedTodos.includes(todo.id)}
                                 onSelect={(selected) => handleSelectTodo(todo.id, selected)}
                                 onUpdate={updateTodo}
+                                onDelete={handleDelete}
                               />
                             ))}
                           </div>
@@ -533,6 +552,7 @@ export function DailyPlanning({
                                 onSelect={(selected) => handleSelectTodo(todo.id, selected)}
                                 onUpdate={updateTodo}
                                 onComplete={completeTodo}
+                                onDelete={handleDelete}
                               />
                             ))}
                           </div>

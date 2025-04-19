@@ -73,3 +73,16 @@ export async function getHabits(date?: Date): Promise<HabitBO[]> {
     }
     throw new Error(data.error);
 }
+
+ // 处理删除待办事项
+export async function deleteTodo(todoId: number): Promise<boolean>{
+    const response = await fetch(`/api/todo/${todoId}`, {
+      method: 'DELETE',
+    });
+
+    const result = await response.json();
+    if (result.success){
+        return true;
+    }
+    throw new Error(result.error);
+}
