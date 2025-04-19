@@ -13,7 +13,7 @@ export function PomodoroReminder() {
   const pathname = usePathname();
   const { activePomodoro, completePomodoro } = usePomodoro();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const hasPlayedRef = useRef<boolean>(false); // 跟踪当前番茄钟的音频是否已播放
+  const prevTimeLeftRef = useRef<number>(0); // 添加一个引用来存储上一次的 timeLeft 值
 
   // 格式化时间
   const formatTime = useCallback((ms: number) => {
@@ -48,10 +48,7 @@ export function PomodoroReminder() {
     const updateTimeLeft = () => {
       const now = Date.now();
       const remaining = Math.max(0, endTime - now);
-      if (timeLeft === 0 && remaining === 0 && !hasPlayedRef.current) {
-        hasPlayedRef.current = true; // 标记为已播放
-      }
-      if (remaining > 0 || hasPlayedRef.current) {
+      if (remaining > 0) {
         setIsLoading(false); // 当有剩余时间时，设置加载状态为 false
       }
       setTimeLeft(remaining);
@@ -68,13 +65,13 @@ export function PomodoroReminder() {
   // 播放完成音频
   useEffect(() => {
     // 当时间为0且有活动的番茄钟时播放音频，并确保只播放一次
-    if (timeLeft === 0 && activePomodoro && audioRef.current && !hasPlayedRef.current) {
+    if (prevTimeLeftRef.current > 0 && timeLeft === 0 && activePomodoro && audioRef.current) {
       audioRef.current.currentTime = 0; // 重置音频到开始位置
       audioRef.current.play().catch(error => {
         console.error('播放音频失败:', error);
       });
-      hasPlayedRef.current = true; // 标记为已播放
     }
+    prevTimeLeftRef.current = timeLeft;
   }, [timeLeft, activePomodoro]);
 
   // 如果在番茄钟页面、没有活动的番茄钟或正在加载，不显示提醒
@@ -120,7 +117,7 @@ export function PomodoroReminder() {
           查看<ArrowRight size={14} />
         </Button>
       </div>
-      
+
       {activePomodoro?.title && (
         <div className="text-sm text-muted-foreground mb-2">
           {activePomodoro.title}

@@ -146,19 +146,20 @@ export function PomodoroTimer({
   const fetchTodos = useCallback(async () => {
     try {
       setIsLoadingTodos(true);
-      const response = await fetch('/api/todolist/todos');
+      const response = await fetch('/api/todo?status=pending');
 
       if (!response.ok) {
         throw new Error('获取待办事项列表失败');
       }
 
-      const todosData = await response.json();
-      // 只获取未完成的任务
-      const serverTodos = todosData.filter((todo: any) => !todo.completed);
+      const resp = await response.json();
+      if (!resp.success){
+        throw new Error(resp.error);
+      }
       //convertToClientToDos
-      const activeTodos = serverTodos.map((todo: any) => ({
+      const activeTodos = resp.data.map((todo: any) => ({
         tags,
-        ...todo.todo,
+        ...todo,
       }));
       setTodos(activeTodos);
 
