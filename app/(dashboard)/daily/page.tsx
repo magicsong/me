@@ -7,7 +7,7 @@ import { DailyPlanning } from "@/components/daily-start/daily-planning";
 import { DailyTimelineView } from "@/components/daily-timeline-view";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { TodoBO } from "@/app/api/todo/types";
+import { TodoBO } from "@/app/api/types";
 
 export default function DailyStartPage() {
   const [showWelcome, setShowWelcome] = useState(true);

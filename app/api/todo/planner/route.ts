@@ -5,7 +5,7 @@ import { trimLLMContentToJsonObject } from '@/lib/langchain/utils';
 import { TodoApiHandler } from '../handler';
 import { FilterOptions } from '../../lib/types';
 import { getCurrentUserId } from '@/lib/utils';
-import { TodoBO } from '../types';
+import { TodoBO } from "@/app/api/types";
 
 const handler = TodoApiHandler.create();
 

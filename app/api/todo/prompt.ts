@@ -1,5 +1,5 @@
 import { PromptBuilder, OutputParser } from '../lib/types';
-import { TodoBO } from './types';
+import { TodoBO } from "@/app/api/types";
 import { PromptTemplate } from "@langchain/core/prompts";
 
 export class TodoPromptBuilder implements PromptBuilder<TodoBO> {

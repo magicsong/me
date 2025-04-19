@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 import { TaskSuggestionDialog } from "./task-suggestion-dialog";
 import { QuadrantPlanner } from "./quadrant-planner";
-import { TodoBO } from "@/app/api/todo/types";
+import { TodoBO } from "@/app/api/types";
 
 interface DailyPlanningStepsProps {
   onStartFocusing: () => void;

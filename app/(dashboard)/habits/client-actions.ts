@@ -1,7 +1,8 @@
 "use client";
 
-import { HabitBO } from "@/app/api/types";
+import { HabitBO, TodoBO } from "@/app/api/types";
 import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 // 更新 completeHabit 函数，使用API而不是直接访问数据库
 export async function completeHabit(
@@ -29,7 +30,7 @@ export async function completeHabit(
             completedAt: options?.completedAt,
             status: options?.status,
             failureReason: options?.failureReason
-            
+
         }),
     });
 
@@ -74,15 +75,36 @@ export async function getHabits(date?: Date): Promise<HabitBO[]> {
     throw new Error(data.error);
 }
 
- // 处理删除待办事项
-export async function deleteTodo(todoId: number): Promise<boolean>{
+// 处理删除待办事项
+export async function deleteTodo(todoId: number): Promise<boolean> {
     const response = await fetch(`/api/todo/${todoId}`, {
-      method: 'DELETE',
+        method: 'DELETE',
     });
 
     const result = await response.json();
-    if (result.success){
+    if (result.success) {
         return true;
     }
     throw new Error(result.error);
+}
+
+export async function createTodo(todo: Partial<TodoBO>): Promise<TodoBO> {
+    const response = await fetch('/api/todo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            data: {
+                ...todo,
+                status: 'pending',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+        }),
+    });
+
+    const result = await response.json();
+    if (result.success) {
+        return result.data;
+    }
+    throw new Error(result.error)
 }

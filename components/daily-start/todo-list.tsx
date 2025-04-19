@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TodoBO } from "@/app/api/todo/types";
+import { TodoBO } from "@/app/api/types";
 import { TodoItem } from "./todo-item";
 import { TodoFilter } from "./todo-filter";
 import { TodoCreationForm } from "./todo-creation-form";

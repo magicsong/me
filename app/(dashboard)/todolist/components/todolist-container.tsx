@@ -15,6 +15,7 @@ import { DailyTimelineView } from './daily-timeline-view';
 import { TagBO, TodoBO } from '@/app/api/types';
 import { fetchTodosByDate } from '../../actions';
 import { BaseResponse } from '@/lib/types';
+import { createTodo } from '../../habits/client-actions';
 
 // 新增：番茄钟会话记录类型
 export interface PomodoroSession {
@@ -286,18 +287,13 @@ export function TodoListContainer() {
         const tagNames = tagNamesArray[i];
 
         // 创建待办事项
-        const todoResponse = await fetch('/api/todo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(todo),
-        });
-
-        if (!todoResponse.ok) {
-          throw new Error(`创建第 ${i + 1} 个待办事项失败`);
+        try {
+          const newTodo = await createTodo(todo);
+          createdTodos.push(newTodo);
+        } catch (error) {
+          console.log(error, "创建第" + i + "个待办项失败");
+          throw new Error("创建第" + i + "个待办项失败");
         }
-
-        const newTodo = await todoResponse.json();
-        createdTodos.push(newTodo);
 
         // 处理标签（如果有）
         if (tagNames && tagNames.length > 0) {

@@ -10,7 +10,8 @@ import { cn } from '@/lib/utils';
 import { format, addDays, subDays, endOfDay, subDays as dateFnsSubDays } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PlanResult, PlanScheduleItem, TodoBO } from '@/app/api/todo/types';
+import { PlanResult, PlanScheduleItem } from '@/app/api/todo/types';
+import { TodoBO } from "@/app/api/types";
 import { toast } from 'sonner';
 import { 
   Dialog, 

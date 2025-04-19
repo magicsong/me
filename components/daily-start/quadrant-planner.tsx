@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { DndProvider, useDrag, useDrop } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { TodoBO } from "@/app/api/todo/types";
-import { Card } from "@/components/ui/card";
+import { TodoBO } from "@/app/api/types";
 import { TodoPriority } from "@/components/daily-start/todo-priority";
 import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { toast } from "sonner";
 
 interface QuadrantPlannerProps {

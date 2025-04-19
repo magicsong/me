@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TodoApiHandler } from '../handler';
-import { BatchTodoRequest, TodoBO } from '../types';
+import { BatchTodoRequest } from '../types';
 import { getCurrentUserId } from '@/lib/utils';
 
 // 创建 TodoApiHandler 实例

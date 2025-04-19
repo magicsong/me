@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TodoBO } from "@/app/api/todo/types";
+import { TodoBO } from "@/app/api/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { CheckIcon, TrashIcon, PencilIcon, TimerIcon, TagIcon, PlusIcon, XIcon } from "lucide-react";
