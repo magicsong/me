@@ -7,20 +7,21 @@ import { DailyPlanning } from "@/components/daily-start/daily-planning";
 import { DailyTimelineView } from "@/components/daily-timeline-view";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { TodoBO } from "@/app/api/types";
+import { PomodoroBO, TodoBO } from "@/app/api/types";
 
 export default function DailyStartPage() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [todos, setTodos] = useState<TodoBO[]>([]);
   const [todosYesterday, setTodosYesterday] = useState<TodoBO[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [pomodoroSessions, setPomodoroSessions] = useState<PomodoroSession[]>([]);
+  const [pomodoroSessions, setPomodoroSessions] = useState<PomodoroBO[]>([]);
   const [activeTab, setActiveTab] = useState("planning");
   const router = useRouter();
 
   useEffect(() => {
-      fetchTodos();
-      fetchYesterdayTodos();
+    fetchTodos();
+    fetchYesterdayTodos();
+    fetchPomodoros();
   }, [router, selectedDate]);
 
   // 检查是否已经显示过今天的欢迎页
@@ -33,6 +34,25 @@ export default function DailyStartPage() {
     }
   }, []);
 
+  async function fetchPomodoros() {
+    const date = new Date();
+    const formattedDate = date.toISOString().split('T')[0];
+    // Get next day for date range
+    const nextDay = new Date(date);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const nextDayFormatted = nextDay.toISOString().split('T')[0];
+    const response = await fetch(`/api/pomodoro?createdAt_gte=${formattedDate}&createdAt_lt=${nextDayFormatted}`);
+
+    if (!response.ok) {
+      throw new Error('获取番茄钟记录失败');
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error('获取番茄钟记录失败' + data.error);
+    }
+    setPomodoroSessions(data.data);
+  }
   async function fetchTodos() {
     try {
       // 获取选中日期的0点时间
@@ -87,7 +107,7 @@ export default function DailyStartPage() {
       const response = await fetch('/api/todo/' + todo.id, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({data:todo}),
+        body: JSON.stringify({ data: todo }),
       });
 
       const result = await response.json();
@@ -123,28 +143,8 @@ export default function DailyStartPage() {
   }
 
   async function handleStartPomodoro(todoId: number) {
-    try {
-      const response = await fetch('/api/pomodoro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          todoId,
-          duration: 25, // 默认25分钟
-          startTime: new Date().toISOString()
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        router.push(`/pomodoro/${result.data.id}`);
-      } else {
-        toast.error("开始番茄钟失败", { description: result.error });
-      }
-    } catch (error) {
-      console.error('开始番茄钟出错:', error);
-      toast.error("开始番茄钟出错");
-    }
+    // 直接导航到pomodoro页面，可以通过URL参数传递todo的ID
+    router.push(`/pomodoro?todoId=${todoId}`);
   }
 
   // 用于刷新今日和昨日的待办事项数据

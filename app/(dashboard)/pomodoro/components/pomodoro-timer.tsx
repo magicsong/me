@@ -122,10 +122,10 @@ export function PomodoroTimer({
     }
   }, [toast]);
 
+  
   // 从URL参数获取todo信息
   useEffect(() => {
     const todoId = searchParams.get('todoId');
-
     if (todoId) {
       setRelatedTodoId(todoId);
 
@@ -279,48 +279,24 @@ export function PomodoroTimer({
     }
 
     // 如果有现有的番茄钟ID，更新其状态
-    if (pomodoroId) {
-      await updateServerPomodoroStatus(pomodoroId, 'completed');
-      setPomodoroId(null);
-    } else {
-      // 否则创建新番茄钟记录
+    if (pomodoroId) { 
       try {
-        const response = await fetch('/api/pomodoro', {
+        const response = await fetch(`/api/pomodoro/${pomodoroId}/complete`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title,
-            description,
-            duration,
-            tagIds: selectedTag ? [selectedTag] : []
-          }),
         });
-
+        
         if (response.ok) {
-          console.log("保存番茄钟成功");
-          toast({
-            title: "番茄钟完成",
-            description: "您的专注时间已保存",
-          });
+          setPomodoroId(null);
         } else {
-          const errorData = await response.json();
-          throw new Error(`请求失败: ${errorData.error || response.statusText}`);
+          throw new Error('请求失败');
         }
       } catch (error) {
-        console.error('保存番茄钟失败:', error);
-        toast({
-          title: "错误",
-          description: "保存专注记录失败",
-          variant: "destructive",
-        });
+        console.error('完成番茄钟失败:', error);
       }
     }
-
     // 通知状态改变
     onPomodoroChange(null);
-  }, [pomodoroId, title, description, duration, selectedTag, updateServerPomodoroStatus, playSoundOnComplete, toast]);
+  }, [pomodoroId]);
 
   // 开始番茄钟
   const startPomodoro = useCallback(async () => {

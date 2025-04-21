@@ -73,6 +73,7 @@ export function TimelineComponent({
 
   // 获取特定小时的所有项目
   const getItemsForHour = (hour: number): TimelineItem[] => {
+    console.log(items);
     return items.filter(item => {
       const startHour = getHourFromTime(item.startTime);
       const endHour = getHourFromTime(item.endTime);

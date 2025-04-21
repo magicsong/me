@@ -11,7 +11,7 @@ import { format, addDays, subDays, endOfDay, subDays as dateFnsSubDays } from 'd
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PlanResult, PlanScheduleItem } from '@/app/api/todo/types';
-import { TodoBO } from "@/app/api/types";
+import { PomodoroBO, TodoBO } from "@/app/api/types";
 import { toast } from 'sonner';
 import { 
   Dialog, 
@@ -25,13 +25,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { TimelineComponent, TimelineItem } from './timeline/timeline-component';
 
-interface PomodoroSession {
-  todoId: number;
-  startTime: string;
-  endTime: string;
-  completed?: boolean;
-}
-
 interface DailyTimelineViewProps {
   todos: TodoBO[];
   selectedDate: Date;
@@ -40,7 +33,7 @@ interface DailyTimelineViewProps {
   onStartPomodoro: (todoId: number) => void;
   onEditTodo: (todo: TodoBO) => void;
   workingHours?: { start: number; end: number }; // 工作时间配置
-  pomodoroSessions?: PomodoroSession[]; // 番茄钟分配
+  pomodoroSessions?: PomodoroBO[]; // 番茄钟分配
 }
 
 export function DailyTimelineView({
@@ -206,15 +199,28 @@ const cancelPlanResult = () => {
 
   // 将番茄钟会话转换为时间线项目
   const convertPomodorosToTimelineItems = (): TimelineItem[] => {
-    return pomodoroSessions.map((session, index) => ({
-      id: `pomodoro-${session.todoId}-${index}`,
-      type: 'pomodoro',
-      title: `番茄钟 #${index + 1}`,
-      startTime: session.startTime,
-      endTime: session.endTime,
-      draggable: false,
-      metadata: session
-    }));
+    return pomodoroSessions.map((session, index) => {
+      let endTimeValue = session.endTime;
+      
+      // 如果endTime为空，计算endTime = startTime + duration
+      if (!endTimeValue && session.startTime) {
+        const startDate = new Date(session.startTime);
+        // 使用session中的duration或默认25分钟(标准番茄钟时长)
+        const durationInMinutes = session.duration || 25;
+        const endDate = new Date(startDate.getTime() + durationInMinutes * 60 * 1000);
+        endTimeValue = endDate.toISOString();
+      }
+      
+      return {
+        id: `pomodoro-${session.title}-${index}`,
+        type: 'pomodoro',
+        title: `番茄钟 #${index + 1}`,
+        startTime: session.startTime,
+        endTime: endTimeValue,
+        draggable: false,
+        metadata: session
+      };
+    });
   };
 
   // 获取所有时间线项目
@@ -253,16 +259,22 @@ const cancelPlanResult = () => {
                 onEditTodo(todo);
               }}
             >
-              <Edit2 className="h-3 w-3" />
+              <div className="flex gap-1 items-center">
+                <Edit2 className="h-3 w-3 mr-1" />
+                <span className="text-xs">编辑</span>
+              </div>
             </button>
             <button 
-              className="text-green-600 hover:text-green-800 p-0.5 rounded-sm"
+              className="text-green-600 hover:text-green-800 p-1 rounded-sm flex items-center"
               onClick={(e) => {
                 e.stopPropagation();
                 onStartPomodoro(todo.id);
               }}
             >
-              <Play className="h-3 w-3" />
+              <div className="flex gap-1 items-center">
+                <Play className="h-3 w-3 mr-1" />
+                <span className="text-xs">开始专注</span>
+              </div>
             </button>
           </div>
         </div>

@@ -15,7 +15,7 @@ import {
   XIcon
 } from "lucide-react";
 import { toast } from "sonner";
-import { TodoBO } from "@/app/api/todo/types";
+import { TodoBO } from "@/app/api/types";
 import { deleteTodo } from "@/app/(dashboard)/habits/client-actions";
 
 interface DailyPlanningProps {
