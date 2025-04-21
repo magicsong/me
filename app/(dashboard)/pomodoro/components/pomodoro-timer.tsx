@@ -689,7 +689,7 @@ export function PomodoroTimer({
           {isCompleted && (
             <Button
               size="lg"
-              onClick={resetPomodoro}
+              onClick={completePomodoro}
               variant="default"
               type="button"
             >
