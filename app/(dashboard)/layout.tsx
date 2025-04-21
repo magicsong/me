@@ -13,7 +13,8 @@ import {
   FileText,
   History,
   Brain,
-  MessageSquare
+  MessageSquare,
+  FileBarChart // 导入总结图表相关图标
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -77,6 +78,9 @@ function DesktopNav() {
         </NavItem>
         <NavItem href="/daily" label="Daily">
           <History className="h-5 w-5" />
+        </NavItem>
+        <NavItem href="/summary" label="日常总结">
+          <FileBarChart className="h-5 w-5" />
         </NavItem>
         <NavItem href="/chat" label="AI Chat">
           <MessageSquare className="h-5 w-5" />
@@ -199,6 +203,13 @@ function MobileNav() {
           >
             <History className="h-5 w-5" />
             日常
+          </Link>
+          <Link
+            href="/summary"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <FileBarChart className="h-5 w-5" />
+            日常总结
           </Link>
           <Link
             href="#"

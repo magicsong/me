@@ -41,9 +41,9 @@ function convertToDailySummaryContext(dbData: DailySummaryContent): DailySummary
       date: '',
       completedTasks: [],
       goodThings: [],
-      learnings: [], // 修改为数组类型
-      challenges: [], // 修改为数组类型
-      improvements: [], // 修改为数组类型
+      learnings: '', // 修改为数组类型
+      challenges: '', // 修改为数组类型
+      improvements: '', // 修改为数组类型
       mood: '',
       energyLevel: '',
       sleepQuality: '',
@@ -57,7 +57,7 @@ function convertToDailySummaryContext(dbData: DailySummaryContent): DailySummary
     goodThings: dbData.goodThings || [],
     learnings: dbData.learnings || '',
     challenges: dbData.challenges || '',
-    improvements: dbData.improvements || '',
+    improvements: dbData.improvements[0] || '',
     mood: dbData.mood || '',
     energyLevel: dbData.energyLevel || '',
     sleepQuality: dbData.sleepQuality || '',

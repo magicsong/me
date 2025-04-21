@@ -57,7 +57,14 @@ export function ClientBreadcrumb() {
       name: 'Goals',
       page: '目标追踪'
     };
-  } else if (pathname?.includes('/ai-history')) {
+  }  else if (pathname?.includes('/summary')) {
+    breadcrumbItems = {
+      link: '/summary',
+      name: 'Summary',
+      page: '个人总结'
+    };
+  } 
+  else if (pathname?.includes('/ai-history')) {
     // 添加AI历史面包屑
     if (pathname.includes('/ai-history/')) {
       breadcrumbItems = {

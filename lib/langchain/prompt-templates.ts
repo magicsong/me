@@ -6,8 +6,9 @@ import { DailySummaryContext, ThreeDaySummaryContext, WeeklySummaryContext } fro
 export function getDailySummaryPrompt(dateStr: string, context: DailySummaryContext, yesterdaySummary?: string): string {
   return `
     以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
-    完成任务: ${context.completedTasks ? context.completedTasks.join(', ') : '无'}
-    失败任务：${context.failedTasks ? context.failedTasks.join(', ') : '无'}
+    完成习惯: ${context.completedTasks ? context.completedTasks.join(', ') : '无'}
+    失败习惯：${context.failedTasks ? context.failedTasks.join(', ') : '无'}
+    完成任务：${context.completedTodos ? context.completedTodos.join(', ') : '无'}
     三件好事: ${context.goodThings ? context.goodThings.filter(Boolean).join(', ') : '无'}
     今日收获: ${context.learnings || '无'}
     挑战: ${context.challenges || '无'}

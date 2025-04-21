@@ -1,23 +1,22 @@
 import 'server-only';
 
-import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
-import { StructuredOutputParser } from "@langchain/core/output_parsers";
-import { chatModel } from "./index";
-import {
-  summaryFeedbackPrompt,
-  tagSuggestionPrompt,
-  dailyPlanningPrompt,
-  habitSuggestionPrompt,
-  toDoAutoPlanPrompt
-} from "./prompts";
 import { auth } from "@/lib/auth";
 import { findLLMCachedResponse, saveLLMRecordToDB } from "@/lib/db/llm";
-import { createHash } from "crypto";
-import { AIMessage, AIMessageChunk, HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { load } from "@langchain/core/load";
-import { getCurrentDateString, trimLLMContentToJsonObject, trimLLMContentToJsonArray } from '../utils';
-import { OperationType, EntityType, Operation, BatchOperation, LLMGenerationOptions, ApiResponse, BatchApiResponse } from './types';
+import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
+import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
+import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
+import { createHash } from "crypto";
+import { getCurrentDateString } from '../utils';
+import { chatModel } from "./index";
+import {
+  dailyPlanningPrompt,
+  habitSuggestionPrompt,
+  summaryFeedbackPrompt,
+  tagSuggestionPrompt,
+  toDoAutoPlanPrompt
+} from "./prompts";
 
 // 创建带缓存支持的链（泛型版本）
 const createCachedChain = async <T>(chainFunc: () => Promise<T>, cacheKey: string, cacheTime: number = 60): Promise<T> => {
