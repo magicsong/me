@@ -5,7 +5,7 @@ import { DailySummaryContext, ThreeDaySummaryContext, WeeklySummaryContext } fro
  */
 export function getDailySummaryPrompt(dateStr: string, context: DailySummaryContext, yesterdaySummary?: string): string {
   return `
-    以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
+    上面是我们之前的对话，以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
     完成习惯: ${context.completedTasks ? context.completedTasks.join(', ') : '无'}
     失败习惯：${context.failedTasks ? context.failedTasks.join(', ') : '无'}
     完成任务：${context.completedTodos ? context.completedTodos.join(', ') : '无'}
@@ -17,10 +17,9 @@ export function getDailySummaryPrompt(dateStr: string, context: DailySummaryCont
     精力水平: ${context.energyLevel || '无'}
     睡眠质量: ${context.sleepQuality || '无'}
     明日目标: ${context.tomorrowGoals || '无'}
-    昨日总结: ${yesterdaySummary || '无'}
     
-    请根据以上信息，总结我这一天的情况，包括亮点和改进空间，不超过500个字。
-    使用客观但鼓励的语气，直接给出总结，不需要"你的总结是"这样的开头。
+    请根据以上信息，总结我这一天的情况，包括亮点和改进空间，可以结合前面的对话，分析几天趋势
+    使用客观语气,可以适当鼓励，但不能都是鼓励，发现问题需要客观指出，直接给出总结，不需要"你的总结是"这样的开头。
   `;
 }
 

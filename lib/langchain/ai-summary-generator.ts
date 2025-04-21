@@ -84,6 +84,7 @@ function convertToThreeDaySummaryContext(dbData: DailySummaryRow[]): ThreeDaySum
     completedTasks: (item.content as JournalEntry).completedTasks || [],
     completionCount: (item.content as JournalEntry).completionCount || 0,
     completionScore: (item.content as JournalEntry).completionScore || 0,
+    failedTasks: (item.content as JournalEntry).failedTasks || [],
     goodThings: (item.content as JournalEntry).goodThings || [],
     learnings: (item.content as JournalEntry).learnings || '',
     challenges: (item.content as JournalEntry).challenges || '',

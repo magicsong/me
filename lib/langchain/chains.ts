@@ -8,7 +8,7 @@ import { StructuredOutputParser } from "@langchain/core/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables";
 import { createHash } from "crypto";
-import { getCurrentDateString } from '../utils';
+import { getCurrentDateString, getCurrentUserId } from '../utils';
 import { chatModel } from "./index";
 import {
   dailyPlanningPrompt,
@@ -17,6 +17,7 @@ import {
   tagSuggestionPrompt,
   toDoAutoPlanPrompt
 } from "./prompts";
+import { generateContent, GenerateOptions } from './memory';
 
 // 创建带缓存支持的链（泛型版本）
 const createCachedChain = async <T>(chainFunc: () => Promise<T>, cacheKey: string, cacheTime: number = 60): Promise<T> => {
@@ -51,17 +52,15 @@ const createCachedChain = async <T>(chainFunc: () => Promise<T>, cacheKey: strin
 export { createCachedChain };
 // 生成总结反馈
 export async function generateSummaryFeedback(summaryContent: string): Promise<string> {
-  const chain = RunnableSequence.from([
-    summaryFeedbackPrompt,
-    chatModel,
-  ]);
-  const result = await createCachedChain(
-    () => chain.invoke({ summaryContent }),
-    `summary-feedback:${summaryContent}`,
-    240 // 缓存4小时
-  );
-  // 返回消息的content字段
-  return String(result.content)
+  const userId = await getCurrentUserId();
+  const opts = {
+    userId, sessionId: "daily-summary", input: summaryContent, memoryParams: {
+      memoryType: "window",
+      windowSize: 6,
+      returnMessages: true,
+    }
+  } as GenerateOptions;
+  return generateContent(opts);
 }
 
 // 标签建议解析器

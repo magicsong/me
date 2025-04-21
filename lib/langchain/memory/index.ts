@@ -11,7 +11,7 @@ const pool = new Pool({
 });
 
 
-interface MemoryParams {
+export interface MemoryParams {
     memoryType?: "buffer" | "window" | "summary";
     returnMessages?: boolean;
     windowSize?: number;
@@ -19,7 +19,7 @@ interface MemoryParams {
     memoryKey?: string;
 }
 
-interface GenerateOptions {
+export interface GenerateOptions {
     userId: string;
     sessionId: string;
     input: string;
