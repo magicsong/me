@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import ChatUI from "@/components/ChatUI";
 
 export default function ChatTestPage() {

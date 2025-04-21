@@ -1,16 +1,15 @@
-import { db } from "@/lib/db";
 import { PostgresChatMessageHistory } from "@langchain/community/stores/message/postgres";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 import { ChatOpenAI } from "@langchain/openai";
 import { ConversationChain } from "langchain/chains";
 import { BufferWindowMemory, ConversationSummaryBufferMemory } from "langchain/memory";
+import { chatModel } from "..";
+import { Pool } from "pg";
 
-// 构造参数支持 pool 或 poolConfig、sessionId 和可选 tableName
-const chatHistory = new PostgresChatMessageHistory({
-    sessionId: "my-session",
-    pool: db,
-    tableName: "chat_histories",
+const pool = new Pool({
+    connectionString: process.env.POSTGRES_URL,
 });
+
 
 interface MemoryParams {
     memoryType?: "buffer" | "window" | "summary";
@@ -30,6 +29,12 @@ interface GenerateOptions {
 // 核心接口
 export async function generateContent(opts: GenerateOptions): Promise<string> {
     const { sessionId, input, memoryParams } = opts;
+    // 构造参数支持 pool 或 poolConfig、sessionId 和可选 tableName
+    const chatHistory = new PostgresChatMessageHistory({
+        sessionId: sessionId,
+        pool: pool,
+        tableName: "chat_histories",
+    });
     // 选择内存策略
     let memory;
     switch (memoryParams?.memoryType) {
@@ -38,6 +43,7 @@ export async function generateContent(opts: GenerateOptions): Promise<string> {
                 chatHistory: chatHistory,
                 k: memoryParams.windowSize ?? 5,
                 returnMessages: memoryParams.returnMessages,
+                memoryKey: "chat_history",
             });
             break;
         case "summary":
@@ -57,7 +63,7 @@ export async function generateContent(opts: GenerateOptions): Promise<string> {
 
     // 构建链并生成
     const chain = new ConversationChain({
-        llm: new ChatOpenAI({ temperature: 0.7 }),
+        llm: chatModel,
         memory,
         prompt: ChatPromptTemplate.fromMessages([
             new MessagesPlaceholder(memoryParams?.memoryKey ?? "chat_history"),

@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { generateContent } from "@/lib/langchain/memory";
 
 interface Message {
   role: "user" | "ai";
@@ -33,19 +32,31 @@ export default function ChatUI({ userId, sessionId, memoryType = "buffer" }: Cha
     setIsLoading(true);
     
     try {
-      // 获取AI响应
-      const response = await generateContent({
-        userId,
-        sessionId,
-        input: inputValue,
-        memoryParams: {
-          memoryType,
-          returnMessages: true,
+      // 使用API调用替代直接函数调用
+      const response = await fetch('/api/memory-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          userId,
+          sessionId,
+          input: inputValue,
+          memoryParams: {
+            memoryType,
+            returnMessages: true,
+          },
+        }),
       });
       
+      if (!response.ok) {
+        throw new Error(`API响应错误: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
       // 添加AI消息
-      const aiMessage: Message = { role: "ai", content: response };
+      const aiMessage: Message = { role: "ai", content: data.content || data.response };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error("生成响应失败:", error);
