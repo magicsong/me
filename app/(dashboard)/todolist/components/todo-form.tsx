@@ -19,16 +19,16 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Todo } from './todolist-container';
 import { MultiSelect } from './multi-select';
+import { TodoBO } from '@/app/api/types';
 
 interface TodoFormProps {
   onSubmit: (
-    data: Omit<Todo, 'id' | 'created_at' | 'updated_at' | 'completed_at'>,
+    data: Omit<TodoBO, 'id' | 'created_at' | 'updated_at' | 'completed_at'>,
     tagIds: number[]
   ) => void;
   onCancel: () => void;
-  initialData?: Todo;
+  initialData?: TodoBO;
 }
 
 interface Tag {
@@ -42,7 +42,7 @@ export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
   const [status, setStatus] = useState(initialData?.status || 'pending');
   const [priority, setPriority] = useState(initialData?.priority || 'medium');
   const [dueDate, setDueDate] = useState<Date | undefined>(
-    initialData?.due_date ? new Date(initialData.due_date) : undefined
+    initialData?.plannedDate ? new Date(initialData.plannedDate) : undefined
   );
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
@@ -119,7 +119,7 @@ export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
       description,
       status: status as 'pending' | 'in_progress' | 'completed' | 'archived',
       priority: priority as 'low' | 'medium' | 'high' | 'urgent',
-      due_date: dueDate?.toISOString(),
+      plannedDate: dueDate?.toISOString(),
     };
 
     // 获取选择的标签IDs

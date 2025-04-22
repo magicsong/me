@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getAllNotes, createNote, updateNote, deleteNote, getNoteById } from '@/lib/db-notes';
+import { getCurrentUserId } from '@/lib/utils';
 
 // 获取笔记列表
 export async function GET(request: NextRequest) {
@@ -39,8 +40,8 @@ export async function GET(request: NextRequest) {
 // 创建新笔记
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const userId = await getCurrentUserId()
+    if (!userId) {
       return NextResponse.json({ error: '未授权：需要用户登录' }, { status: 401 });
     }
     
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     
     const note = await createNote({
       ...body,
-      userId: session.user.id
+      userId,
     });
     
     return NextResponse.json(note);

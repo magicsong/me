@@ -113,7 +113,7 @@ export function TodoListContainer() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(todo),
+        body: JSON.stringify({data:todo}),
       });
 
       if (!response.ok) {
@@ -121,7 +121,7 @@ export function TodoListContainer() {
       }
 
       // 获取新创建的待办事项ID
-      const newTodo = await response.json();
+      const newTodo = await response.json().data;
 
       // 确保有待办事项ID才进行标签关联
       if (newTodo && newTodo.id) {
