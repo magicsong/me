@@ -29,6 +29,7 @@ import { HabitEntry } from '@/lib/persist/habit-entry';
 // 获取当前用户ID的辅助函数
 async function getCurrentUserId() {
   const session = await auth();
+  console.log(session);
   if (!session?.user?.id) {
     throw new Error('未登录或无效用户');
   }

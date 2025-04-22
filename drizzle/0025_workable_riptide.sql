@@ -1,0 +1,1 @@
+ALTER TYPE "public"."insight_kind" ADD VALUE 'daily_quote';

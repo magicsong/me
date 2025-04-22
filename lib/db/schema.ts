@@ -308,7 +308,8 @@ export const insightKind = pgEnum("insight_kind", [
 	'personal_profile',  // 个人画像
 	'habit_analysis',    // 习惯分析
 	'goal_tracking',     // 目标进度跟踪
-	'productivity_trend' // 生产力趋势
+	'productivity_trend', // 生产力趋势
+	'daily_quote',
 ])
 
 // 添加AI洞察表

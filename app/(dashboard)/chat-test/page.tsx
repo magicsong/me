@@ -9,7 +9,6 @@ const NewTimelineNoSSR = dynamic(
 
 import { useState } from "react";
 import ChatUI from "@/components/ChatUI";
-import NewTimeline from "@/components/timeline/new-timeline";
 
 export default function ChatTestPage() {
   const [sessionId, setSessionId] = useState(`session-${Date.now()}`);
