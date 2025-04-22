@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import "@bitnoi.se/react-scheduler/dist/style.css";
 

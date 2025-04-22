@@ -1,5 +1,12 @@
 "use client";
 
+import dynamic from 'next/dynamic'
+ 
+const NewTimelineNoSSR = dynamic(
+  () => import('@/components/timeline/new-timeline'),
+  { ssr: false }
+)
+
 import { useState } from "react";
 import ChatUI from "@/components/ChatUI";
 import NewTimeline from "@/components/timeline/new-timeline";
@@ -15,7 +22,7 @@ export default function ChatTestPage() {
   return (
     <div className="container mx-auto p-2 sm:p-4 md:p-6 overflow-x-hidden">
       <div className="w-full overflow-x-auto">
-      <NewTimeline />
+      <NewTimelineNoSSR />
       </div>
       
       <h1 className="text-2xl font-bold mb-6 mt-6">LangChain 聊天记忆测试</h1>

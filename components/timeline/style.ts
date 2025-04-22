@@ -1,3 +1,5 @@
+"use client";
+
 import styled, { createGlobalStyle, type DefaultTheme } from "styled-components";
 
 export const prefixId = "reactSchedulerOutsideWrapper";
