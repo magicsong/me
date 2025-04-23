@@ -30,6 +30,8 @@ export interface JournalEntry {
     tomorrowGoals: string;
     completedTasks: string[];
     failedTasks: string[]; // 添加字段
+    failedHabits: string[];
+    completedHabits: string[];
     completionCount: number;
     completionScore: number;
     summary?: string; // 添加字段

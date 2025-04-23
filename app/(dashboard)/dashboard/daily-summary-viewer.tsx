@@ -559,7 +559,7 @@ export function DailySummaryViewer() {
         completedHabits={completedHabits}
         failedTasks={failedTasks}
         failedHabits={failedHabits}
-        totalTasks={totalTasks + completedTasks.length + failedTasks.length}
+        totalTasks={totalTasks}
         summaryDate={dateType === 'today' ? 'today' : 'yesterday'}
       />
 

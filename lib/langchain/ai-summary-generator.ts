@@ -118,14 +118,9 @@ export async function generateAISummary(dateStr: string, userId: string, summary
   switch (summaryType) {
     case SummaryType.DAILY:
       const dailyData = await getDailySummary(dateStr);
-      const yesterdayDate = new Date(dateStr);
-      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-      const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
-      const yesterdayData = await getDailySummary(yesterdayStr);
 
       context = convertToDailySummaryContext(dailyData.content as JournalEntry);
-      const yesterdaySummary = JSON.stringify(yesterdayData?.content) || '';
-      prompt = getDailySummaryPrompt(dateStr, context, yesterdaySummary);
+      prompt = getDailySummaryPrompt(dateStr, context);
 
       if (dailyData.id) {
         referencedDataArr.push({ id: dailyData.id, tableName: 'daily_summaries' });

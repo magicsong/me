@@ -124,15 +124,8 @@ export interface BaseSummaryItem {
     sleepQuality: string;
     tomorrowGoals: string;
     aiSummary?: string;
-    // 4. 习惯与打卡
-    habitCompletion: Record<string, boolean>;  
-      /* 例如：
-        {
-          "早起": true,
-          "阅读": false,
-          "拉伸": true
-        }
-      */
+    failedHabits: string[];
+    completedHabits: string[];
   }
   
   /**
