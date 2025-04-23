@@ -25,16 +25,7 @@ import {
   updateUserRewardsInDB
 } from '@/lib/db-rewards';
 import { HabitEntry } from '@/lib/persist/habit-entry';
-
-// 获取当前用户ID的辅助函数
-async function getCurrentUserId() {
-  const session = await auth();
-  console.log(session);
-  if (!session?.user?.id) {
-    throw new Error('未登录或无效用户');
-  }
-  return session.user.id;
-}
+import { getCurrentUserId } from '@/lib/utils';
 
 export async function createHabit(formData: FormData) {
   const userId = await getCurrentUserId();

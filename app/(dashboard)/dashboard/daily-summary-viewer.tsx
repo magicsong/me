@@ -31,34 +31,24 @@ import {
   Brain,
   CalendarDays,
   Calendar as CalendarIcon,
+  CheckCircle,
   ChevronRight,
+  Circle,
   Edit,
   FileText,
   Lightbulb,
   Star,
   User
 } from 'lucide-react';
-import { useEffect, useState ,useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { fetchDailySummary, saveDailySummary } from './actions';
 import { AISummarySection } from './components/ai-summary-section';
 import { DailySummaryForm } from './daily-summary-form';
 import { getHabits } from '../habits/client-actions';
+import { DailySummaryContext, TodoBO } from '@/app/api/types';
+import { fetchTodosByDate } from '../actions';
 
-type SummaryData = {
-  date: string;
-  completedTasks: string[];
-  completionCount: number;
-  completionScore: number;
-  goodThings: string[];
-  learnings: string;
-  challenges: string;
-  improvements: string;
-  mood: string;
-  energyLevel: string;
-  sleepQuality: string;
-  tomorrowGoals: string;
-  aiSummary?: string; // 添加AI总结字段
-};
+type SummaryData = DailySummaryContext
 
 export function DailySummaryViewer() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -67,8 +57,10 @@ export function DailySummaryViewer() {
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
-  const [failedTasks, setFailedTasks] = useState<string[]>([]); // 添加未完成任务状态
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]); // 完成的普通任务
+  const [completedHabits, setCompletedHabits] = useState<string[]>([]); // 完成的习惯任务
+  const [failedTasks, setFailedTasks] = useState<string[]>([]); // 未完成的普通任务
+  const [failedHabits, setFailedHabits] = useState<string[]>([]); // 未完成的习惯
   const [totalTasks, setTotalTasks] = useState(0);
   const [habitsLoading, setHabitsLoading] = useState(false);
 
@@ -95,7 +87,7 @@ export function DailySummaryViewer() {
         const result = await fetchDailySummary(dateStr);
 
         if (result.success && result.data) {
-          setSummaryData(result.data.content);
+          setSummaryData(result.data.content as DailySummaryContext || null);
         } else {
           setSummaryData(null);
           if (result.message) {
@@ -113,33 +105,57 @@ export function DailySummaryViewer() {
 
     loadSummary();
     loadHabitsData(); // 在日期改变时也加载习惯数据
+    loadTodosData();  // 在日期改变时也加载任务数据
   }, [selectedDate]);
 
-  // 加载习惯数据
-  const loadHabitsData = async () => {
-    setHabitsLoading(true);
+  // 加载任务数据
+  const loadTodosData = async () => {
     try {
-      const result = await getHabits(selectedDate);
-      
-      if (result.length > 0) {
-        // 过滤出已完成的习惯
-        const completedHabits = result.filter((habit) => habit.completedToday);
-        // 过滤出未完成的习惯
-        const failedHabits = result.filter((habit) => !habit.completedToday);
-        
-        setCompletedTasks(completedHabits.map(habit => habit.name) || []);
-        setFailedTasks(failedHabits.map(habit => habit.name) || []);
-        setTotalTasks(result.length || 0); // 总任务数应该是所有习惯数量
-      } else {
+      const result = await fetchTodosByDate(selectedDate);
+
+      if (result.success && result.data) {
+        // 过滤出已完成的任务
+        const todos = result.data as TodoBO[];
+        const completed = todos.filter(todo => todo.completedAt);
+        const failed = todos.filter(todo => !todo.completedAt);
+
+        // 设置任务数据，不添加前缀
+        setCompletedTasks(completed.map(todo => todo.title));
+        setFailedTasks(failed.map(todo => todo.title));
+        setTotalTasks(todos.length);
+      }
+      else {
         setCompletedTasks([]);
         setFailedTasks([]);
         setTotalTasks(0);
       }
     } catch (err) {
+      console.error('加载任务数据失败:', err);
+    }
+  };
+  // 加载习惯数据
+  const loadHabitsData = async () => {
+    setHabitsLoading(true);
+    try {
+      const result = await getHabits(selectedDate);
+      if (result.length > 0) {
+        // 过滤出已完成的习惯
+        const completed = result.filter((habit) => habit.completedToday);
+        // 过滤出未完成的习惯
+        const failed = result.filter((habit) => habit.failedToday);
+
+        // 直接设置习惯数据，不再添加前缀
+        setCompletedHabits(completed.map(habit => habit.name));
+        setFailedHabits(failed.map(habit => habit.name));
+      } else {
+        setCompletedHabits([]);
+        setFailedHabits([]);
+        setTotalTasks(0);
+      }
+    } catch (err) {
       console.error('加载习惯数据失败:', err);
-      setCompletedTasks([]);
-      setFailedTasks([]);
-      setTotalTasks(0);
+      setCompletedHabits([]);
+      setFailedHabits([]);
     } finally {
       setHabitsLoading(false);
     }
@@ -155,7 +171,7 @@ export function DailySummaryViewer() {
 
   // 日期导航
   const goToPreviousDay = () => {
-    
+
     setSelectedDate(prev => subDays(prev, 1));
   };
 
@@ -320,11 +336,11 @@ export function DailySummaryViewer() {
                 onClick={() => handleOpenForm()}
                 className="mt-2"
               >
-                {dateType === 'today' 
-                  ? '记录今日总结' 
-                  : dateType === 'yesterday' 
-                  ? '记录昨日总结' 
-                  : '添加历史总结'
+                {dateType === 'today'
+                  ? '记录今日总结'
+                  : dateType === 'yesterday'
+                    ? '记录昨日总结'
+                    : '添加历史总结'
                 }
               </Button>
             </div>
@@ -371,8 +387,8 @@ export function DailySummaryViewer() {
                   <TabsTrigger value="ai" className="flex items-center gap-1.5">
                     <Brain className="h-3.5 w-3.5" />
                     <span>AI 总结</span>
-                    </TabsTrigger>
-                  </TabsList>
+                  </TabsTrigger>
+                </TabsList>
 
                 {/* 个人总结区Tab内容 */}
                 <TabsContent value="personal" className="mt-0">
@@ -383,6 +399,59 @@ export function DailySummaryViewer() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="py-2 pb-4">
+                      {/* 任务和习惯完成情况 */}
+                      {(completedHabits.length > 0 || completedTasks.length > 0) && (
+                        <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-4 hover:bg-indigo-50/80 transition-colors md:col-span-2">
+                          <div className="flex items-center text-sm font-medium mb-3">
+                            <CheckCircle className="h-4 w-4 mr-2 text-indigo-500" />
+                            <span className="text-indigo-900">今日完成</span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* 习惯完成情况 */}
+                            {completedHabits.length > 0 && (
+                              <div>
+                                <h4 className="text-xs font-medium text-indigo-700 mb-2">习惯</h4>
+                                <div className="space-y-1.5">
+                                  {completedHabits.map((habit, index) => (
+                                    <div key={`habit-${index}`} className="flex items-center">
+                                      <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-2" />
+                                      <span className="text-sm text-slate-700">{habit}</span>
+                                    </div>
+                                  ))}
+                                  {failedHabits.map((habit, index) => (
+                                    <div key={`failed-habit-${index}`} className="flex items-center opacity-60">
+                                      <Circle className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                                      <span className="text-sm text-slate-500 line-through">{habit}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 任务完成情况 */}
+                            {completedTasks.length > 0 && (
+                              <div>
+                                <h4 className="text-xs font-medium text-indigo-700 mb-2">任务</h4>
+                                <div className="space-y-1.5">
+                                  {completedTasks.map((task, index) => (
+                                    <div key={`task-${index}`} className="flex items-center">
+                                      <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-2" />
+                                      <span className="text-sm text-slate-700">{task}</span>
+                                    </div>
+                                  ))}
+                                  {failedTasks.map((task, index) => (
+                                    <div key={`failed-task-${index}`} className="flex items-center opacity-60">
+                                      <Circle className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                                      <span className="text-sm text-slate-500 line-through">{task}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* 三件好事 */}
                         {summaryData.goodThings?.filter(Boolean).length > 0 && (
@@ -481,13 +550,16 @@ export function DailySummaryViewer() {
       </Card>
 
       {/* 总结表单 */}
+      {/* 总结表单 */}
       <DailySummaryForm
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleSubmitSummary}
         completedTasks={completedTasks}
+        completedHabits={completedHabits}
         failedTasks={failedTasks}
-        totalTasks={totalTasks}
+        failedHabits={failedHabits}
+        totalTasks={totalTasks + completedTasks.length + failedTasks.length}
         summaryDate={dateType === 'today' ? 'today' : 'yesterday'}
       />
 

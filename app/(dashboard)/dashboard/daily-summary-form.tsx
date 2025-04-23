@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { 
+import {
   BatteryFull, BatteryMedium, BatteryLow,
-  Smile, Meh, Frown, 
+  Smile, Meh, Frown,
   Moon, CalendarIcon, Sparkles,
   Flower2, CheckCircle2, XCircle
 } from 'lucide-react';
@@ -26,6 +26,8 @@ type DailySummaryFormProps = {
   failedTasks: string[];
   totalTasks: number;
   summaryDate: 'today' | 'yesterday';
+  completedHabits: string[],
+  failedHabits: string[],
 };
 
 const emojis = ['😊', '😃', '😐', '😔', '😢'];
@@ -37,7 +39,9 @@ export function DailySummaryForm({
   completedTasks,
   failedTasks,
   totalTasks,
-  summaryDate
+  summaryDate,
+  completedHabits,
+  failedHabits,
 }: DailySummaryFormProps) {
   const [completionScore, setCompletionScore] = useState(5);
   const [goodThings, setGoodThings] = useState(['', '', '']);
@@ -66,12 +70,12 @@ export function DailySummaryForm({
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
-    return summaryDate === 'today' 
+
+    return summaryDate === 'today'
       ? today.toISOString().split('T')[0]
       : yesterday.toISOString().split('T')[0];
   };
-  
+
   const getDateDisplay = () => {
     const dateStr = getDateString();
     const [year, month, day] = dateStr.split('-');
@@ -98,17 +102,17 @@ export function DailySummaryForm({
   useEffect(() => {
     async function loadExistingSummary() {
       if (!isOpen) return;
-      
+
       const dateStr = getDateString();
       setLoading(true);
-      
+
       try {
         const result = await fetchDailySummary(dateStr);
-        
+
         if (result.success && result.data) {
           const summaryData = result.data.content;
-          if (result.data.ai_summary){
-            summaryData.AiSummary= result.data.ai_summary;
+          if (result.data.ai_summary) {
+            summaryData.AiSummary = result.data.ai_summary;
           }
           // 填充表单数据
           if (summaryData.completionScore) setCompletionScore(summaryData.completionScore);
@@ -138,7 +142,7 @@ export function DailySummaryForm({
         setLoading(false);
       }
     }
-    
+
     loadExistingSummary();
   }, [isOpen, summaryDate]);
 
@@ -158,7 +162,7 @@ export function DailySummaryForm({
   // 处理表单提交
   const handleSubmit = async () => {
     setSubmitting(true);
-    
+
     const formData = {
       date: getDateString(),
       dateType: summaryDate,
@@ -175,20 +179,20 @@ export function DailySummaryForm({
       tomorrowGoals,
       failedTasks: failedTasks, // 使用传入的未完成任务
     };
-    
+
     try {
       // 调用父组件提供的onSubmit函数并等待结果
       const result = await onSubmit(formData);
-      
+
       if (result.success) {
         toast({
           title: "保存成功",
           description: "你的日常总结已保存",
         });
-        
+
         // 关闭表单
         onClose();
-        
+
         // 刷新页面数据以显示最新内容
         router.refresh();
       } else {
@@ -225,7 +229,7 @@ export function DailySummaryForm({
             <span>{getDateDisplay()}</span>
           </div>
         </DialogHeader>
-        
+
         <div className="py-4 space-y-6">
           {loading ? (
             <div className="flex justify-center items-center h-40">
@@ -239,30 +243,39 @@ export function DailySummaryForm({
               {/* 1. 今日完成情况 */}
               <div className="space-y-3">
                 <h3 className="text-md font-semibold">1️⃣ {summaryDate === 'today' ? '今日' : '昨日'}完成情况</h3>
-                
-                <div className="space-y-2">
-                  {/* 已完成任务列表 - 只展示不可修改 */}
-                  <Label>✅ {summaryDate === 'today' ? '今日' : '昨日'}已完成的任务</Label>
-                  <div className="border rounded-md p-3 bg-slate-50">
-                    {completedTasks.length > 0 ? (
-                      <div className="space-y-2">
-                        {completedTasks.map((task) => (
-                          <div key={task} className="flex items-center space-x-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            <span className="text-sm">{task}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">没有完成任何习惯任务</p>
-                    )}
+
+                {/* 任务完成情况 - 两栏布局 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 左侧：已完成任务 */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      已完成的任务
+                    </Label>
+                    <div className="border rounded-md p-3 bg-slate-50 h-[150px] overflow-y-auto">
+                      {completedTasks.length > 0 ? (
+                        <div className="space-y-2">
+                          {completedTasks.map((task) => (
+                            <div key={task} className="flex items-center space-x-2">
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              <span className="text-sm">{task}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">没有完成任何任务</p>
+                      )}
+                    </div>
                   </div>
-                  
-                  {/* 未完成任务列表 - 只展示不可修改 */}
-                  {failedTasks && failedTasks.length > 0 && (
-                    <>
-                      <Label>❌ {summaryDate === 'today' ? '今日' : '昨日'}未完成的任务</Label>
-                      <div className="border rounded-md p-3 bg-slate-50">
+
+                  {/* 右侧：未完成任务 */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1">
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      未完成的任务
+                    </Label>
+                    <div className="border rounded-md p-3 bg-slate-50 h-[150px] overflow-y-auto">
+                      {failedTasks.length > 0 ? (
                         <div className="space-y-2">
                           {failedTasks.map((task) => (
                             <div key={task} className="flex items-center space-x-2">
@@ -271,39 +284,94 @@ export function DailySummaryForm({
                             </div>
                           ))}
                         </div>
-                      </div>
-                    </>
-                  )}
-                  
-                  <div className="flex justify-between text-sm mt-3">
-                    <Label>🔢 已完成任务数：{completedTasks.length} / {totalTasks}</Label>
-                    <Label>📈 完成率：{completionRate}%</Label>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">没有未完成的任务</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-                
-                <div className="space-y-2">
+
+                {/* 习惯完成情况 - 两栏布局 */}
+                {(completedHabits.length > 0 || failedHabits.length > 0) && (
+                  <>
+                    <h4 className="text-sm font-medium mt-5 mb-2">习惯完成情况</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 左侧：已坚持习惯 */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-1">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          已坚持的习惯
+                        </Label>
+                        <div className="border rounded-md p-3 bg-slate-50/70 h-[120px] overflow-y-auto">
+                          {completedHabits.length > 0 ? (
+                            <div className="space-y-2">
+                              {completedHabits.map((habit) => (
+                                <div key={habit} className="flex items-center space-x-2">
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                  <span className="text-sm">{habit}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">没有坚持任何习惯</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 右侧：未坚持习惯 */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-1">
+                          <XCircle className="h-4 w-4 text-amber-500" />
+                          未坚持的习惯
+                        </Label>
+                        <div className="border rounded-md p-3 bg-slate-50/70 h-[120px] overflow-y-auto">
+                          {failedHabits.length > 0 ? (
+                            <div className="space-y-2">
+                              {failedHabits.map((habit) => (
+                                <div key={habit} className="flex items-center space-x-2">
+                                  <XCircle className="h-4 w-4 text-amber-500" />
+                                  <span className="text-sm">{habit}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">没有未坚持的习惯</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* 任务完成统计信息 */}
+                <div className="flex justify-between text-sm mt-5 px-1">
+                  <Label>🔢 已完成：{completedTasks.length + completedHabits.length} / {totalTasks}</Label>
+                  <Label>📈 完成率：{completionRate}%</Label>
+                </div>
+
+                <div className="space-y-2 mt-3">
                   <div className="flex justify-between">
                     <Label>📊 完成度评分 (1-10)</Label>
                     <span className="text-sm font-medium">{completionScore}</span>
                   </div>
-                  <Slider 
-                    value={[completionScore]} 
-                    min={1} 
-                    max={10} 
-                    step={1} 
-                    onValueChange={(vals) => setCompletionScore(vals[0])} 
+                  <Slider
+                    value={[completionScore]}
+                    min={1}
+                    max={10}
+                    step={1}
+                    onValueChange={(vals) => setCompletionScore(vals[0])}
                   />
                 </div>
               </div>
-              
+
               {/* 2. 三件好事 */}
               <div className="space-y-3">
                 <h3 className="text-md font-semibold">2️⃣ 三件好事</h3>
-                
+
                 {[0, 1, 2].map((index) => (
                   <div key={index} className="grid grid-cols-[1fr_5fr] gap-2 items-center">
                     <Label htmlFor={`good-thing-${index}`} className="flex justify-center">
-                      <Flower2/>
+                      <Flower2 />
                     </Label>
                     <Input
                       id={`good-thing-${index}`}
@@ -314,11 +382,11 @@ export function DailySummaryForm({
                   </div>
                 ))}
               </div>
-              
+
               {/* 3. 今日反思 */}
               <div className="space-y-3">
                 <h3 className="text-md font-semibold">3️⃣ {summaryDate === 'today' ? '今日' : '昨日'}反思</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="learnings">💭 今天有哪些值得记录的收获？</Label>
                   <Textarea
@@ -329,7 +397,7 @@ export function DailySummaryForm({
                     rows={3}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="challenges">❌ 今天遇到了什么挑战？</Label>
                   <Textarea
@@ -340,7 +408,7 @@ export function DailySummaryForm({
                     rows={3}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="improvements">🔄 如果能重来一次，今天我会怎么做？</Label>
                   <Textarea
@@ -352,11 +420,11 @@ export function DailySummaryForm({
                   />
                 </div>
               </div>
-              
+
               {/* 4. 情绪 & 状态 */}
               <div className="space-y-3">
                 <h3 className="text-md font-semibold">4️⃣ 情绪 & 状态</h3>
-                
+
                 <div className="space-y-2">
                   <Label>😊 {summaryDate === 'today' ? '今天' : '昨天'}的整体状态如何？</Label>
                   <div className="flex justify-between p-2 border rounded-md">
@@ -365,21 +433,20 @@ export function DailySummaryForm({
                         key={emoji}
                         type="button"
                         onClick={() => setMoodIndex(index)}
-                        className={`text-2xl p-2 rounded-full transition-all ${
-                          moodIndex === index ? 'bg-primary/10 scale-110' : 'hover:bg-muted/50'
-                        }`}
+                        className={`text-2xl p-2 rounded-full transition-all ${moodIndex === index ? 'bg-primary/10 scale-110' : 'hover:bg-muted/50'
+                          }`}
                       >
                         {emoji}
                       </button>
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="energy-level">🏋️ {summaryDate === 'today' ? '今天' : '昨天'}的精力管理如何？</Label>
-                  <RadioGroup 
-                    id="energy-level" 
-                    value={energyLevel} 
+                  <RadioGroup
+                    id="energy-level"
+                    value={energyLevel}
                     onValueChange={setEnergyLevel}
                     className="flex gap-4"
                   >
@@ -403,12 +470,12 @@ export function DailySummaryForm({
                     </div>
                   </RadioGroup>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="sleep-quality">💤 睡眠质量如何？</Label>
-                  <RadioGroup 
-                    id="sleep-quality" 
-                    value={sleepQuality} 
+                  <RadioGroup
+                    id="sleep-quality"
+                    value={sleepQuality}
                     onValueChange={setSleepQuality}
                     className="flex gap-4"
                   >
@@ -433,11 +500,11 @@ export function DailySummaryForm({
                   </RadioGroup>
                 </div>
               </div>
-              
+
               {/* 5. 明日展望 */}
               <div className="space-y-3">
                 <h3 className="text-md font-semibold">5️⃣ {summaryDate === 'today' ? '明日' : '今日'}展望</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="tomorrow-goals">🎯 {summaryDate === 'today' ? '明天' : '今天'}最重要的 3 个目标</Label>
                   <Textarea
@@ -454,11 +521,11 @@ export function DailySummaryForm({
             </>
           )}
         </div>
-        
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>取消</Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={loading || submitting}
           >
             {submitting ? "保存中..." : "保存总结"}

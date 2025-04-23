@@ -5,22 +5,19 @@ import {
   getWeeklySummaryPrompt
 } from './prompt-templates';
 
-import { getDailySummary, getWeeklySummary, getRecentDailySummaries } from '../db/db-daily-summary';
-import { 
-  DailySummaryContext, 
-  ThreeDaySummaryContext, 
-  WeeklySummaryContext, 
+import {
+  DailySummaryContext,
   SummaryType,
-  BaseSummaryItem
-} from './types';
+  ThreeDaySummaryContext,
+  WeeklySummaryContext
+} from '@/app/api/types';
+import { getDailySummary, getRecentDailySummaries, getWeeklySummary } from '../db/db-daily-summary';
 
-import {daily_summaries} from '../../lib/db/schema'
+import { daily_summaries } from '../../lib/db/schema';
 import { JournalEntry } from '../types/jsonb';
 
 // 定义从数据库 schema 推导出的类型
 type DailySummaryRow = typeof daily_summaries.$inferSelect;
-// 将 content 定义为 JournalEntry 类型
-type DailySummaryContent = JournalEntry;
 
 // 定义生成摘要返回类型
 interface SummaryResult {
@@ -35,33 +32,24 @@ interface SummaryResult {
 /**
  * 将数据库日常总结数据转换为每日总结上下文
  */
-function convertToDailySummaryContext(dbData: DailySummaryContent): DailySummaryContext {
+function convertToDailySummaryContext(dbData: JournalEntry): DailySummaryContext {
   if (!dbData) {
     return {
       date: '',
       completedTasks: [],
       goodThings: [],
-      learnings: '', // 修改为数组类型
-      challenges: '', // 修改为数组类型
-      improvements: '', // 修改为数组类型
+      learnings: [], // 修改为数组类型
+      challenges: [], // 修改为数组类型
+      improvements: [], // 修改为数组类型
       mood: '',
       energyLevel: '',
       sleepQuality: '',
       tomorrowGoals: ''
     };
   }
-  
+
   return {
-    date: dbData.date || '',
-    completedTasks: dbData.completedTasks || [],
-    goodThings: dbData.goodThings || [],
-    learnings: dbData.learnings || '',
-    challenges: dbData.challenges || '',
-    improvements: dbData.improvements[0] || '',
-    mood: dbData.mood || '',
-    energyLevel: dbData.energyLevel || '',
-    sleepQuality: dbData.sleepQuality || '',
-    tomorrowGoals: dbData.tomorrowGoals || ''
+    ...dbData,
   };
 }
 
@@ -78,25 +66,9 @@ function convertToThreeDaySummaryContext(dbData: DailySummaryRow[]): ThreeDaySum
     };
   }
   const sortedData = [...dbData].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  const dailySummaries: BaseSummaryItem[] = sortedData.map(item => ({
-    date: (item.content as JournalEntry).date || '',
-    completedTasks: (item.content as JournalEntry).completedTasks || [],
-    completionCount: (item.content as JournalEntry).completionCount || 0,
-    completionScore: (item.content as JournalEntry).completionScore || 0,
-    failedTasks: (item.content as JournalEntry).failedTasks || [],
-    goodThings: (item.content as JournalEntry).goodThings || [],
-    learnings: (item.content as JournalEntry).learnings || '',
-    challenges: (item.content as JournalEntry).challenges || '',
-    improvements: (item.content as JournalEntry).improvements || '',
-    mood: (item.content as JournalEntry).mood || '',
-    energyLevel: (item.content as JournalEntry).energyLevel || '',
-    sleepQuality: (item.content as JournalEntry).sleepQuality || '',
-    tomorrowGoals: (item.content as JournalEntry).tomorrowGoals || ''
-  }));
-  
+
   return {
-    dailySummaries,
+    dailySummaries: sortedData.map((i) => { return i.content as DailySummaryContext }),
     startDate: sortedData[0]?.date || '',
     endDate: sortedData[sortedData.length - 1]?.date || ''
   };
@@ -121,7 +93,7 @@ function convertToWeeklySummaryContext(dbData: DailySummaryRow): WeeklySummaryCo
       nextWeekGoals: ''
     };
   }
-  
+
   return {
     completedTasks: (dbData.content as JournalEntry).completedTasks || [],
     goodThings: (dbData.content as JournalEntry).goodThings || [],
@@ -141,7 +113,7 @@ function convertToWeeklySummaryContext(dbData: DailySummaryRow): WeeklySummaryCo
 export async function generateAISummary(dateStr: string, userId: string, summaryType = 'daily'): Promise<SummaryResult> {
   let context;
   let prompt;
-  let referencedDataArr: {id: string | number; tableName: string}[] = [];
+  let referencedDataArr: { id: string | number; tableName: string }[] = [];
 
   switch (summaryType) {
     case SummaryType.DAILY:
