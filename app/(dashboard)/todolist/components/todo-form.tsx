@@ -119,8 +119,9 @@ export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
       description,
       status: status as 'pending' | 'in_progress' | 'completed' | 'archived',
       priority: priority as 'low' | 'medium' | 'high' | 'urgent',
-      plannedDate: dueDate?.toISOString(),
-    };
+      plannedEndTime: dueDate?.toISOString(),
+      plannedDate: new Date().toISOString(),
+    } as TodoBO;
 
     // 获取选择的标签IDs
     const tagIds = selectedTags.map(tag => parseInt(tag.value));
