@@ -38,6 +38,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useRouter } from 'next/navigation';
 
 interface TodoItemProps {
   todo: TodoBO;
@@ -73,7 +74,7 @@ export function TodoItem({
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#3b82f6"); // 默认蓝色
   const [isCreatingTag, setIsCreatingTag] = useState(false);
-  
+  const router = useRouter();
   const form = useForm<Partial<TodoBO>>({
     defaultValues: {
       id: todo.id,
@@ -123,7 +124,9 @@ export function TodoItem({
     e.stopPropagation();
     if (onStartPomodoro) {
       onStartPomodoro(todo.id);
-    }
+    } else{
+      router.push(`/pomodoro?todoId=${todo.id}`);
+    } 
   };
   
   const handleTagsEdit = (e: React.MouseEvent) => {

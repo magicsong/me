@@ -1,26 +1,27 @@
-import React, { useState } from "react";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { TodoBO } from "@/app/api/types";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { 
-  SunIcon, 
-  ArrowRightIcon, 
-  RefreshCwIcon,
-  ClipboardListIcon,
-  GridIcon,
-  ClockIcon,
+import { Switch } from "@/components/ui/switch";
+import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  ArrowRightIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ClipboardListIcon,
+  ClockIcon,
+  GridIcon,
+  RefreshCwIcon,
   SparklesIcon,
+  SunIcon,
 } from "lucide-react";
+import React, { useState } from "react";
 import { toast } from "sonner";
-import { TaskSuggestionDialog } from "./task-suggestion-dialog";
 import { QuadrantPlanner } from "./quadrant-planner";
-import { TodoBO } from "@/app/api/types";
+import { TaskSuggestionDialog } from "./task-suggestion-dialog";
+import { LoadingModal } from "../ui/loading-modal";
 
 interface DailyPlanningStepsProps {
   onStartFocusing: () => void;
@@ -48,6 +49,10 @@ export function DailyPlanningSteps({
     updated: Array<{id: string, title: string, description?: string, priority?: 'urgent' | 'high' | 'medium' | 'low', editing?: boolean, expanded?: boolean}>;
   }>({ created: [], updated: [] });
 
+   // 添加loading状态
+   const [isAiGenerating, setIsAiGenerating] = useState(false);
+   const [isTimeGenerating, setIsTimeGenerating] = useState(false);
+
   // 检查本地存储是否已经完成了今天的规划
   React.useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -67,6 +72,7 @@ export function DailyPlanningSteps({
   const nextStep = () => {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
+      onDataRefresh();
     } else {
       completePlanning();
     }
@@ -97,7 +103,7 @@ export function DailyPlanningSteps({
       toast.error("请先填写今日规划后再生成任务");
       return;
     }
-
+    setIsAiGenerating(true);
     // 如果需要更新现有待办，先获取今天的待办事项
     let existingTodos = [];
     if (updateExisting) {
@@ -166,7 +172,9 @@ export function DailyPlanningSteps({
         
         // 打开弹窗
         setShowTaskDialog(true);
-        
+         // 隐藏loading状态
+        setIsAiGenerating(false);
+      
         const newTasksCount = data.data.created?.length || 0;
         const updatedTasksCount = data.data.updated?.length || 0;
         
@@ -487,6 +495,12 @@ export function DailyPlanningSteps({
         onRemove={handleRemoveTask}
         onToggleEditing={toggleEditing}
         onSuccess={nextStep} // 添加成功回调，自动进入下一步
+      />
+      {/* 添加AI生成任务loading模态框 */}
+      <LoadingModal 
+        open={isAiGenerating} 
+        title="AI正在生成任务建议" 
+        description="请稍等，我们正在根据您的规划生成智能任务建议..." 
       />
     </Card>
   );

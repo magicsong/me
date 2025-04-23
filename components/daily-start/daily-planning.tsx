@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { TodoBO } from "@/app/api/types";
 import { deleteTodo } from "@/app/(dashboard)/habits/client-actions";
+import { useRouter } from "next/navigation";
 
 interface DailyPlanningProps {
   todos: TodoBO[];
@@ -34,7 +35,7 @@ export function DailyPlanning({
   const [selectedTodos, setSelectedTodos] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState("today");
   const [showCompleted, setShowCompleted] = useState(false);
-
+  const router = useRouter();
   // 根据showCompleted状态过滤任务
   const filteredTodos = useMemo(() => {
     if (showCompleted) {
@@ -276,9 +277,13 @@ export function DailyPlanning({
     }
   }
 
-  function handleStartFocusing() {
-    // 进入时间轴视图
-    onChangeTab();
+  function handleStartFocusing(id?: string) {
+    if (id) {
+      router.push(`/pomodoro?todoId=${id}`);
+    } else {
+      // Navigate to the pomodoro page
+      router.push('/pomodoro');
+    }
   }
 
   return (
@@ -293,11 +298,11 @@ export function DailyPlanning({
       {/* 待办事项管理 */}
       <Card>
         <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center gap-2">
-            <ClockIcon className="h-5 w-5 text-blue-500" />
-            任务管理
-          </CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
+              <ClockIcon className="h-5 w-5 text-blue-500" />
+              任务管理
+            </CardTitle>
             <div className="flex items-center space-x-2">
               <Switch
                 id="show-completed"
@@ -394,6 +399,7 @@ export function DailyPlanning({
                                   onSelect={(selected) => handleSelectTodo(todo.id, selected)}
                                   onUpdate={updateTodo}
                                   onDelete={handleDelete}
+                                  onStartPomodoro={() => handleStartFocusing(todo.id)}
                                 />
                               ))}
                             </div>
