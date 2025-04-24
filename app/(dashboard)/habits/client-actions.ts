@@ -1,6 +1,7 @@
 "use client";
 
 import { HabitBO, TodoBO } from "@/app/api/types";
+import { getCurrentUserId } from "@/lib/utils";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 
@@ -107,4 +108,22 @@ export async function createTodo(todo: Partial<TodoBO>): Promise<TodoBO> {
         return result.data;
     }
     throw new Error(result.error)
+}
+
+
+// 获取习惯详情，包括挑战阶梯
+export async function getHabitDetail(habitId: number) {
+    const response = await fetch(`/api/habit/${habitId}`, {
+        method: 'GET',
+    });
+
+    if (!response.ok) {
+        throw new Error('获取习惯详情失败');
+    }
+
+    const data = await response.json();
+    if (data.success) {
+        return data.data;
+    }
+    throw new Error(data.error);
 }

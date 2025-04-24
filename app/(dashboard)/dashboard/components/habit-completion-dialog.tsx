@@ -17,9 +17,10 @@ import {
   ThumbsUp,
   Trophy,
 } from "lucide-react";
-import { getHabitDetail } from "../../habits/actions";
+
 import { HabitBO } from "@/app/api/types";
 import { ChallengeTier } from "@/app/api/types/habit";
+import { getHabitDetail } from "../../habits/client-actions";
 
 // 类型定义
 type DifficultyLevel = "easy" | "medium" | "hard" | null;

@@ -13,6 +13,7 @@ import { useSearchParams } from 'next/navigation';
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import { PomodoroBO } from '@/app/api/types';
 import { BaseRequest } from '@/app/api/lib/types';
+import { getHabitDetail } from '../../habits/client-actions';
 // 预设时间选项（分钟）
 const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
 
@@ -47,6 +48,8 @@ export function PomodoroTimer({
   const [isLoadingTodos, setIsLoadingTodos] = useState(false);  // 添加加载状态
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [relatedHabitId, setRelatedHabitId] = useState<string | null>(null);  // 添加关联的习惯ID
+  const [sourceType, setSourceType] = useState<'todo' | 'habit' | 'custom'>('custom');  // 添加来源类型
 
   // 初始化音频
   useEffect(() => {
@@ -123,11 +126,15 @@ export function PomodoroTimer({
   }, [toast]);
 
   
-  // 从URL参数获取todo信息
+  // 从URL参数获取todo或habit信息
   useEffect(() => {
     const todoId = searchParams.get('todoId');
+    const habitId = searchParams.get('habitId');
+    
     if (todoId) {
       setRelatedTodoId(todoId);
+      setRelatedHabitId(null);
+      setSourceType('todo');
 
       // 从API获取完整的待办事项信息
       (async () => {
@@ -136,6 +143,21 @@ export function PomodoroTimer({
           setTitle(todoDetails.title || '');
           if (todoDetails.description) {
             setDescription(todoDetails.description);
+          }
+        }
+      })();
+    } else if (habitId) {
+      setRelatedHabitId(habitId);
+      setRelatedTodoId(null);
+      setSourceType('habit');
+
+      // 从API获取完整的习惯信息
+      (async () => {
+        const habitDetails = await fetchHabitDetails(habitId);
+        if (habitDetails) {
+          setTitle(habitDetails.name || '');
+          if (habitDetails.description) {
+            setDescription(habitDetails.description);
           }
         }
       })();
@@ -183,6 +205,25 @@ export function PomodoroTimer({
     }
   }, [relatedTodoId, title, toast]);
 
+
+  // 获取习惯详情
+  const fetchHabitDetails = useCallback(async (habitId: string) => {
+    try {
+      setIsLoadingTodo(true); // 复用加载状态
+      return await getHabitDetail(Number(habitId));
+    } catch (error) {
+      console.error('获取习惯详情失败:', error);
+      toast({
+        title: "错误",
+        description: "无法加载习惯信息",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsLoadingTodo(false);
+    }
+  }, [toast]);
+  
   // 初始化时加载待办事项列表
   useEffect(() => {
     fetchTodos();
@@ -195,6 +236,7 @@ export function PomodoroTimer({
       setRelatedTodoId(todoId);
       setTitle(selectedTodo.title || '');
       setDescription(selectedTodo.description || '');
+      setSourceType('todo');
     }
   }, [todos]);
 
@@ -333,7 +375,8 @@ export function PomodoroTimer({
         description,
         duration: durationInMinutes,
         tagIds: selectedTag ? [Number(selectedTag)] : [],
-        todoId: Number(relatedTodoId)  // 添加关联的todoId
+        todoId: sourceType === 'todo' && relatedTodoId ? Number(relatedTodoId) : undefined,
+        habitId: sourceType === 'habit' && relatedHabitId ? Number(relatedHabitId) : undefined
       }
       // 先创建服务器端番茄钟
       try {

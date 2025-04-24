@@ -3,22 +3,24 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 
+import { HabitBO } from '@/app/api/types';
 import {
+  BookOpen,
   CalendarIcon, CheckCheck,
   CheckCircle2, Circle,
-  Trophy, XCircle, BookOpen
+  Clock,
+  Trophy, XCircle
 } from 'lucide-react';
+import { useRouter } from 'next/navigation'; // 添加导航钩子
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner'; // 导入 sonner 的 toast
 import { completeHabit } from '../habits/client-actions';
 import { HabitCalendar } from '../habits/habit-calendar';
 import { DifficultyFeedback } from './components/difficulty-feedback';
 import { HabitCompletionDialog } from './components/habit-completion-dialog';
 import { HabitFailureDialog } from './components/habit-failure-dialog';
-import { toast } from 'sonner'; // 导入 sonner 的 toast
-import { HabitBO } from '@/app/api/types';
-
 // 难度评估类型
 type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
 
@@ -40,7 +42,18 @@ export function HabitCheckInCard() {
 
   // 添加失败对话框状态
   const [failureDialogOpen, setFailureDialogOpen] = useState(false);
+  const router = useRouter(); // 添加路由跳转钩子
 
+  // ...existing code...
+
+  // 处理开始专注按钮点击
+  function handleStartFocus(e: React.MouseEvent, habit: HabitBO) {
+    e.stopPropagation(); // 阻止冒泡，避免同时触发打开日历
+    // 导航到番茄钟页面，并传递habitId参数
+    router.push(`/pomodoro?habitId=${habit.id}`);
+  }
+
+  // ...existing code...
   // 获取习惯数据
   async function fetchHabits() {
     setLoading(true);
@@ -207,11 +220,11 @@ export function HabitCheckInCard() {
                   }}
                   transition={{ duration: 0.3 }}
                   className={`flex items-center p-3 rounded-md cursor-pointer border ${selectedHabit?.id === habit.id ? 'border-primary bg-primary/5' :
-                      habit.completedToday
-                        ? 'bg-muted border-muted text-muted-foreground'  // 成功完成的样式
-                        : habit.failedToday
-                          ? 'bg-red-50/50 border-red-100 text-muted-foreground'  // 失败的样式
-                          : 'hover:bg-muted/50'
+                    habit.completedToday
+                      ? 'bg-muted border-muted text-muted-foreground'  // 成功完成的样式
+                      : habit.failedToday
+                        ? 'bg-red-50/50 border-red-100 text-muted-foreground'  // 失败的样式
+                        : 'hover:bg-muted/50'
                     }`}
                   onClick={() => handleHabitClick(habit)}
                 >
@@ -295,6 +308,15 @@ export function HabitCheckInCard() {
                         >
                           <CheckCheck className="h-4 w-4 mr-1" />
                           打卡
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8"
+                          onClick={(e) => handleStartFocus(e, habit)}
+                        >
+                          <Clock className="h-4 w-4 mr-1" />
+                          专注
                         </Button>
                         <Button
                           variant="destructive"  // 使用更醒目的样式

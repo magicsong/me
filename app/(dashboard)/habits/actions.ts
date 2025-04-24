@@ -1,6 +1,5 @@
 'use server';
 
-import { auth } from '@/lib/auth'; // 导入auth函数
 import {
   completeHabitInDB,
   createHabitInDB,
@@ -13,8 +12,7 @@ import {
   getHabitsFromDB,
   getHabitStatsFromDB,
   getHabitTiersFromDB,
-  getHabitTierStatsFromDB, // 添加此导入用于补打卡
-  HabitHistoryEntry,
+  getHabitTierStatsFromDB,
   updateHabitInDB,
   updateHabitTierInDB
 } from '@/lib/db/db-habit';
@@ -143,12 +141,6 @@ export async function getHabitsForDate(dateString?: string) {
 }
 
 // ===== 新增习惯挑战相关函数 =====
-
-// 获取习惯详情，包括挑战阶梯
-export async function getHabitDetail(habitId: number) {
-  const userId = await getCurrentUserId();
-  return getHabitByIdDB(habitId, userId);
-}
 
 // 获取习惯的挑战阶梯
 export async function getHabitTiers(habitId: number) {
