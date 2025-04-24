@@ -28,6 +28,7 @@ interface TodoFormProps {
     tagIds: number[]
   ) => void;
   onCancel: () => void;
+  isModal: boolean;
   initialData?: TodoBO;
 }
 
@@ -36,7 +37,7 @@ interface Tag {
   label: string;
 }
 
-export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
+export function TodoForm({ onSubmit, onCancel, isModal = false, initialData }: TodoFormProps) {
   const [title, setTitle] = useState(initialData?.title || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [status, setStatus] = useState(initialData?.status || 'pending');
@@ -198,7 +199,7 @@ export function TodoForm({ onSubmit, onCancel, initialData }: TodoFormProps) {
           
           <div className="space-y-2">
             <Label htmlFor="due-date">截止日期</Label>
-            <Popover>
+            <Popover modal={isModal}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"

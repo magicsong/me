@@ -220,7 +220,7 @@ export function TodoListContainer() {
 
   const handleDeleteTodo = async (todoId: number) => {
     try {
-      const response = await fetch(`/api/todos/${todoId}`, {
+      const response = await fetch(`/api/todo/${todoId}`, {
         method: 'DELETE',
       });
 
