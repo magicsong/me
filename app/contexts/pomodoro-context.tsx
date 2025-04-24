@@ -1,22 +1,11 @@
 'use client';
 
-import React, { createContext, useState, useContext, useEffect, ReactNode, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
-
-interface Pomodoro {
-  id: string;
-  startTime: number;
-  duration: number;
-  tag?: string;
-  completed?: boolean;
-  title: string;
-  endTime: number;
-  description: string;
-}
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { PomodoroBO } from '../api/types';
 
 interface PomodoroContextType {
-  activePomodoro: Pomodoro | null;
-  setActivePomodoro: (pomodoro: Pomodoro | null) => void;
+  activePomodoro: PomodoroBO | null;
+  setActivePomodoro: (pomodoro: PomodoroBO | null) => void;
   completePomodoro: () => Promise<void>;
   isLoading: boolean;
 }
@@ -28,9 +17,8 @@ const CACHE_KEY = 'activePomodoro';
 const CACHE_EXPIRES_IN_MS = 5 * 60 * 1000; // 5分钟
 
 export function PomodoroProvider({ children }: { children: ReactNode }) {
-  const [activePomodoro, setActivePomodoro] = useState<Pomodoro | null>(null);
+  const [activePomodoro, setActivePomodoro] = useState<PomodoroBO | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const pathname = usePathname();
   
   // 从缓存获取数据
   const getFromCache = useCallback(() => {
@@ -54,7 +42,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 保存到缓存
-  const saveToCache = useCallback((data: Pomodoro) => {
+  const saveToCache = useCallback((data: PomodoroBO) => {
     try {
       const cacheData = {
         data,
@@ -91,17 +79,8 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
         }
         const data = result.data;
         if (data && data.length > 0) {
-          const pomodoro = {
-            id: data[0].id,
-            startTime: new Date(data[0].startTime).getTime(),
-            duration: data[0].duration,
-            tag: data[0].tag,
-            title: data[0].title,
-            description: data[0].description,
-            endTime: undefined,
-          };
-          saveToCache(pomodoro);
-          setActivePomodoro(pomodoro);
+          saveToCache(data[0]);
+          setActivePomodoro(data[0]);
         } else {
           clearCache();
           setActivePomodoro(null);

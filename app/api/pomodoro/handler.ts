@@ -2,6 +2,7 @@ import { PomodoroData, PomodoroPersistenceService } from '@/lib/persist/pomodoro
 import { BaseApiHandler } from "../lib/BaseApiHandler";
 import { BusinessObject } from '../lib/types';
 import { PomodoroBO } from '../types';
+import { todo } from 'node:test';
 
 export class PomodoroApiHandler extends BaseApiHandler<PomodoroData, PomodoroBO> {
   validateBO(data: PomodoroBO): boolean {
@@ -22,6 +23,11 @@ export class PomodoroApiHandler extends BaseApiHandler<PomodoroData, PomodoroBO>
 
     // 必须有开始时间
     if (!data.startTime) return false;
+
+    if (!data.habitId && !data.todoId) {
+      console.log("验证失败: 必须提供 habitId 或 todoId");
+      return false;
+    }
 
     return true;
   }
@@ -88,6 +94,7 @@ export class PomodoroApiHandler extends BaseApiHandler<PomodoroData, PomodoroBO>
       start_time: businessObject.startTime,
       end_time: businessObject.endTime,
       habit_id: businessObject.habitId,
+      todo_id: businessObject.todoId,
       goal_id: businessObject.goalId,
     };
     if (businessObject.id && businessObject.id > 0) {

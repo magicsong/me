@@ -36,7 +36,7 @@ export function TodoListContainer() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<TodoBO | null>(null);
   const [filters, setFilters] = useState({
-    status: '',
+    status: 'pending',
     priority: '',
     search: '',
     tagId: 0,

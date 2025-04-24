@@ -11,7 +11,7 @@ import { Play, Pause, RotateCcw, Check } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 // 引入倒计时组件
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
-import { PomodoroBO } from '@/app/api/types';
+import { PomodoroBO, TodoBO } from '@/app/api/types';
 import { BaseRequest } from '@/app/api/lib/types';
 import { getHabitDetail } from '../../habits/client-actions';
 // 预设时间选项（分钟）
@@ -19,9 +19,9 @@ const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
 
 // 定义类型
 interface PomodoroTimerProps {
-  activePomodoro: any;
+  activePomodoro: PomodoroBO;
   playSoundOnComplete: boolean;
-  onPomodoroChange: (pomodoro: any) => void;
+  onPomodoroChange: (pomodoro: PomodoroBO) => void;
 }
 
 export function PomodoroTimer({
@@ -42,13 +42,13 @@ export function PomodoroTimer({
   const [selectedTag, setSelectedTag] = useState('');
   const [tags, setTags] = useState<any[]>([]);
   const [pomodoroId, setPomodoroId] = useState<number | null>(null);
-  const [relatedTodoId, setRelatedTodoId] = useState<string | null>(null);
+  const [relatedTodoId, setRelatedTodoId] = useState<number | null>(null);
   const [isLoadingTodo, setIsLoadingTodo] = useState(false);
-  const [todos, setTodos] = useState<any[]>([]);  // 添加todos状态
+  const [todos, setTodos] = useState<TodoBO[]>([]);  // 添加todos状态
   const [isLoadingTodos, setIsLoadingTodos] = useState(false);  // 添加加载状态
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [relatedHabitId, setRelatedHabitId] = useState<string | null>(null);  // 添加关联的习惯ID
+  const [relatedHabitId, setRelatedHabitId] = useState<number | null>(null);  // 添加关联的习惯ID
   const [sourceType, setSourceType] = useState<'todo' | 'habit' | 'custom'>('custom');  // 添加来源类型
 
   // 初始化音频
@@ -84,7 +84,7 @@ export function PomodoroTimer({
   // 恢复活动中的番茄钟
   useEffect(() => {
     if (activePomodoro) {
-      const endTime = activePomodoro.startTime + activePomodoro.duration * 1000 * 60;
+      const endTime = new Date(activePomodoro.startTime).getTime() + activePomodoro.duration * 1000 * 60;
       setTitle(activePomodoro.title || '');
       setDescription(activePomodoro.description || '');
       setDuration(activePomodoro.duration || 25);
@@ -93,9 +93,17 @@ export function PomodoroTimer({
       setTimeLeft(remainingTime);
       setIsRunning(remainingTime > 0);
       setIsFinished(remainingTime === 0);
-      setSelectedTag(activePomodoro.tagId || '');
+      //setSelectedTag(activePomodoro.tagId || '');
       if (activePomodoro.id) {
         setPomodoroId(activePomodoro.id);
+      }
+      if (activePomodoro.todoId) {
+        setRelatedTodoId(activePomodoro.todoId);
+        setSourceType('todo');
+      }
+      if (activePomodoro.habitId) {
+        setRelatedHabitId(activePomodoro.habitId);
+        setSourceType('habit');
       }
     }
   }, [activePomodoro]);
@@ -125,12 +133,12 @@ export function PomodoroTimer({
     }
   }, [toast]);
 
-  
+
   // 从URL参数获取todo或habit信息
   useEffect(() => {
     const todoId = searchParams.get('todoId');
     const habitId = searchParams.get('habitId');
-    
+
     if (todoId) {
       setRelatedTodoId(todoId);
       setRelatedHabitId(null);
@@ -175,12 +183,11 @@ export function PomodoroTimer({
       }
 
       const resp = await response.json();
-      if (!resp.success){
+      if (!resp.success) {
         throw new Error(resp.error);
       }
       //convertToClientToDos
-      const activeTodos = resp.data.map((todo: any) => ({
-        tags,
+      const activeTodos = resp.data.map((todo: TodoBO) => ({
         ...todo,
       }));
       setTodos(activeTodos);
@@ -205,6 +212,56 @@ export function PomodoroTimer({
     }
   }, [relatedTodoId, title, toast]);
 
+  // 添加一个新函数，用于完成待办事项
+  const completeTodoAndPomodoro = useCallback(async () => {
+    console.log("番茄钟和待办事项一起完成");
+
+    // 首先完成番茄钟
+    setIsRunning(false);
+    setIsCompleted(true);
+    setIsFinished(false);
+
+    try {
+      // 如果有关联的番茄钟ID，更新其状态
+      if (pomodoroId) {
+        const response = await fetch(`/api/pomodoro/${pomodoroId}/complete`, {
+          method: 'POST',
+        });
+
+        if (response.ok) {
+          setPomodoroId(null);
+        } else {
+          throw new Error('更新番茄钟状态失败');
+        }
+      }
+
+      // 如果有关联的待办事项ID，将其标记为完成
+      if (relatedTodoId) {
+        const todoResponse = await fetch(`/api/todo/${relatedTodoId}/complete`, {
+          method: 'POST',
+        });
+
+        if (!todoResponse.ok) {
+          throw new Error('完成待办事项失败');
+        }
+
+        toast({
+          title: "成功",
+          description: "已完成番茄钟和关联的待办事项",
+        });
+      }
+    } catch (error) {
+      console.error('完成番茄钟和待办事项失败:', error);
+      toast({
+        title: "错误",
+        description: "更新状态失败",
+        variant: "destructive",
+      });
+    }
+
+    // 通知状态改变
+    onPomodoroChange(null);
+  }, [pomodoroId, relatedTodoId, onPomodoroChange, toast]);
 
   // 获取习惯详情
   const fetchHabitDetails = useCallback(async (habitId: string) => {
@@ -223,7 +280,7 @@ export function PomodoroTimer({
       setIsLoadingTodo(false);
     }
   }, [toast]);
-  
+
   // 初始化时加载待办事项列表
   useEffect(() => {
     fetchTodos();
@@ -231,9 +288,9 @@ export function PomodoroTimer({
 
   // 处理待办事项选择
   const handleTodoSelection = useCallback((todoId: string) => {
-    const selectedTodo = todos.find(todo => todo.id === todoId);
+    const selectedTodo = todos.find(todo => todo.id === Number(todoId));
     if (selectedTodo) {
-      setRelatedTodoId(todoId);
+      setRelatedTodoId(Number(todoId));
       setTitle(selectedTodo.title || '');
       setDescription(selectedTodo.description || '');
       setSourceType('todo');
@@ -302,7 +359,6 @@ export function PomodoroTimer({
 
   // 番茄钟完成处理
   const completePomodoro = useCallback(async () => {
-    console.log("番茄钟完成");
     setIsRunning(false);
     setIsCompleted(true);
     setIsFinished(false); // 重置结束状态，确保不会同时显示多个按钮
@@ -321,12 +377,12 @@ export function PomodoroTimer({
     }
 
     // 如果有现有的番茄钟ID，更新其状态
-    if (pomodoroId) { 
+    if (pomodoroId) {
       try {
         const response = await fetch(`/api/pomodoro/${pomodoroId}/complete`, {
           method: 'POST',
         });
-        
+
         if (response.ok) {
           setPomodoroId(null);
         } else {
@@ -375,8 +431,8 @@ export function PomodoroTimer({
         description,
         duration: durationInMinutes,
         tagIds: selectedTag ? [Number(selectedTag)] : [],
-        todoId: sourceType === 'todo' && relatedTodoId ? Number(relatedTodoId) : undefined,
-        habitId: sourceType === 'habit' && relatedHabitId ? Number(relatedHabitId) : undefined
+        todoId: relatedTodoId ? relatedTodoId : undefined,
+        habitId: relatedHabitId ? relatedHabitId : undefined
       }
       // 先创建服务器端番茄钟
       try {
@@ -684,27 +740,30 @@ export function PomodoroTimer({
           )}
 
           {isFinished && !isCompleted && (
-            <Button
-              size="lg"
-              onClick={completePomodoro}
-              variant="default"
-              type="button"
-            >
-              <Check className="mr-2" /> 确认完成
-            </Button>
-          )}
+            <div className="flex gap-3 w-full">
+              <Button
+                size="lg"
+                onClick={completePomodoro}
+                variant="default"
+                type="button"
+                className="flex-1"
+              >
+                <Check className="mr-2" /> 确认完成
+              </Button>
 
-          {(isRunning || timeLeft > 0 || isFinished) && !isCompleted && (
-            <Button
-              size="lg"
-              onClick={resetPomodoro}
-              variant="outline"
-              type="button"
-            >
-              <RotateCcw className="mr-2" /> 重置
-            </Button>
+              {sourceType === 'todo' && (
+                <Button
+                  size="lg"
+                  onClick={completeTodoAndPomodoro}
+                  variant="default"
+                  type="button"
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                >
+                  <Check className="mr-2" /> 完成待办
+                </Button>
+              )}
+            </div>
           )}
-
           {isCompleted && (
             <Button
               size="lg"
