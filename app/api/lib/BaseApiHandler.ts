@@ -857,7 +857,10 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
             }
             const fields = this.fieldsMoveToExtraOptionsWhenGet()
             const dbFilters = this.convertFilters(filters, fields)
-            const result = await this.persistenceService.getWithFilters(dbFilters, userId, filters.limit);
+            if (filters.sortBy) {
+                filters.sortBy = this.convertFieldName(filters.sortBy)
+            }
+            const result = await this.persistenceService.getWithFilters(dbFilters, userId, filters);
 
             return {
                 items: this.toBusinessObjects(result.items),
@@ -899,8 +902,8 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
             const paginationOptions: PaginationOptions = {
                 page,
                 pageSize,
-                sortBy: filters.sortBy,
-                sortOrder: filters.sortDirection
+                sortBy: filters.sortBy ? this.convertFieldName(filters.sortBy) : undefined,
+                sortDirection: filters.sortDirection
             };
 
             // 转换为持久层的过滤条件
@@ -1011,12 +1014,6 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
                 }
             }
         }
-
-        // 处理排序字段
-        if (filters.sortBy) {
-            result.sortBy = this.convertFieldName(filters.sortBy);
-        }
-
         return result;
     }
 }

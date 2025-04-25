@@ -49,7 +49,7 @@ export function HabitCompletionDialog({
   // 状态管理
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [habitDetail, setHabitDetail] = useState<any>(null);
+  const [habitDetail, setHabitDetail] = useState<HabitBO>();
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel>(null);
   const [comment, setComment] = useState("");
   const [selectedTierId, setSelectedTierId] = useState<number | undefined>(undefined);
@@ -172,7 +172,7 @@ export function HabitCompletionDialog({
               <div className="flex justify-center p-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               </div>
-            ) : !habitDetail?.challenge_tiers?.length ? (
+            ) : !habitDetail?.challengeTiers?.length ? (
               <div className="text-center py-4 bg-gray-50 rounded-md">
                 <Trophy className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm">此习惯暂无挑战级别，将进行普通打卡</p>
@@ -180,7 +180,7 @@ export function HabitCompletionDialog({
               </div>
             ) : (
               <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
-                {habitDetail.challenge_tiers.map((tier: ChallengeTier) => {
+                {habitDetail.challengeTiers.map((tier: ChallengeTier) => {
                   const tierColors = getTierColors(tier.level);
                   const isSelected = selectedTierId === tier.id;
                   

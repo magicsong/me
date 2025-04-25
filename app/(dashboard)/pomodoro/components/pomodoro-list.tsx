@@ -35,7 +35,7 @@ export function PomodoroList() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const { toast } = useToast();
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     loadPomodoros(true);
@@ -52,7 +52,7 @@ export function PomodoroList() {
       const currentPage = reset ? 0 : page;
       const offset = currentPage * PAGE_SIZE;
       
-      const url = `/api/pomodoro?limit=${PAGE_SIZE}&offset=${offset}`;
+      const url = `/api/pomodoro?limit=${PAGE_SIZE}&offset=${offset}&sortBy=createdAt&sortDirection=desc`;
       
       const response = await fetch(url);
       

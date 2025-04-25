@@ -199,7 +199,7 @@ export function createNextRouteHandlers<T, BO extends BusinessObject>(handler: I
       const id = searchParams.get('id');
       const page = searchParams.has('page') ? parseInt(searchParams.get('page') as string) : undefined;
       const pageSize = searchParams.has('pageSize') ? parseInt(searchParams.get('pageSize') as string) : undefined;
-
+      
       // 使用从身份验证获取的userId，而不是从参数中获取
       const userIdFromParam = searchParams.get('userId') || undefined;
       const effectiveUserId = userId || userIdFromParam;

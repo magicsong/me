@@ -8,14 +8,20 @@ export interface PaginatedResult<T> {
 }
 
 // 排序类型
-export type SortOrder = 'asc' | 'desc';
+export type sortDirection = 'asc' | 'desc';
 
 // 分页选项
 export interface PaginationOptions {
     page?: number;
     pageSize?: number;
     sortBy?: string;
-    sortOrder?: SortOrder;
+    sortDirection?: sortDirection;
+}
+export interface ListOptions {
+    limit?: number,
+    offset?: number,
+    sortBy?: string;
+    sortDirection?: sortDirection;
 }
 
 // 钩子类型定义
@@ -110,7 +116,7 @@ export interface PersistenceService<T> {
     getWithFilters?(
         filter: FilterCondition<T>,
         userId?: string,
-        limit?: number,
+        listOptions?: ListOptions
     ): Promise<{
         items: T[];
         total: number;

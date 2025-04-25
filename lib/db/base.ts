@@ -1,7 +1,7 @@
 import { sql, eq, and, or, desc, asc, SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { PgTableWithColumns } from 'drizzle-orm/pg-core';
-import { db, FilterCondition, PaginationOptions, RepositoryHooks, PersistenceService, PaginatedResult } from '.';
+import { db, FilterCondition, PaginationOptions, RepositoryHooks, PersistenceService, PaginatedResult, ListOptions } from '.';
 
 // 基础仓库类
 export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<string, any>> implements PersistenceService<I> {
@@ -132,17 +132,43 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     }
 
     // 查找多条记录
-    async findMany(filter: FilterCondition<I> = {}): Promise<I[]> {
+    async findMany(filter: FilterCondition<I> = {}, listOptions?: ListOptions): Promise<I[]> {
         if (this.hooks.beforeQuery) {
             filter = await Promise.resolve(this.hooks.beforeQuery(filter));
         }
 
         const condition = this.buildWhereCondition(filter);
-        const result = await this.db
+        let query = this.db
             .select()
             .from(this.table)
-            .where(condition);
+            .where(condition).$dynamic();
+        console.log('query!!!!!!!', query.toSQL(),filter,listOptions);
+        if (listOptions) {
+            // 应用排序
+            if (listOptions.sortBy) {
+                // 检查排序字段是否存在于表中
+                if (listOptions.sortBy in this.table) {
+                    query = query.orderBy(
+                        listOptions.sortDirection === 'desc'
+                            ? desc(this.table[listOptions.sortBy as string] as any)
+                            : asc(this.table[listOptions.sortBy as string] as any)
+                    );
+                } else {
+                    console.log(`排序字段 ${listOptions.sortBy} 在表 ${this.table.name} 中不存在`);
+                }
+            }
 
+            // 应用限制
+            if (listOptions.limit !== undefined && listOptions.limit > 0) {
+                query = query.limit(listOptions.limit);
+            }
+
+            // 应用偏移
+            if (listOptions.offset !== undefined && listOptions.offset >= 0) {
+                query = query.offset(listOptions.offset);
+            }
+        }
+        const result = await query;
         let data = this.purifyResults(result);
 
         if (this.hooks.afterQuery) {
@@ -292,7 +318,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
     async getWithFilters(
         filter: FilterCondition<I>,
         userId?: string,
-        limit?: number,
+        listOptions?: ListOptions,
     ): Promise<{
         items: I[];
         total: number;
@@ -302,10 +328,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
             filter = { ...filter, user_id: userId } as unknown as FilterCondition<I>;
         }
 
-        let data = await this.findMany(filter);
-        if (limit && limit > 0) {
-            data = data.slice(0, limit);
-        }
+        let data = await this.findMany(filter, listOptions);
         return {
             items: data,
             total: data.length
@@ -326,11 +349,9 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         metadata?: Record<string, any>;
     }> {
         const actualFilter = filter || {};
-        console.log("db", actualFilter)
         if (userId) {
             actualFilter.user_id = userId as any;
         }
-
         const result = await this.findWithPagination(actualFilter, page);
 
         return {
@@ -350,11 +371,9 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         if (this.hooks.beforeQuery) {
             filter = await Promise.resolve(this.hooks.beforeQuery(filter));
         }
-        console.log("db", filter)
-        const { page = 1, pageSize = 10, sortBy, sortOrder = 'asc' } = options;
+        const { page = 1, pageSize = 10, sortBy, sortDirection = 'asc' } = options;
         const offset = (page - 1) * pageSize;
         const condition = this.buildWhereCondition(filter);
-
         const countResult = await this.db
             .select({ count: SQL`count(*)` })
             .from(this.table)
@@ -367,11 +386,11 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
             .from(this.table)
             .where(condition)
             .limit(pageSize)
-            .offset(offset);
+            .offset(offset).$dynamic();
 
         if (sortBy) {
             query = query.orderBy(
-                sortOrder === 'desc'
+                sortDirection === 'desc'
                     ? desc(this.table[sortBy as string] as any)
                     : asc(this.table[sortBy as string] as any)
             );
@@ -410,7 +429,8 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
             }
             // 检查字段是否存在于表结构中
             if (!(key in this.table)) {
-                throw new Error(`字段 ${key} 在表 ${this.table.name} 中不存在`);
+                console.log(`字段 ${key} 在表 ${this.table.name} 中不存在`);
+                continue;
             }
 
             if (typeof value === 'object' && !Array.isArray(value)) {
