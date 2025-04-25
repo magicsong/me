@@ -110,7 +110,7 @@ export function DailyPlanningSteps({
       try {
         // 获取今天的日期
         const today = new Date().toISOString().split('T')[0];
-        const response = await fetch(`/api/todo?planned_date=${today}`);
+        const response = await fetch(`/api/todo?plannedDate_gte=${today}`);
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
@@ -124,8 +124,9 @@ export function DailyPlanningSteps({
     }
 
     // 调用真实的API生成TODO列表
-    toast.promise(
-      fetch('/api/todo', {
+    try {
+      setIsAiGenerating(true);
+      const response = await fetch('/api/todo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,56 +137,60 @@ export function DailyPlanningSteps({
           userPrompt: intention,
           batchSize: 4,
           generateBothCreatedAndUpdated: updateExisting,
-          ...(updateExisting && existingTodos.length > 0 ? { data: existingTodos } : {})
+          data: existingTodos
         }),
-      })
-      .then(response => {
-        if (!response.ok) {
-          console.log(response);
-          throw new Error('网络请求失败');
-        }
-        return response.json();
-      })
-      .then(data => {
-        if (!data.success) {
-          throw new Error(data.error || '生成失败');
-        }
-        
-        // 为每个任务添加默认的优先级
-        const created = data.data.created?.map((todo: any) => ({
-          ...todo,
-          priority: todo.priority || 'medium',  // 默认中等优先级
-          expanded: false
-        })) || [];
-        
-        const updated = data.data.updated?.map((todo: any) => ({
-          ...todo,
-          priority: todo.priority || 'medium',  // 默认中等优先级
-          expanded: false
-        })) || [];
-        
-        // 存储完整的任务数据用于弹窗展示
-        setGeneratedTasksData({
-          created,
-          updated
-        });
-        
-        // 打开弹窗
-        setShowTaskDialog(true);
-         // 隐藏loading状态
-        setIsAiGenerating(false);
-      
-        const newTasksCount = data.data.created?.length || 0;
-        const updatedTasksCount = data.data.updated?.length || 0;
-        
-        return { new: newTasksCount, updated: updatedTasksCount };
-      }),
-      {
-        loading: '正在使用AI生成任务清单...',
-        success: (result) => `成功生成${result.new}个新任务${result.updated > 0 ? `，更新${result.updated}个任务` : ''}!`,
-        error: (err) => `生成失败: ${err.message}`
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
+        throw new Error(`请求失败: ${response.status} ${response.statusText}`);
       }
-    );
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'AI生成失败');
+      }
+      
+      // 为每个任务添加默认的优先级
+      const created = data.data.created?.map((todo: any) => ({
+        ...todo,
+        priority: todo.priority || 'medium',  // 默认中等优先级
+        expanded: false
+      })) || [];
+      
+      const updated = data.data.updated?.map((todo: any) => ({
+        ...todo,
+        priority: todo.priority || 'medium',  // 默认中等优先级
+        expanded: false
+      })) || [];
+      
+      // 存储完整的任务数据用于弹窗展示
+      setGeneratedTasksData({
+        created,
+        updated
+      });
+      
+      // 打开弹窗
+      setShowTaskDialog(true);
+      
+      const newTasksCount = data.data.created?.length || 0;
+      const updatedTasksCount = data.data.updated?.length || 0;
+      
+      toast.success(`成功生成${newTasksCount}个新任务${updatedTasksCount > 0 ? `，更新${updatedTasksCount}个任务` : ''}!`);
+    } catch (error) {
+      console.error('AI任务生成错误:', error);
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        toast.error('网络连接错误，请检查您的网络');
+      } else if (error instanceof SyntaxError) {
+        toast.error('解析服务器响应失败');
+      } else {
+        toast.error(`生成失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      }
+    } finally {
+      setIsAiGenerating(false);
+    }
   };
   
   // 处理创建/更新任务的函数
@@ -232,6 +237,7 @@ export function DailyPlanningSteps({
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
+              id: task.id,
               title: task.title,
               description: task.description,
               priority: task.priority

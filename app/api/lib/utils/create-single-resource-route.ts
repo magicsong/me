@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { IApiHandler } from '../interfaces/IApiHandler';
 import { BaseRequest, BaseResponse, BusinessObject, FilterOptions, PatchRequest } from '../types';
+import { getCurrentUserId } from '@/lib/utils';
 
 /**
  * 创建标准API响应
  */
 function createApiResponse(success: boolean, data?: any, error?: string, status: number = 200) {
   const response: { success: boolean; data?: any; error?: string } = { success };
-  
+
   if (data !== undefined) {
     response.data = data;
   }
-  
+
   if (error) {
     response.error = error;
   }
-  
+
   return NextResponse.json(response, { status });
 }
 
@@ -119,11 +120,15 @@ export function createSingleResourceRoute<T, BO extends BusinessObject>(
     try {
       const { id } = await params;
       const body = await request.json();
-      
+      const userId = await getCurrentUserId();
       // 确保请求体中包含ID
-      const data = { ...body, id };
-      
+      const data = { ...body, id, userId };
+      // 取巧一下，如果没有data，就将整个作为data
+      if (!body.data) {
+        return await updateResource({ data: data, userId: userId });
+      }
       return await updateResource(data);
+
     } catch (error) {
       console.error(`PUT ${resourceName} 错误:`, error);
       return createApiResponse(false, undefined, '处理请求时发生错误', 500);
@@ -133,14 +138,14 @@ export function createSingleResourceRoute<T, BO extends BusinessObject>(
   /**
    * 处理PATCH请求 - 部分更新单个资源
    */
-  async function PATCH(request: NextRequest, { params }: { params:  Promise<{ id: string }> }) {
+  async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
       const { id } = await params;
       const body = await request.json();
-      
+      const userId = await getCurrentUserId();
       // 确保请求体中包含ID
-      const data = { ...body, id };
-      
+      const data = { ...body, id, userId };
+
       return await patchResource(data);
     } catch (error) {
       console.error(`PATCH ${resourceName} 错误:`, error);
@@ -154,7 +159,7 @@ export function createSingleResourceRoute<T, BO extends BusinessObject>(
   async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
       const { id } = await params;
-      
+
       // 尝试从请求体中读取更多信息
       let body = {};
       try {
@@ -162,7 +167,7 @@ export function createSingleResourceRoute<T, BO extends BusinessObject>(
       } catch (e) {
         // 如果没有请求体，忽略错误
       }
-      
+
       return await deleteResource(id, body);
     } catch (error) {
       console.error(`DELETE ${resourceName} 错误:`, error);

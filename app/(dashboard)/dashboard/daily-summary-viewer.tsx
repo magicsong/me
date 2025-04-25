@@ -117,7 +117,7 @@ export function DailySummaryViewer() {
         // 过滤出已完成的任务
         const todos = result.data as TodoBO[];
         const completed = todos.filter(todo => todo.completedAt);
-        const failed = todos.filter(todo => !todo.completedAt);
+        const failed = todos.filter(todo => !todo.completedAt && todo.priority !== 'low');
 
         // 设置任务数据，不添加前缀
         setCompletedTasks(completed.map(todo => todo.title));
