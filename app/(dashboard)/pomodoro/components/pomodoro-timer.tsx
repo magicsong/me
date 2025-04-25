@@ -50,6 +50,7 @@ export function PomodoroTimer({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [relatedHabitId, setRelatedHabitId] = useState<number | null>(null);  // 添加关联的习惯ID
   const [sourceType, setSourceType] = useState<'todo' | 'habit' | 'custom'>('custom');  // 添加来源类型
+  const [hasUrlParams, setHasUrlParams] = useState(false);  // 添加URL参数状态
 
   // 初始化音频
   useEffect(() => {
@@ -140,10 +141,10 @@ export function PomodoroTimer({
     const habitId = searchParams.get('habitId');
 
     if (todoId) {
-      setRelatedTodoId(todoId);
+      setRelatedTodoId(Number(todoId));
       setRelatedHabitId(null);
       setSourceType('todo');
-
+      setHasUrlParams(true);
       // 从API获取完整的待办事项信息
       (async () => {
         const todoDetails = await fetchTodoDetails(todoId);
@@ -155,9 +156,10 @@ export function PomodoroTimer({
         }
       })();
     } else if (habitId) {
-      setRelatedHabitId(habitId);
+      setRelatedHabitId(Number(habitId));
       setRelatedTodoId(null);
       setSourceType('habit');
+      setHasUrlParams(true);
 
       // 从API获取完整的习惯信息
       (async () => {
@@ -192,12 +194,14 @@ export function PomodoroTimer({
       }));
       setTodos(activeTodos);
 
-      // 如果有活动任务且当前没有选定的任务，默认选择第一个
-      if (activeTodos.length > 0 && !relatedTodoId && !title) {
-        setRelatedTodoId(activeTodos[0].id);
-        setTitle(activeTodos[0].title || '');
-        if (activeTodos[0].description) {
-          setDescription(activeTodos[0].description);
+      // 如果有活动任务且当前没有选定的任务，默认选择第一个，但不能覆盖URL里的参数
+      if (!hasUrlParams) {
+        if (activeTodos.length > 0 && !relatedTodoId && !title) {
+          setRelatedTodoId(activeTodos[0].id);
+          setTitle(activeTodos[0].title || '');
+          if (activeTodos[0].description) {
+            setDescription(activeTodos[0].description);
+          }
         }
       }
     } catch (error) {
