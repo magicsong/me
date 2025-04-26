@@ -26,8 +26,8 @@ import { Award, BarChart, BookOpen, Brain, CalendarCheck, CheckCircle2, Heart, P
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { deleteHabit, getHabitDetail } from './actions';
-import { completeHabit } from './client-actions';
+import { deleteHabit } from './actions';
+import { completeHabit, getHabitDetail } from './client-actions';
 import { HabitChallengeDialog } from './components/habit-challenge-dialog';
 import { EditHabitForm } from './edit-habit-form';
 import { HabitBO } from "@/app/api/types";

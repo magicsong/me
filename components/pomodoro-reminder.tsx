@@ -42,7 +42,7 @@ export function PomodoroReminder() {
   // 计算剩余时间
   useEffect(() => {
     if (!activePomodoro) return;
-    const startTimeMs = activePomodoro.startTime;
+    const startTimeMs = new Date(activePomodoro.startTime).getTime();
     const endTime = startTimeMs + (activePomodoro.duration * 60 * 1000);
 
     const updateTimeLeft = () => {

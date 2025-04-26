@@ -3,6 +3,7 @@ import { HabitEntryService } from '@/lib/persist/habit-entry';
 import { HabitPersistenceService } from '@/lib/persist/habit';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUserId } from '@/lib/utils';
+import { updateUserRewardsInDB } from '@/lib/db-rewards';
 
 // 创建打卡记录
 export async function POST(request: NextRequest) {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: '未授权' }, { status: 401 });
     }
 
-    const { habitId, tierId, comment, difficulty, completedAt,status,failureReason } = await request.json();
+    const { habitId, tierId, comment, difficulty, completedAt, status, failureReason } = await request.json();
 
     if (!habitId) {
       return NextResponse.json(
@@ -61,6 +62,14 @@ export async function POST(request: NextRequest) {
       habit.streak = habit.streak + 1;
     }
     await habitService.update(habit.id, habit)
+    let rewardPoints = habit.reward_points;
+    if (tierId) {
+      const r = habit.challengeTiers?.find(i => (i.id === tierId))?.reward_points;
+      if (r) {
+        rewardPoints = r;
+      }
+    }
+    await updateUserRewardsInDB(userId, rewardPoints, habit.category);
     revalidatePath('/habits');
 
     return NextResponse.json({

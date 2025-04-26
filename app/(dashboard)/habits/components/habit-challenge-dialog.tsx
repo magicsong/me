@@ -16,30 +16,11 @@ import {
 import { completeHabit} from '../client-actions';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-
-interface HabitChallengeTier {
-    id: number;
-    name: string;
-    level: number;
-    description?: string;
-    reward_points: number;
-}
-
-interface HabitDetail {
-    id: number;
-    name: string;
-    challenge_tiers: HabitChallengeTier[];
-    completed_tier?: {
-        id: number;
-        name: string;
-        level: number;
-        reward_points: number;
-    } | null;
-}
+import { HabitBO } from '@/app/api/types';
 
 interface HabitChallengeDialogProps {
     isOpen: boolean;
-    habitDetail: HabitDetail | null;
+    habitDetail: HabitBO | null;
     onClose: () => void;
     onRefresh?: () => void;
 }
@@ -146,7 +127,7 @@ export function HabitChallengeDialog({
                             </div>
                         )}
 
-                        {(!habitDetail?.challenge_tiers || habitDetail.challenge_tiers.length === 0) ? (
+                        {(!habitDetail?.challengeTiers || habitDetail.challengeTiers.length === 0) ? (
                             <div className="text-center p-6">
                                 <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                                 <h3 className="text-lg font-medium mb-2">还没有习惯挑战</h3>
@@ -182,10 +163,10 @@ export function HabitChallengeDialog({
                         ) : (
                             <>
                                 <div className="space-y-4 my-4">
-                                    {habitDetail.challenge_tiers.map((tier) => {
+                                    {habitDetail.challengeTiers.map((tier) => {
                                         const tierColors = getTierColors(tier.level);
                                         const isCompleting = completingTier === tier.id;
-                                        const isCompleted = habitDetail.completed_tier?.id === tier.id;
+                                        const isCompleted = habitDetail.completedTier === tier.id;
 
                                         return (
                                             <div
