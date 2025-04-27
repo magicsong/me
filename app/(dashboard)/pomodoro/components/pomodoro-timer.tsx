@@ -82,6 +82,45 @@ export function PomodoroTimer({
     }
   }, []);
 
+  // 从URL参数获取todo或habit信息
+  useEffect(() => {
+    const todoId = searchParams.get('todoId');
+    const habitId = searchParams.get('habitId');
+
+    if (todoId) {
+      setHasUrlParams(true);
+      setRelatedTodoId(Number(todoId));
+      setRelatedHabitId(null);
+      setSourceType('todo');
+      
+      // 从API获取完整的待办事项信息
+      (async () => {
+        const todoDetails = await fetchTodoDetails(todoId);
+        if (todoDetails) {
+          setTitle(todoDetails.title || '');
+          if (todoDetails.description) {
+            setDescription(todoDetails.description);
+          }
+        }
+      })();
+    } else if (habitId) {
+      setHasUrlParams(true);
+      setRelatedHabitId(Number(habitId));
+      setRelatedTodoId(null);
+      setSourceType('habit');
+      // 从API获取完整的习惯信息
+      (async () => {
+        const habitDetails = await fetchHabitDetails(habitId);
+        if (habitDetails) {
+          setTitle(habitDetails.name || '');
+          if (habitDetails.description) {
+            setDescription(habitDetails.description);
+          }
+        }
+      })();
+    }
+  }, [searchParams]);
+  
   // 恢复活动中的番茄钟
   useEffect(() => {
     if (activePomodoro) {
@@ -133,46 +172,6 @@ export function PomodoroTimer({
       setIsLoadingTodo(false);
     }
   }, [toast]);
-
-
-  // 从URL参数获取todo或habit信息
-  useEffect(() => {
-    const todoId = searchParams.get('todoId');
-    const habitId = searchParams.get('habitId');
-
-    if (todoId) {
-      setRelatedTodoId(Number(todoId));
-      setRelatedHabitId(null);
-      setSourceType('todo');
-      setHasUrlParams(true);
-      // 从API获取完整的待办事项信息
-      (async () => {
-        const todoDetails = await fetchTodoDetails(todoId);
-        if (todoDetails) {
-          setTitle(todoDetails.title || '');
-          if (todoDetails.description) {
-            setDescription(todoDetails.description);
-          }
-        }
-      })();
-    } else if (habitId) {
-      setRelatedHabitId(Number(habitId));
-      setRelatedTodoId(null);
-      setSourceType('habit');
-      setHasUrlParams(true);
-
-      // 从API获取完整的习惯信息
-      (async () => {
-        const habitDetails = await fetchHabitDetails(habitId);
-        if (habitDetails) {
-          setTitle(habitDetails.name || '');
-          if (habitDetails.description) {
-            setDescription(habitDetails.description);
-          }
-        }
-      })();
-    }
-  }, [searchParams, fetchTodoDetails]);
 
   // 获取待办事项列表
   const fetchTodos = useCallback(async () => {
@@ -293,7 +292,7 @@ export function PomodoroTimer({
   // 处理待办事项选择
   const handleTodoSelection = useCallback((todoId: string) => {
     const selectedTodo = todos.find(todo => todo.id === Number(todoId));
-    if (selectedTodo) {
+    if (selectedTodo && !hasUrlParams) {
       setRelatedTodoId(Number(todoId));
       setTitle(selectedTodo.title || '');
       setDescription(selectedTodo.description || '');

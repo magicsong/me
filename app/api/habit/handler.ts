@@ -118,6 +118,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       streak: dataObject.streak || 0,
       failedToday: dataObject.checkinStatus === 'failed',
       failureReason: dataObject.failureReason,
+      checkInDays: dataObject.checkin_days,
     };
   }
   fieldsMoveToExtraOptionsWhenGet(): string[] {
@@ -136,6 +137,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       reward_points: businessObject.rewardPoints || 0, // 确保有默认值
       status: businessObject.status,
       streak: businessObject.streak,
+      checkin_days: businessObject.checkInDays,
     };
   }
 
