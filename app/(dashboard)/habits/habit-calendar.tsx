@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BookOpen, ChevronLeft, ChevronRight, Cone, X } from 'lucide-react';
 import { getHabitHistory } from './actions';
-import { completeHabitOnDate} from './client-actions';
+import { completeHabitOnDate } from './client-actions';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -54,11 +54,11 @@ export function HabitCalendar({
     setIsLoading(true);
     try {
       const history = await getHabitHistory(id);
-      
+
       // 分离完成和失败的记录
       const completed: Date[] = [];
       const failed: Date[] = [];
-      
+
       history.forEach(record => {
         if (record.status === 'failed') {
           failed.push(new Date(record.completed_at));
@@ -66,7 +66,7 @@ export function HabitCalendar({
           completed.push(new Date(record.completed_at));
         }
       });
-      
+
       setCompletedDates(completed);
       setFailedDates(failed);
     } catch (error) {
@@ -169,9 +169,21 @@ export function HabitCalendar({
 
     setIsBackfillLoading(true);
     try {
+      // Create a date with selected date's year/month/day but current time
+      const now = new Date();
+      const backfillDate = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate(),
+        now.getHours(),
+        now.getMinutes(),
+        now.getSeconds(),
+        now.getMilliseconds()
+      );
+
       await completeHabitOnDate(
         habit.id,
-        selectedDate.toISOString()
+        backfillDate.toUTCString()
       );
 
       // 刷新习惯历史
