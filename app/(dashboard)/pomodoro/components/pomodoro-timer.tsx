@@ -51,6 +51,7 @@ export function PomodoroTimer({
   const [relatedHabitId, setRelatedHabitId] = useState<number | null>(null);  // 添加关联的习惯ID
   const [sourceType, setSourceType] = useState<'todo' | 'habit' | 'custom'>('custom');  // 添加来源类型
   const [hasUrlParams, setHasUrlParams] = useState(false);  // 添加URL参数状态
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // 初始化音频
   useEffect(() => {
@@ -84,6 +85,9 @@ export function PomodoroTimer({
 
   // 从URL参数获取todo或habit信息
   useEffect(() => {
+    if (isInitialized) {
+      return;
+    }
     const todoId = searchParams.get('todoId');
     const habitId = searchParams.get('habitId');
 
@@ -92,7 +96,7 @@ export function PomodoroTimer({
       setRelatedTodoId(Number(todoId));
       setRelatedHabitId(null);
       setSourceType('todo');
-      
+
       // 从API获取完整的待办事项信息
       (async () => {
         const todoDetails = await fetchTodoDetails(todoId);
@@ -119,8 +123,9 @@ export function PomodoroTimer({
         }
       })();
     }
-  }, [searchParams]);
-  
+    setIsInitialized(true)
+  }, []);
+
   // 恢复活动中的番茄钟
   useEffect(() => {
     if (activePomodoro) {
@@ -264,7 +269,7 @@ export function PomodoroTimer({
 
     // 通知状态改变
     onPomodoroChange(null);
-  }, [pomodoroId, relatedTodoId, onPomodoroChange, toast]);
+  }, [isInitialized, pomodoroId, relatedTodoId, onPomodoroChange]);
 
   // 获取习惯详情
   const fetchHabitDetails = useCallback(async (habitId: string) => {
@@ -286,11 +291,17 @@ export function PomodoroTimer({
 
   // 初始化时加载待办事项列表
   useEffect(() => {
+    if (!isInitialized) {
+      return;
+    }
     fetchTodos();
-  }, [fetchTodos]);
+  }, [isInitialized, fetchTodos]);
 
   // 处理待办事项选择
   const handleTodoSelection = useCallback((todoId: string) => {
+    if (!isInitialized) {
+      return;
+    }
     const selectedTodo = todos.find(todo => todo.id === Number(todoId));
     if (selectedTodo && !hasUrlParams) {
       setRelatedTodoId(Number(todoId));
@@ -298,7 +309,7 @@ export function PomodoroTimer({
       setDescription(selectedTodo.description || '');
       setSourceType('todo');
     }
-  }, [todos]);
+  }, [isInitialized, todos]);
 
   // 处理计时器
   useEffect(() => {

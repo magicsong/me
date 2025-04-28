@@ -142,7 +142,6 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
             .select()
             .from(this.table)
             .where(condition).$dynamic();
-        console.log('query!!!!!!!', query.toSQL(),filter,listOptions);
         if (listOptions) {
             // 应用排序
             if (listOptions.sortBy) {
