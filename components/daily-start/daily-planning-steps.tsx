@@ -17,11 +17,12 @@ import {
   SparklesIcon,
   SunIcon,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { QuadrantPlanner } from "./quadrant-planner";
 import { TaskSuggestionDialog } from "./task-suggestion-dialog";
 import { LoadingModal } from "../ui/loading-modal";
+import { format } from "date-fns";
 
 interface DailyPlanningStepsProps {
   onStartFocusing: () => void;
@@ -55,7 +56,7 @@ export function DailyPlanningSteps({
   const [isMigrating, setIsMigrating] = useState(false);
 
   // 检查本地存储是否已经完成了今天的规划
-  React.useEffect(() => {
+  useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     const completedDate = localStorage.getItem("planningCompletedDate");
     if (completedDate === today) {
@@ -63,6 +64,42 @@ export function DailyPlanningSteps({
     }
   }, []);
 
+    // 添加这个useEffect来加载昨天总结中的明日展望作为今日意图的默认值
+    useEffect(() => {
+      const fetchDefaultIntention = async () => {
+        try {
+          // 获取昨日的日期
+          
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+          
+          // 调用API获取今日习惯数据（包含昨日明日展望作为intention）
+          const response = await fetch(`/api/daily-summary?date=${yesterdayStr}`);
+          
+          if (!response.ok) {
+            console.error('获取默认intention失败:', await response.text());
+            return;
+          }
+          
+          const data = await response.json();
+          
+          // 如果返回了intention且当前未设置，则设置为默认值
+          if (data.success && data.data[0] && data.data[0].content.tomorrowGoals) {
+            setIntention(data.data[0].content.tomorrowGoals);
+            toast.info('已加载昨日规划的明日展望');
+          }
+        } catch (error) {
+          console.error('获取默认intention失败:', error);
+        }
+      };
+      
+      // 只有当intention为空时才获取默认值
+      if (!intention.trim()) {
+        fetchDefaultIntention();
+      }
+    }, []); // 组件挂载时执行一次
+    
   // 添加一键迁移昨日未完成任务的函数
   const migrateYesterdayTasks = async () => {
     try {

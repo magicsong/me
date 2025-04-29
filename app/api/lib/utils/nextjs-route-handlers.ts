@@ -126,14 +126,7 @@ function parseQueryParams(searchParams: URLSearchParams): FilterOptions {
         case 'lt':
         case 'ne':
           // 数值或日期比较运算符
-          if (fieldName === 'date' || fieldName.endsWith('Date') || fieldName.endsWith('Time')) {
-            // 日期类型
-            try {
-              processedValue = new Date(value);
-            } catch (e) {
-              processedValue = value;
-            }
-          } else if (!isNaN(Number(value)) && value.trim() !== '') {
+          if (!isNaN(Number(value)) && value.trim() !== '') {
             // 数值类型
             processedValue = Number(value);
           } else if (value === 'true' || value === 'false') {
@@ -157,15 +150,6 @@ function parseQueryParams(searchParams: URLSearchParams): FilterOptions {
         processedValue = true;
       } else if (value === 'false') {
         processedValue = false;
-      }
-      // 处理日期参数
-      else if (key === 'date' || key.endsWith('Date') || key.endsWith('Time')) {
-        try {
-          processedValue = new Date(value);
-        } catch (e) {
-          // 如果日期解析失败，保留原始字符串
-          processedValue = value;
-        }
       }
       // 处理数字参数
       else if (!isNaN(Number(value)) && value.trim() !== '') {
@@ -199,7 +183,7 @@ export function createNextRouteHandlers<T, BO extends BusinessObject>(handler: I
       const id = searchParams.get('id');
       const page = searchParams.has('page') ? parseInt(searchParams.get('page') as string) : undefined;
       const pageSize = searchParams.has('pageSize') ? parseInt(searchParams.get('pageSize') as string) : undefined;
-      
+
       // 使用从身份验证获取的userId，而不是从参数中获取
       const userIdFromParam = searchParams.get('userId') || undefined;
       const effectiveUserId = userId || userIdFromParam;
