@@ -249,3 +249,15 @@ export interface WeeklySummaryContext {
   weeklyGoalsCompletion: Record<string, boolean>; // 本周目标的完成情况
   weaknesses: string[]; // 详细的不足描述
 }
+
+// 定义笔记业务对象
+export interface NoteBO extends BusinessObject {
+  id?: number;
+  userId: string;
+  title: string;
+  content: string;
+  category?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  tags?: Array<TagBO>;
+}

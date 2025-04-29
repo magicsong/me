@@ -7,14 +7,16 @@ import { PlusIcon, PencilIcon, TrashIcon, DocumentIcon } from "@heroicons/react/
 import { format } from "date-fns";
 import QuickNoteModal from "@/components/notes/QuickNoteModal";
 import NoteFilter from "@/components/notes/NoteFilter";
+import { BaseResponse } from "@/app/api/lib/types";
+import { NoteBO } from "@/app/api/types";
 
 export default function NotePage() {
-  const [notes, setNotes] = useState([]);
+  const [notes, setNotes] = useState<NoteBO>([]);
   const [loading, setLoading] = useState(true);
   const [isQuickNoteOpen, setIsQuickNoteOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const search = searchParams.get('search') || '';
   const category = searchParams.get('category') || '';
   const tag = searchParams.get('tag') || '';
@@ -28,15 +30,20 @@ export default function NotePage() {
   async function fetchNotes() {
     setLoading(true);
     try {
-      let url = `/api/note?sortBy=${sortBy}&order=${order}`;
+      let url = `/api/note?sortBy=${sortBy}&sortDirection=${order}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
       if (category) url += `&category=${encodeURIComponent(category)}`;
       if (tag) url += `&tag=${encodeURIComponent(tag)}`;
-      
+
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch notes");
-      const data = await response.json();
-      setNotes(data);
+      const data = await response.json() as BaseResponse<NoteBO>;
+      if (data.success) {
+        setNotes(data.data);
+      }
+      else {
+        console.error("Error fetching notes:", data.error);
+      }
     } catch (error) {
       console.error("Error loading notes:", error);
     } finally {
@@ -46,14 +53,14 @@ export default function NotePage() {
 
   async function deleteNote(id: number) {
     if (!confirm("确定要删除这个笔记吗？")) return;
-    
+
     try {
       const response = await fetch(`/api/note?id=${id}`, {
         method: "DELETE",
       });
-      
+
       if (!response.ok) throw new Error("Failed to delete note");
-      
+
       fetchNotes();
     } catch (error) {
       console.error("Error deleting note:", error);
@@ -84,8 +91,8 @@ export default function NotePage() {
             <PlusIcon className="h-5 w-5 mr-1" />
             快速笔记
           </button>
-          <Link 
-            href="/notes/new" 
+          <Link
+            href="/notes/new"
             className="px-4 py-2 bg-blue-500 text-white rounded-md flex items-center"
           >
             <DocumentIcon className="h-5 w-5 mr-1" />
@@ -93,9 +100,9 @@ export default function NotePage() {
           </Link>
         </div>
       </div>
-      
+
       <NoteFilter />
-      
+
       {loading ? (
         <div className="flex justify-center py-10">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -107,8 +114,8 @@ export default function NotePage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {notes.map((note: any) => (
-            <div 
-              key={note.id} 
+            <div
+              key={note.id}
               className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
             >
               <Link href={`/notes/${note.id}`}>
@@ -130,8 +137,8 @@ export default function NotePage() {
                   {note.tags && note.tags.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1">
                       {note.tags.map((tag: any) => (
-                        <span 
-                          key={tag.id} 
+                        <span
+                          key={tag.id}
                           className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full"
                         >
                           {tag.name}
@@ -142,13 +149,13 @@ export default function NotePage() {
                 </div>
               </Link>
               <div className="border-t px-5 py-2 flex justify-end space-x-2">
-                <Link 
+                <Link
                   href={`/notes/edit/${note.id}`}
                   className="p-1 text-gray-500 hover:text-blue-500"
                 >
                   <PencilIcon className="h-5 w-5" />
                 </Link>
-                <button 
+                <button
                   onClick={() => deleteNote(note.id)}
                   className="p-1 text-gray-500 hover:text-red-500"
                 >
@@ -159,10 +166,10 @@ export default function NotePage() {
           ))}
         </div>
       )}
-      
+
       {/* 快速笔记模态框 */}
-      <QuickNoteModal 
-        isOpen={isQuickNoteOpen} 
+      <QuickNoteModal
+        isOpen={isQuickNoteOpen}
         onClose={() => setIsQuickNoteOpen(false)}
         onSaved={fetchNotes}
       />

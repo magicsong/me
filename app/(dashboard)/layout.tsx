@@ -97,7 +97,7 @@ function DesktopNav() {
         <NavItem href="/pomodoro" label="Pomodoro">
           <Timer className="h-5 w-5" />
         </NavItem>
-        <NavItem href="/note" label="Notes">
+        <NavItem href="/notes" label="Notes">
           <FileText className="h-5 w-5" />
         </NavItem>
         <NavItem href="/ai-history" label="AI History">

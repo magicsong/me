@@ -6,13 +6,14 @@ import { format } from "date-fns";
 import { ArrowLeftIcon, PencilIcon, TrashIcon, ClockIcon, TagIcon, FolderIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import ReadOnlyTipTap from "@/components/notes/ReadOnlyTipTap";
+import { NoteBO } from "@/app/api/types";
 
 export default function NoteDetailPage() {
   const params = useParams();
   const router = useRouter();
   const noteId = params.id;
 
-  const [note, setNote] = useState(null);
+  const [note, setNote] = useState<NoteBO>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -25,7 +26,7 @@ export default function NoteDetailPage() {
           throw new Error("笔记不存在或无法获取");
         }
         const data = await response.json();
-        setNote(data);
+        setNote(data.data);
       } catch (err) {
         setError(err.message || "获取笔记详情失败");
         console.error("获取笔记详情错误:", err);
