@@ -138,7 +138,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         }
 
         const condition = this.buildWhereCondition(filter);
-        console.log('查询条件:', condition,"filter",filter);
+        //console.log('查询条件:', condition,"filter",filter);
         let query = this.db
             .select()
             .from(this.table)

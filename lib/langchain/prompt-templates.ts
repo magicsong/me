@@ -20,7 +20,7 @@ export function getDailySummaryPrompt(dateStr: string, context: DailySummaryCont
     明日目标: ${context.tomorrowGoals || '无'}
     
     请根据以上信息，总结我这一天的情况，包括亮点和改进空间，可以结合前面的对话，分析几天趋势
-    使用客观语气,可以适当鼓励，发现问题需要客观指出，直接给出总结，不需要"你的总结是"这样的开头。
+    使用客观但鼓励的语气，发现问题需要客观柔和指出，针对问题提出友好意见，结合明日规划，给出相应的建议。直接给出总结，不需要"你的总结是"这样的开头。
   `;
 }
 

@@ -24,6 +24,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { TimelineComponent, TimelineItem } from './timeline/timeline-component';
+import { saveSchedule } from './daily-start/actions';
 
 interface DailyTimelineViewProps {
   todos: TodoBO[];
@@ -98,43 +99,6 @@ export function DailyTimelineView({
     }
   };
 
-  
-  // 内部保存规划结果的方法
-  const saveScheduleInternally = async (schedule: PlanScheduleItem[]): Promise<void> => {
-    try {
-      // 将规划结果转换为任务更新
-      const updatePromises = schedule.map(item => {
-        // 尝试转换string类型的taskId为number
-        const todoId = Number(item.taskId);
-        
-        if (isNaN(todoId)) {
-          console.warn(`无效的任务ID: ${item.taskId}`);
-          return Promise.resolve();
-        }
-        
-        // 解析时间字符串
-        const parseTimeString = (timeStr: string): Date => {
-          const [hours, minutes] = timeStr.split(':').map(Number);
-          const date = new Date(selectedDate);
-          date.setHours(hours, minutes, 0, 0);
-          return date;
-        };
-        
-        const startTime = parseTimeString(item.startTime);
-        const endTime = parseTimeString(item.endTime);
-        
-        // 调用更新函数
-        return onUpdateTodoTime(todoId, startTime.toISOString(), endTime.toISOString());
-      });
-      
-      await Promise.all(updatePromises.filter(Boolean));
-      toast.success(`成功更新 ${schedule.length} 个任务的时间安排`);
-    } catch (error) {
-      console.error('保存规划结果失败:', error);
-      throw new Error('更新任务时间失败');
-    }
-  };
-
   // 执行AI规划
   const executeAiPlan = async () => {
     if (!userPrompt.trim()) {
@@ -167,7 +131,7 @@ const savePlanResult = async (updatedPlan: PlanResult) => {
   }
 
   try {
-    await saveScheduleInternally(updatedPlan.schedule);
+    await saveSchedule(updatedPlan.schedule,selectedDate);
     setShowPlanResult(false);
     toast.success("规划已保存并应用到任务时间");
   } catch (error) {

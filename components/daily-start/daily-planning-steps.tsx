@@ -5,6 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { PlanResultTimelineView } from '../PlanResultTimelineView'; // 添加导入
+import { PlanResult } from '@/app/api/todo/types';
+
 import {
   ArrowRightIcon,
   CheckIcon,
@@ -23,6 +26,8 @@ import { QuadrantPlanner } from "./quadrant-planner";
 import { TaskSuggestionDialog } from "./task-suggestion-dialog";
 import { LoadingModal } from "../ui/loading-modal";
 import { format } from "date-fns";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
+import { saveSchedule } from "./actions";
 
 interface DailyPlanningStepsProps {
   onStartFocusing: () => void;
@@ -55,6 +60,13 @@ export function DailyPlanningSteps({
   const [isTimeGenerating, setIsTimeGenerating] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
 
+  // 在现有状态定义附近添加
+  const [planResult, setPlanResult] = useState<PlanResult | null>(null);
+  const [showPlanResult, setShowPlanResult] = useState(false);
+  const [userPrompt, setUserPrompt] = useState(''); // 用户提示输入
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const workingHours = { start: 9, end: 22 }; // 默认工作时间设置
+
   // 检查本地存储是否已经完成了今天的规划
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -64,42 +76,42 @@ export function DailyPlanningSteps({
     }
   }, []);
 
-    // 添加这个useEffect来加载昨天总结中的明日展望作为今日意图的默认值
-    useEffect(() => {
-      const fetchDefaultIntention = async () => {
-        try {
-          // 获取昨日的日期
-          
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yesterdayStr = yesterday.toISOString().split('T')[0];
-          
-          // 调用API获取今日习惯数据（包含昨日明日展望作为intention）
-          const response = await fetch(`/api/daily-summary?date=${yesterdayStr}`);
-          
-          if (!response.ok) {
-            console.error('获取默认intention失败:', await response.text());
-            return;
-          }
-          
-          const data = await response.json();
-          
-          // 如果返回了intention且当前未设置，则设置为默认值
-          if (data.success && data.data[0] && data.data[0].content.tomorrowGoals) {
-            setIntention(data.data[0].content.tomorrowGoals);
-            toast.info('已加载昨日规划的明日展望');
-          }
-        } catch (error) {
-          console.error('获取默认intention失败:', error);
+  // 添加这个useEffect来加载昨天总结中的明日展望作为今日意图的默认值
+  useEffect(() => {
+    const fetchDefaultIntention = async () => {
+      try {
+        // 获取昨日的日期
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        // 调用API获取今日习惯数据（包含昨日明日展望作为intention）
+        const response = await fetch(`/api/daily-summary?date=${yesterdayStr}`);
+
+        if (!response.ok) {
+          console.error('获取默认intention失败:', await response.text());
+          return;
         }
-      };
-      
-      // 只有当intention为空时才获取默认值
-      if (!intention.trim()) {
-        fetchDefaultIntention();
+
+        const data = await response.json();
+
+        // 如果返回了intention且当前未设置，则设置为默认值
+        if (data.success && data.data[0] && data.data[0].content.tomorrowGoals) {
+          setIntention(data.data[0].content.tomorrowGoals);
+          toast.info('已加载昨日规划的明日展望');
+        }
+      } catch (error) {
+        console.error('获取默认intention失败:', error);
       }
-    }, []); // 组件挂载时执行一次
-    
+    };
+
+    // 只有当intention为空时才获取默认值
+    if (!intention.trim()) {
+      fetchDefaultIntention();
+    }
+  }, []); // 组件挂载时执行一次
+
   // 添加一键迁移昨日未完成任务的函数
   const migrateYesterdayTasks = async () => {
     try {
@@ -130,7 +142,7 @@ export function DailyPlanningSteps({
       // 更新所有任务的计划日期为今天
       const updatePromises = yesterdayTasks.map(async (task: TodoBO) => {
         if (task.completedAt) {
-          console.log("task is already done",task);
+          console.log("task is already done", task);
           return
         }
         const updateResponse = await fetch(`/api/todo/${task.id}`, {
@@ -398,28 +410,85 @@ export function DailyPlanningSteps({
     }
   };
 
-  const generateTimeSchedule = () => {
-    // 模拟AI生成时间表
-    toast.promise(
-      new Promise(resolve => setTimeout(resolve, 1500)),
-      {
-        loading: '正在规划您的时间表...',
-        success: () => {
-          setTimeSchedule(
-            "09:00 - 10:30 专注工作：完成项目A开发\n" +
-            "10:30 - 11:00 休息\n" +
-            "11:00 - 12:00 回复邮件\n" +
-            "12:00 - 13:00 午餐休息\n" +
-            "13:00 - 15:00 准备会议材料\n" +
-            "15:00 - 15:30 休息\n" +
-            "15:30 - 17:00 代码审核\n" +
-            "17:00 - 17:30 日总结"
-          );
-          return "时间表已生成!";
+  // 调用内部的AI规划API
+  const callAiPlanApi = async (prompt: string): Promise<PlanResult> => {
+    try {
+      setIsTimeGenerating(true);
+      const response = await fetch('/api/todo/planner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        error: "生成失败，请重试"
+        body: JSON.stringify({
+          userPrompt: prompt,
+          timeRange: `${workingHours.start}:00-${workingHours.end}:00` // 根据当前工作时间设置
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || '规划请求失败');
       }
-    );
+
+      return data.data;
+    } catch (error) {
+      console.error('API请求失败:', error);
+      throw new Error('无法连接到规划服务');
+    } finally {
+      setIsTimeGenerating(false);
+    }
+  };
+
+  // 执行AI规划
+  const executeAiPlan = async () => {
+    if (!userPrompt.trim()) {
+      toast.error("请输入规划需求");
+      return;
+    }
+
+    setPlanDialogOpen(false);
+    setIsTimeGenerating(true);
+
+    try {
+      const result = await callAiPlanApi(userPrompt);
+      setPlanResult(result);
+      setShowPlanResult(true);
+      setTimeSchedule(result.summary); // 将摘要设置为时间安排
+      toast.success("AI已完成今日任务规划");
+    } catch (error) {
+      console.error('AI规划失败:', error);
+      toast.error(error instanceof Error ? error.message : "AI规划失败，请稍后重试");
+    } finally {
+      setIsTimeGenerating(false);
+    }
+  };
+  // 保存规划结果
+  const savePlanResult = async (updatedPlan: PlanResult) => {
+    if (!updatedPlan || !updatedPlan.schedule || updatedPlan.schedule.length === 0) {
+      toast.error("没有可保存的规划结果");
+      return;
+    }
+
+    try {
+      // 这里后续可以添加保存规划结果的逻辑
+      await saveSchedule(updatedPlan.schedule, new Date());
+      setShowPlanResult(false);
+      setTimeSchedule(updatedPlan.summary); // 保存更新后的摘要
+      toast.success("规划已保存");
+    } catch (error) {
+      console.error('保存规划失败:', error);
+      toast.error(error instanceof Error ? error.message : "保存规划失败");
+    }
+  };
+
+  // 取消规划结果
+  const cancelPlanResult = () => {
+    setShowPlanResult(false);
+  };
+  const generateTimeSchedule = () => {
+    // 打开规划对话框
+    setPlanDialogOpen(true)
   };
 
   if (isCompleted) {
@@ -528,7 +597,7 @@ export function DailyPlanningSteps({
               />
 
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 mb-2">
                   <Switch
                     id="update-existing"
                     checked={updateExisting}
@@ -536,13 +605,21 @@ export function DailyPlanningSteps({
                   />
                   <Label htmlFor="update-existing">同时更新今日现有待办</Label>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={simulateAiGeneration}
-                >
-                  <SparklesIcon className="mr-2 h-4 w-4" />
-                  AI生成任务建议
-                </Button>
+                <div className="mt-4">
+                  <Button
+                    variant="default"
+                    onClick={simulateAiGeneration}
+                    className="w-full py-6 text-lg font-medium shadow-md hover:shadow-lg transition-all"
+                    disabled={isAiGenerating}
+                  >
+                    {isAiGenerating ? (
+                      <RefreshCwIcon className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                      <SparklesIcon className="mr-2 h-5 w-5" />
+                    )}
+                    {isAiGenerating ? "AI生成中..." : "AI生成任务建议"}
+                  </Button>
+                </div>
               </div>
 
               <div className="flex justify-between">
@@ -594,8 +671,19 @@ export function DailyPlanningSteps({
                   variant="outline"
                   onClick={generateTimeSchedule}
                   className="w-full"
+                  disabled={isTimeGenerating}
                 >
-                  生成时间安排
+                  {isTimeGenerating ? (
+                    <>
+                      <RefreshCwIcon className="mr-2 h-4 w-4 animate-spin" />
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <ClockIcon className="mr-2 h-4 w-4" />
+                      生成时间安排
+                    </>
+                  )}
                 </Button>
               )}
 
@@ -630,6 +718,60 @@ export function DailyPlanningSteps({
         open={isAiGenerating}
         title="AI正在生成任务建议"
         description="请稍等，我们正在根据您的规划生成智能任务建议..."
+      />
+      // 在组件返回的JSX末尾添加
+      {/* AI规划对话框 */}
+      <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>AI自动规划</DialogTitle>
+            <DialogDescription>
+              请输入您今天的规划需求，例如"我希望今天高效完成所有紧急任务，中午有1小时的午休时间"
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="prompt">规划需求</Label>
+              <Textarea
+                id="prompt"
+                placeholder="请输入您的规划需求..."
+                value={userPrompt}
+                onChange={(e) => setUserPrompt(e.target.value)}
+                className="h-32"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPlanDialogOpen(false)}>
+              取消
+            </Button>
+            <Button type="button" onClick={executeAiPlan}>
+              开始规划
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* 规划结果展示 */}
+      {showPlanResult && planResult && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-auto p-6">
+            <PlanResultTimelineView
+              planResult={planResult}
+              date={new Date()}
+              workingHours={workingHours}
+              onSavePlan={savePlanResult}
+              onCancel={cancelPlanResult}
+            />
+          </div>
+        </div>
+      )}
+      {/* 生成时间安排的loading模态框 */}
+      <LoadingModal
+        open={isTimeGenerating}
+        title="AI正在生成时间安排"
+        description="请稍等，我们正在为您的任务生成智能时间安排..."
       />
     </Card>
   );
