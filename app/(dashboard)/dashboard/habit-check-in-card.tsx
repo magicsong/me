@@ -44,8 +44,6 @@ export function HabitCheckInCard() {
   const [failureDialogOpen, setFailureDialogOpen] = useState(false);
   const router = useRouter(); // 添加路由跳转钩子
 
-  // ...existing code...
-
   // 处理开始专注按钮点击
   function handleStartFocus(e: React.MouseEvent, habit: HabitBO) {
     e.stopPropagation(); // 阻止冒泡，避免同时触发打开日历
@@ -53,7 +51,6 @@ export function HabitCheckInCard() {
     router.push(`/pomodoro?habitId=${habit.id}`);
   }
 
-  // ...existing code...
   // 获取习惯数据
   async function fetchHabits() {
     setLoading(true);
@@ -110,7 +107,11 @@ export function HabitCheckInCard() {
 
     try {
       // 1. 完成打卡
-      await completeHabit(data.habitId, { comment: data.comment, difficulty: data.difficulty, tierId: data.tierId });
+      await completeHabit(data.habitId, { comment: data.comment, 
+        difficulty: data.difficulty, 
+        tierId: data.tierId,
+        completedAt: new Date().toUTCString() 
+      });
       // 使用 sonner 显示成功消息
       toast.success("🎉 已完成！继续加油！", {
         duration: 3000,
@@ -143,7 +144,7 @@ export function HabitCheckInCard() {
       await completeHabit(data.habitId, {
         comment: data.comment,
         failureReason: data.failureReason,
-        status: data.status
+        status: data.status,
       });
 
       toast.info("📝 已记录。每次反思都是成长的机会！", {

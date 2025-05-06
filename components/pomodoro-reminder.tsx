@@ -11,6 +11,7 @@ export function PomodoroReminder() {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const pathname = usePathname();
+  const router = useRouter(); // 移到组件顶层
   const { activePomodoro, completePomodoro } = usePomodoro();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevTimeLeftRef = useRef<number>(0); // 添加一个引用来存储上一次的 timeLeft 值
@@ -91,7 +92,7 @@ export function PomodoroReminder() {
           size="sm"
           variant="ghost"
           className="ml-2 flex items-center gap-1"
-          onClick={() => useRouter().push('/pomodoro')}
+          onClick={() => router.push('/pomodoro')}
           title="前往番茄钟页面"
         >
           查看<ArrowRight size={14} />
@@ -111,7 +112,7 @@ export function PomodoroReminder() {
           size="sm"
           variant="ghost"
           className="ml-auto flex items-center gap-1"
-          onClick={() => useRouter().push('/pomodoro')}
+          onClick={() => router.push('/pomodoro')}
           title="前往番茄钟页面"
         >
           查看<ArrowRight size={14} />

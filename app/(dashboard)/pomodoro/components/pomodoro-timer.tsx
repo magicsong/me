@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useToast } from '@/components/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Play, Pause, RotateCcw, Check } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Check, Pause, Play } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 // 引入倒计时组件
-import { CountdownCircleTimer } from 'react-countdown-circle-timer';
-import { PomodoroBO, TodoBO } from '@/app/api/types';
 import { BaseRequest } from '@/app/api/lib/types';
+import { PomodoroBO, TodoBO } from '@/app/api/types';
+import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import { getHabitDetail } from '../../habits/client-actions';
 // 预设时间选项（分钟）
 const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];

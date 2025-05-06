@@ -2,9 +2,7 @@ import { habit_challenge_tiers, habit_entries, habits } from '@/lib/db/schema';
 import { format } from 'date-fns';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { BaseRepository } from '../db/';
-import { HabitEntryService } from './habit-entry';
 
-// 习惯类型定义
 // 习惯数据类型定义
 export type HabitData = typeof habits.$inferSelect & {
   challengeTiers?: Array<{

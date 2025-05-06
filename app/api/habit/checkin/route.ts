@@ -32,8 +32,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
-    // 使用增强的 checkInHabit 方法创建打卡记录
+    if (!completedAt){
+      return NextResponse.json({ success: false, error: '缺少完成时间' }, { status: 400 }); 
+    }
     const result = await habitService.checkInHabit(
       Number(habitId),
       userId,

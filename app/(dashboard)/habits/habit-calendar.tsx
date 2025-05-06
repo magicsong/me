@@ -183,7 +183,7 @@ export function HabitCalendar({
 
       await completeHabitOnDate(
         habit.id,
-        backfillDate.toUTCString()
+        backfillDate.toISOString()
       );
 
       // 刷新习惯历史

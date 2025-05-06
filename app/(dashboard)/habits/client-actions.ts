@@ -1,9 +1,7 @@
 "use client";
 
 import { HabitBO, TodoBO } from "@/app/api/types";
-import { getCurrentUserId } from "@/lib/utils";
 import { format } from "date-fns";
-import { tr } from "date-fns/locale";
 
 // 更新 completeHabit 函数，使用API而不是直接访问数据库
 export async function completeHabit(
@@ -54,9 +52,10 @@ export async function completeHabitOnDate(habitId: number, date: string) {
     if (isNaN(targetDate.getTime())) {
         throw new Error('无效的日期格式');
     }
+    targetDate.setHours(0, 0, 0, 0); // 设置时间为00:00:00
 
     // 使用 completeHabit 进行补打卡
-    return completeHabit(habitId, { completedAt: date });
+    return completeHabit(habitId, { completedAt: targetDate.toISOString() });
 }
 
 
