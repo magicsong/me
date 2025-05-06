@@ -222,8 +222,6 @@ export function PomodoroTimer({
 
   // 添加一个新函数，用于完成待办事项
   const completeTodoAndPomodoro = useCallback(async () => {
-    console.log("番茄钟和待办事项一起完成");
-
     // 首先完成番茄钟
     setIsRunning(false);
     setIsCompleted(true);
@@ -257,6 +255,8 @@ export function PomodoroTimer({
           title: "成功",
           description: "已完成番茄钟和关联的待办事项",
         });
+        // 完成后刷新待办事项列表
+        await fetchTodos();
       }
     } catch (error) {
       console.error('完成番茄钟和待办事项失败:', error);
@@ -573,7 +573,25 @@ export function PomodoroTimer({
       </div>
     );
   }, [isRunning]);
-
+  function priorityText(priority: string) {
+    switch (priority) {
+      case 'urgent': return '紧急';
+      case 'high': return '高';
+      case 'medium': return '中';
+      case 'low': return '低';
+      default: return priority;
+    }
+  }
+  // 新增：不同优先级对应不同颜色
+  function priorityColor(priority: string) {
+    switch (priority) {
+      case 'urgent': return 'text-red-600';
+      case 'high': return 'text-orange-500';
+      case 'medium': return 'text-yellow-600';
+      case 'low': return 'text-green-600';
+      default: return 'text-gray-500';
+    }
+  }
   return (
     <div className="space-y-6">
       {!isRunning && !isCompleted && !isFinished && (
@@ -590,11 +608,33 @@ export function PomodoroTimer({
                 <SelectValue placeholder={isLoadingTodos ? "正在加载待办事项..." : "选择一个待办事项"} />
               </SelectTrigger>
               <SelectContent>
-                {todos.map((todo) => (
-                  <SelectItem key={todo.id} value={todo.id}>
-                    {todo.title}
-                  </SelectItem>
-                ))}
+                {todos
+                  .slice()
+                  .sort((a, b) => {
+                    if (a.plannedStartTime && b.plannedStartTime) {
+                      return a.plannedStartTime.localeCompare(b.plannedStartTime);
+                    }
+                    if (a.plannedStartTime) return -1;
+                    if (b.plannedStartTime) return 1;
+                    return 0;
+                  })
+                  .map((todo) => (
+                    <SelectItem key={todo.id} value={todo.id}>
+                      <div className="flex flex-col items-start">
+                        <span>
+                          {todo.title}
+                          <span className={`ml-2 text-xs font-semibold ${priorityColor(todo.priority)}`}>
+                            [{priorityText(todo.priority)}]
+                          </span>
+                        </span>
+                        {todo.plannedStartTime && (
+                          <span className="text-xs text-gray-400">
+                            {todo.plannedStartTime}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
                 {todos.length === 0 && !isLoadingTodos && (
                   <SelectItem value="none" disabled>
                     没有可用的待办事项
