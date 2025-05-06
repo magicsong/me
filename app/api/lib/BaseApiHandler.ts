@@ -525,12 +525,7 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
 
             // 检查是否同时需要生成新对象和更新现有对象
             const generateBoth = !!request.generateBothCreatedAndUpdated;
-
-            // 如果需要同时生成和更新，必须提供data作为更新基础
-            if (generateBoth && (!request.data || !Array.isArray(request.data) || request.data.length === 0)) {
-                return { success: false, error: '当generateBothCreatedAndUpdated为true时，必须提供data数组作为更新基础' };
-            }
-
+            
             // 优先使用parseBatchWithUpdates处理
             if (typeof this.outputParser.parseBatchWithUpdates === 'function') {
                 const prompt = this.promptBuilder.buildCreatePrompt();

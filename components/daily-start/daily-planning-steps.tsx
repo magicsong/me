@@ -719,7 +719,6 @@ export function DailyPlanningSteps({
         title="AI正在生成任务建议"
         description="请稍等，我们正在根据您的规划生成智能任务建议..."
       />
-      // 在组件返回的JSX末尾添加
       {/* AI规划对话框 */}
       <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
