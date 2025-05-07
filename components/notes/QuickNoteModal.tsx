@@ -40,12 +40,12 @@ export default function QuickNoteModal({ isOpen, onClose, onSaved }: QuickNoteMo
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
+        body: JSON.stringify({data:{
           title,
           content,
           category: category || undefined,
           tags: tagList.length > 0 ? tagList : undefined,
-        }),
+        }}),
       });
       
       if (!response.ok) {
