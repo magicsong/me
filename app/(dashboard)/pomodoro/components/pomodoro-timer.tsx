@@ -14,6 +14,7 @@ import { BaseRequest } from '@/app/api/lib/types';
 import { PomodoroBO, TodoBO } from '@/app/api/types';
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import { getHabitDetail } from '../../habits/client-actions';
+import { is } from 'drizzle-orm';
 // 预设时间选项（分钟）
 const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
 
@@ -155,6 +156,7 @@ export function PomodoroTimer({
 
   // 获取待办事项详情
   const fetchTodoDetails = useCallback(async (todoId: string) => {
+
     try {
       setIsLoadingTodo(true);
       const response = await fetch(`/api/todolist/todos/${todoId}`);
@@ -180,6 +182,9 @@ export function PomodoroTimer({
 
   // 获取待办事项列表
   const fetchTodos = useCallback(async () => {
+    if (!isInitialized) {
+      return;
+    }
     try {
       setIsLoadingTodos(true);
       const response = await fetch('/api/todo?status=pending');
@@ -218,7 +223,7 @@ export function PomodoroTimer({
     } finally {
       setIsLoadingTodos(false);
     }
-  }, [relatedTodoId, title, toast]);
+  }, [relatedTodoId, title, toast, hasUrlParams, isInitialized]);
 
   // 添加一个新函数，用于完成待办事项
   const completeTodoAndPomodoro = useCallback(async () => {
@@ -545,7 +550,70 @@ export function PomodoroTimer({
       setDuration(numValue);
     }
   }, []);
+  // ...existing code...
+  const restartSamePomodoro = useCallback(async () => {
+    console.log("再次开始同样的番茄钟");
+    setIsRunning(true);
+    setIsCompleted(false);
+    setIsFinished(false);
+    setPomodoroId(null);
 
+    // 保留相同的标题、描述、时长等设置
+    // 不重置任何内容，直接开始
+
+    // 立即开始新的番茄钟
+    try {
+      const durationInMinutes = Number(duration);
+      const durationInSeconds = durationInMinutes * 60;
+      setTimeLeft(durationInSeconds);  // 立即设置计时时间
+      const startTime = Date.now();
+      const request = {} as BaseRequest<Partial<PomodoroBO>>;
+      request.data = {
+        title,
+        description,
+        duration: durationInMinutes,
+        tagIds: selectedTag ? [Number(selectedTag)] : [],
+        todoId: relatedTodoId ? relatedTodoId : undefined,
+        habitId: relatedHabitId ? relatedHabitId : undefined
+      }
+
+      const response = await fetch('/api/pomodoro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (response.ok) {
+        const newPomodoro = await response.json();
+        setPomodoroId(newPomodoro.id);
+
+        // 设置本地状态
+        setTimeLeft(durationInSeconds);
+        setIsRunning(true);
+        setIsCompleted(false);
+
+        // 通知父组件状态改变
+        onPomodoroChange(newPomodoro);
+
+        toast({
+          title: "番茄钟开始",
+          description: `${durationInMinutes} 分钟的专注时间已开始`,
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(`创建番茄钟失败: ${errorData.error || response.statusText}`);
+      }
+    } catch (error) {
+      console.error("重新开始番茄钟失败:", error);
+      toast({
+        title: "错误",
+        description: "重新开始番茄钟失败",
+        variant: "destructive",
+      });
+    }
+  }, [title, description, duration, selectedTag, relatedTodoId, relatedHabitId, onPomodoroChange, toast]);
   // 格式化时间显示（mm:ss）
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -819,14 +887,26 @@ export function PomodoroTimer({
             </div>
           )}
           {isCompleted && (
-            <Button
-              size="lg"
-              onClick={resetPomodoro}
-              variant="default"
-              type="button"
-            >
-              <Check className="mr-2" /> 完成！开始新的番茄钟
-            </Button>
+            <div className="flex gap-3 w-full">
+              <Button
+                size="lg"
+                onClick={resetPomodoro}
+                variant="outline"
+                type="button"
+                className="flex-1"
+              >
+                <Check className="mr-2" /> 完成！开始新的番茄钟
+              </Button>
+              <Button
+                size="lg"
+                onClick={restartSamePomodoro}
+                variant="default"
+                type="button"
+                className="flex-1"
+              >
+                <Play className="mr-2" /> 再次开始同样的番茄钟
+              </Button>
+            </div>
           )}
         </div>
       </div>
