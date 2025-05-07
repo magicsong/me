@@ -52,7 +52,7 @@ export function HabitCompletionDialog({
   const [habitDetail, setHabitDetail] = useState<HabitBO>();
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel>(null);
   const [comment, setComment] = useState("");
-  const [selectedTierId, setSelectedTierId] = useState<number | undefined>(undefined);
+  const [selectedTierId, setSelectedTierId] = useState<number>(0); // 0表示普通完成
   const [status, setStatus] = useState<'completed' | 'failed'>('completed'); // 默认为完成状态
   const [failureReason, setFailureReason] = useState('');
 
@@ -81,7 +81,7 @@ export function HabitCompletionDialog({
     if (isOpen) {
       setSelectedDifficulty(null);
       setComment("");
-      setSelectedTierId(undefined);
+      setSelectedTierId(0);
       setSubmitting(false);
     }
   }, [isOpen]);
@@ -100,13 +100,13 @@ export function HabitCompletionDialog({
   const handleClose = () => {
     setSelectedDifficulty(null);
     setComment("");
-    setSelectedTierId(undefined);
+    setSelectedTierId(0);
     onClose();
   };
-  
+
   function resetForm() {
     setSelectedDifficulty(null);
-    setSelectedTierId(undefined);
+    setSelectedTierId(0);
     setComment('');
     setStatus('completed');
     setFailureReason('');
@@ -114,10 +114,10 @@ export function HabitCompletionDialog({
   // 处理提交
   const handleSubmit = async () => {
     if (!habit || !selectedDifficulty) return;
-    
+
     try {
       setSubmitting(true);
-      
+
       // 调用合并后的提交函数
       await onSubmit({
         habitId: habit.id,
@@ -125,9 +125,9 @@ export function HabitCompletionDialog({
         difficulty: selectedDifficulty,
         comment,
         status,
-      failureReason: status === 'failed' ? failureReason : undefined
+        failureReason: status === 'failed' ? failureReason : undefined
       });
-      
+
       handleClose();
     } catch (error) {
       console.error("提交习惯完成失败:", error);
@@ -164,10 +164,12 @@ export function HabitCompletionDialog({
         <div className="py-4 space-y-6">
           {/* 挑战级别部分 */}
           <div className="space-y-2">
-            <h3 className="font-medium">1. 选择挑战级别</h3>
-            <p className="text-sm text-muted-foreground mb-2">
-              选择一个挑战级别，不同级别将获得不同的奖励点数。
-            </p>
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium">1. 选择挑战级别</h3>
+              <p className="text-xs text-muted-foreground">
+                不同级别将获得不同的奖励点数。
+              </p>
+            </div>
             {loading ? (
               <div className="flex justify-center p-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -176,20 +178,18 @@ export function HabitCompletionDialog({
               <div className="text-center py-4 bg-gray-50 rounded-md">
                 <Trophy className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm">此习惯暂无挑战级别，将进行普通打卡</p>
-                {selectedTierId === undefined && handleStandardCompletion()}
               </div>
             ) : (
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {habitDetail.challengeTiers.map((tier: ChallengeTier) => {
                   const tierColors = getTierColors(tier.level);
                   const isSelected = selectedTierId === tier.id;
-                  
+
                   return (
                     <div
                       key={tier.id}
-                      className={`border-l-4 p-2 rounded-md ${tierColors} cursor-pointer transition-all duration-200 ${
-                        isSelected ? 'ring-2 ring-primary ring-offset-1' : ''
-                      }`}
+                      className={`border-l-4 p-2 rounded-md ${tierColors} cursor-pointer transition-all duration-200 ${isSelected ? "ring-2 ring-primary ring-offset-1" : ""
+                        }`}
                       onClick={() => handleTierSelect(tier.id)}
                     >
                       <div className="flex justify-between items-center">
@@ -212,11 +212,10 @@ export function HabitCompletionDialog({
                     </div>
                   );
                 })}
-                
+
                 <div
-                  className={`border p-2 rounded-md bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${
-                    selectedTierId === 0 ? 'ring-2 ring-primary ring-offset-1' : ''
-                  }`}
+                  className={`border p-2 rounded-md bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${selectedTierId === 0 ? "ring-2 ring-primary ring-offset-1" : ""
+                    }`}
                   onClick={handleStandardCompletion}
                 >
                   <div className="flex justify-between items-center">
@@ -237,20 +236,19 @@ export function HabitCompletionDialog({
               </div>
             )}
           </div>
-          
+
           {/* 难度评估部分 */}
           <div className="border-t pt-4 space-y-2">
             <h3 className="font-medium">2. 完成难度评估</h3>
             <p className="text-sm text-muted-foreground mb-2">
               评估此次完成的难度，这将帮助优化习惯设置。
             </p>
-            
+
             <div className="flex gap-3 justify-center mt-4">
               <Button
                 variant={selectedDifficulty === "easy" ? "default" : "outline"}
-                className={`flex-1 ${
-                  selectedDifficulty === "easy" ? "bg-green-600 hover:bg-green-700" : ""
-                }`}
+                className={`flex-1 ${selectedDifficulty === "easy" ? "bg-green-600 hover:bg-green-700" : ""
+                  }`}
                 onClick={() => setSelectedDifficulty("easy")}
               >
                 <ThumbsUp className="h-4 w-4 mr-1" />
@@ -258,11 +256,10 @@ export function HabitCompletionDialog({
               </Button>
               <Button
                 variant={selectedDifficulty === "medium" ? "default" : "outline"}
-                className={`flex-1 ${
-                  selectedDifficulty === "medium"
+                className={`flex-1 ${selectedDifficulty === "medium"
                     ? "bg-yellow-600 hover:bg-yellow-700"
                     : ""
-                }`}
+                  }`}
                 onClick={() => setSelectedDifficulty("medium")}
               >
                 <AlertCircle className="h-4 w-4 mr-1" />
@@ -270,16 +267,15 @@ export function HabitCompletionDialog({
               </Button>
               <Button
                 variant={selectedDifficulty === "hard" ? "default" : "outline"}
-                className={`flex-1 ${
-                  selectedDifficulty === "hard" ? "bg-red-600 hover:bg-red-700" : ""
-                }`}
+                className={`flex-1 ${selectedDifficulty === "hard" ? "bg-red-600 hover:bg-red-700" : ""
+                  }`}
                 onClick={() => setSelectedDifficulty("hard")}
               >
                 <AlertTriangle className="h-4 w-4 mr-1" />
                 困难
               </Button>
             </div>
-            
+
             <div className="mt-4">
               <label className="text-sm text-muted-foreground mb-1 block">
                 评价（可选）
