@@ -235,29 +235,34 @@ export function createNextRouteHandlers<T, BO extends BusinessObject>(handler: I
       }
 
       const body = await request.json();
-      const { isAIGeneration, isBatch, ...data } = body;
-
-      // 将userId注入到请求数据中
-      const dataWithUserId = { ...data, userId };
-
+      const { isAIGeneration, isBatch, ...rest } = body;
+      let myRequest: BaseRequest<BO> | BaseBatchRequest<BO> = rest;
+      if (rest.data && typeof rest.data === 'object') {
+        myRequest.data.userId = userId;
+      }
+      if (!rest.data) {
+        console.log('没有data字段，使用默认数据');
+        myRequest.data = { ...rest, userId };
+      }
+      
       if (isAIGeneration) {
         if (isBatch) {
           // AI批量生成
-          const response = await handler.generateBatchWithAI(dataWithUserId as BaseRequest<Partial<BO>>);
+          const response = await handler.generateBatchWithAI(myRequest as BaseRequest<Partial<BO>>);
           return createApiResponse(true, response.data, response.error, response.success ? 200 : 400);
         } else {
           // AI单个生成
-          const response = await handler.generateWithAI(dataWithUserId as BaseRequest<Partial<BO>>);
+          const response = await handler.generateWithAI(myRequest as BaseRequest<Partial<BO>>);
           return createApiResponse(true, response.data, response.error, response.success ? 200 : 400);
         }
       } else {
         // 普通创建
         if (isBatch) {
           // 批量创建
-          const response = await handler.handleBatchCreate(dataWithUserId as BaseBatchRequest<BO>);
+          const response = await handler.handleBatchCreate(myRequest as BaseBatchRequest<BO>);
           return createApiResponse(true, response.data, response.error, response.success ? 201 : 400);
         }
-        const response = await handler.handleCreate(dataWithUserId as BaseRequest<BO>);
+        const response = await handler.handleCreate(myRequest as BaseRequest<BO>);
         return createApiResponse(true, response.data, response.error, response.success ? 201 : 400);
       }
     } catch (error) {

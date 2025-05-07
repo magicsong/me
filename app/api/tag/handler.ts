@@ -44,15 +44,15 @@ export class TagApiHandler extends BaseApiHandler<TagData, TagBO> {
       name: dataObject.name,
       color: dataObject.color || '#3b82f6',
       kind: dataObject.kind || undefined,
-      userId: dataObject.userId,
+      userId: dataObject.user_id,
     };
   }
 
   toDataObject(businessObject: TagBO): Partial<TagData> {
-    const result = {
+    const result: Partial<TagData> = {
       name: businessObject.name,
       color: businessObject.color,
-      userId: businessObject.userId,
+      user_id: businessObject.userId,
     };
     
     if (businessObject.kind) {
@@ -62,7 +62,6 @@ export class TagApiHandler extends BaseApiHandler<TagData, TagBO> {
     if (businessObject.id && businessObject.id > 0) {
       result["id"] = businessObject.id;
     }
-    
     return result;
   }
 

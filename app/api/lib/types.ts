@@ -4,7 +4,7 @@ import { PromptTemplate } from "@langchain/core/prompts";
  * 基础请求接口 - 处理单个对象
  */
 export interface BaseRequest<T> {
-  data?: T; // 单条数据 - 不再支持数组
+  data?: Partial<T>; // 单条数据 - 不再支持数组
   autoGenerate?: boolean; // 是否需要LLM自动生成
   batchSize?: number; // 自动生成时的批量大小
   userPrompt?: string; // 用户给大模型的提示
@@ -15,7 +15,7 @@ export interface BaseRequest<T> {
  * 批量请求基础接口 - 专门处理批量操作
  */
 export interface BaseBatchRequest<T> {
-  data: T[]; // 批量数据 - 必须是数组
+  data: Partial<T>[]; // 批量数据 - 必须是数组
   autoGenerate?: boolean; // 是否需要LLM自动生成
   batchSize?: number; // 自动生成时的批量大小
   userPrompt?: string; // 用户给大模型的提示
@@ -47,6 +47,7 @@ export interface BaseResponse<T> {
   data?: T | T[];
   error?: string;
   generatedCount?: number;
+  message?: string; // 错误消息
 }
 
 /**

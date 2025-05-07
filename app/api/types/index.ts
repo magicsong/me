@@ -75,6 +75,7 @@ export interface TagBO {
   name: string;
   color: string;
   kind?: string;
+  userId: string;
 }
 
 /**

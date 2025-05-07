@@ -21,6 +21,7 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MultiSelect } from './multi-select';
 import { TodoBO } from '@/app/api/types';
+import { fetchTags } from '../../actions';
 
 interface TodoFormProps {
   onSubmit: (
@@ -51,13 +52,12 @@ export function TodoForm({ onSubmit, onCancel, isModal = false, initialData }: T
 
   // 获取所有可用标签
   useEffect(() => {
-    const fetchTags = async () => {
+    const fetchTagsFromServer = async () => {
       try {
         setIsLoadingTags(true);
-        const response = await fetch('/api/todolist/tags');
-        if (response.ok) {
-          const tags = await response.json();
-          setAvailableTags(tags.map((tag: any) => ({ 
+        const response = await fetchTags("todo");
+        if (response.success) {
+          setAvailableTags(response.data?.map((tag: any) => ({ 
             value: tag.id.toString(), 
             label: tag.name 
           })));
@@ -69,7 +69,7 @@ export function TodoForm({ onSubmit, onCancel, isModal = false, initialData }: T
       }
     };
 
-    fetchTags();
+    fetchTagsFromServer();
   }, []);
 
   // 获取当前todo关联的标签
@@ -226,11 +226,12 @@ export function TodoForm({ onSubmit, onCancel, isModal = false, initialData }: T
           
           <div className="space-y-2">
             <Label htmlFor="tags">标签</Label>
-            <MultiSelect 
+            <MultiSelect
               options={availableTags.map(tag => ({
                 value: tag.value,
                 label: tag.label,
               }))}
+              modalPopover={isModal} 
               defaultValue={selectedTagValues}
               onValueChange={handleTagValueChange}
               placeholder={isLoadingTags ? "加载标签中..." : "选择标签"}

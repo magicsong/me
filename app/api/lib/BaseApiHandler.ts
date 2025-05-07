@@ -7,6 +7,7 @@ import {
 import { IApiHandler } from './interfaces/IApiHandler';
 import { FilterCondition, PaginationOptions, PersistenceService } from '@/lib/db/intf';
 import { PromptTemplate } from '@langchain/core/prompts';
+import { getCurrentUserId } from '@/lib/utils';
 
 /**
  * 通用API处理基类，实现IApiHandler接口
@@ -171,6 +172,9 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
     async handleCreate(request: BaseRequest<BO>): Promise<BaseResponse<BO>> {
         try {
             // 处理自动生成
+            if (!request.userId) {
+                request.userId = await getCurrentUserId();
+            }
             if (request.autoGenerate) {
                 return this.handleAutoGenerate(request);
             }
@@ -525,7 +529,7 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
 
             // 检查是否同时需要生成新对象和更新现有对象
             const generateBoth = !!request.generateBothCreatedAndUpdated;
-            
+
             // 优先使用parseBatchWithUpdates处理
             if (typeof this.outputParser.parseBatchWithUpdates === 'function') {
                 const prompt = this.promptBuilder.buildCreatePrompt();

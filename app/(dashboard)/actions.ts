@@ -1,5 +1,7 @@
 import { BaseResponse } from '@/app/api/lib/types';
-import { TodoBO } from '../api/types';
+import { TagBO, TodoBO } from '../api/types';
+import { get } from 'http';
+import { getCurrentUserId } from '@/lib/utils';
 
 
 export async function fetchTodosByDate(date: Date): Promise<BaseResponse<TodoBO>> {
@@ -21,4 +23,91 @@ export async function fetchTodosByDate(date: Date): Promise<BaseResponse<TodoBO>
 
   const result: BaseResponse<TodoBO> = await response.json();
   return result;
+}
+
+// 真实API调用 - 获取标签列表
+export async function fetchTags(kind?: string): Promise<BaseResponse<TagBO>> {
+  try {
+    let response;
+    if (!kind) {
+      response = await fetch(`/api/tag`);
+    } else {
+      const params = new URLSearchParams({ kind });
+      response = await fetch(`/api/tag?${params.toString()}`);
+    }
+    const result: BaseResponse<TagBO> = await response.json();
+    return result;
+  } catch (error) {
+    console.error("获取标签失败:", error);
+    return {
+      success: false,
+      message: '获取标签失败',
+      data: []
+    };
+  }
+}
+
+// 创建标签API
+export async function createTagApi(tag: Omit<TagBO, "id">): Promise<BaseResponse<TagBO>> {
+  try {
+    const response = await fetch('/api/tag', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: tag }),
+    });
+
+    const result: BaseResponse<TagBO> = await response.json();
+    return result;
+  } catch (error) {
+    console.error("创建标签失败:", error);
+    return {
+      success: false,
+      message: '创建标签失败',
+      data: null
+    };
+  }
+}
+
+// 更新标签API
+export async function updateTagApi(tag: TagBO): Promise<BaseResponse<TagBO>> {
+  try {
+    const response = await fetch(`/api/tag/${tag.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(tag),
+    });
+
+    const result: BaseResponse<TagBO> = await response.json();
+    return result;
+  } catch (error) {
+    console.error("更新标签失败:", error);
+    return {
+      success: false,
+      message: '更新标签失败',
+      data: null
+    };
+  }
+}
+
+// 删除标签API
+export async function deleteTagApi(tagId: number): Promise<BaseResponse<boolean>> {
+  try {
+    const response = await fetch(`/api/tag/${tagId}`, {
+      method: 'DELETE',
+    });
+
+    const result: BaseResponse<boolean> = await response.json();
+    return result;
+  } catch (error) {
+    console.error("删除标签失败:", error);
+    return {
+      success: false,
+      message: '删除标签失败',
+      data: false
+    };
+  }
 }

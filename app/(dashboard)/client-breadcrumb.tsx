@@ -13,14 +13,14 @@ import {
 
 export function ClientBreadcrumb() {
   const pathname = usePathname();
-  
+
   // 根据路径返回不同的面包屑内容
   let breadcrumbItems = {
     link: '/dashboard',
     name: 'Dashboard',
     page: '仪表盘'
   };
-  
+
   if (pathname?.includes('/habits')) {
     breadcrumbItems = {
       link: '/habits',
@@ -45,6 +45,12 @@ export function ClientBreadcrumb() {
       name: 'Pomodoro',
       page: '番茄钟'
     };
+  } else if (pathname?.includes('/tags')) {
+    breadcrumbItems = {
+      link: '/tags',
+      name: 'Tags',
+      page: '标签管理'
+    };
   } else if (pathname?.includes('/todolist')) {
     breadcrumbItems = {
       link: '/todolist',
@@ -57,13 +63,13 @@ export function ClientBreadcrumb() {
       name: 'Goals',
       page: '目标追踪'
     };
-  }  else if (pathname?.includes('/summary')) {
+  } else if (pathname?.includes('/summary')) {
     breadcrumbItems = {
       link: '/summary',
       name: 'Summary',
       page: '个人总结'
     };
-  } 
+  }
   else if (pathname?.includes('/ai-history')) {
     // 添加AI历史面包屑
     if (pathname.includes('/ai-history/')) {

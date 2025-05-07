@@ -14,7 +14,8 @@ import {
   History,
   Brain,
   MessageSquare,
-  FileBarChart // 导入总结图表相关图标
+  FileBarChart, // 导入总结图表相关图标
+  Tag
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -100,6 +101,9 @@ function DesktopNav() {
         <NavItem href="/notes" label="Notes">
           <FileText className="h-5 w-5" />
         </NavItem>
+        <NavItem href="/tags" label="Tags">
+          <Tag className="h-5 w-5" />
+        </NavItem>
         <NavItem href="/ai-history" label="AI History">
           <Brain className="h-5 w-5" />
         </NavItem>
@@ -161,6 +165,13 @@ function MobileNav() {
           >
             <CalendarCheck2 className="h-5 w-5" />
             Habits
+          </Link>
+          <Link
+            href="/tags"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <Tag className="h-5 w-5" />
+            标签管理
           </Link>
           <Link
             href="/todolist"

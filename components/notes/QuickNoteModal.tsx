@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import TipTapEditor from "./TipTapEditor";
+import { MultiSelect } from "@/app/(dashboard)/todolist/components/multi-select";
+import { fetchTags } from "@/app/(dashboard)/actions";
 
 interface QuickNoteModalProps {
   isOpen: boolean;
@@ -10,15 +12,51 @@ interface QuickNoteModalProps {
   onSaved: () => void;
 }
 
+interface Tag {
+  value: string;
+  label: string;
+}
+
 export default function QuickNoteModal({ isOpen, onClose, onSaved }: QuickNoteModalProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
-  const [tags, setTags] = useState("");
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [isLoadingTags, setIsLoadingTags] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // 获取所有可用标签
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        setIsLoadingTags(true);
+        const response = await fetchTags("note");
+        if (response.success) {
+          setAvailableTags(response.data?.map((tag: any) => ({ 
+            value: tag.id.toString(), 
+            label: tag.name 
+          })));
+        }
+      } catch (error) {
+        console.error('获取标签失败:', error);
+      } finally {
+        setIsLoadingTags(false);
+      }
+    };
+
+    if (isOpen) {
+      loadTags();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  // 处理标签选择变化
+  const handleTagValueChange = (values: string[]) => {
+    setSelectedTagIds(values);
+  };
 
   async function handleSave() {
     if (!title.trim() || !content.trim()) {
@@ -30,11 +68,12 @@ export default function QuickNoteModal({ isOpen, onClose, onSaved }: QuickNoteMo
     setError("");
     
     try {
-      // 准备标签数据
-      const tagList = tags
-        ? tags.split(",").map(tag => tag.trim()).filter(tag => tag)
-        : [];
-        
+      // 从选择的标签ID获取标签名称
+      const tagList = selectedTagIds.map(id => {
+        const tag = availableTags.find(tag => tag.value === id);
+        return tag ? tag.label : "";
+      }).filter(name => name);
+      
       const response = await fetch("/api/note", {
         method: "POST",
         headers: {
@@ -57,12 +96,9 @@ export default function QuickNoteModal({ isOpen, onClose, onSaved }: QuickNoteMo
       setTitle("");
       setContent("");
       setCategory("");
-      setTags("");
+      setSelectedTagIds([]);
       
-      // 调用保存成功的回调
       onSaved();
-      
-      // 关闭模态框
       onClose();
     } catch (error) {
       console.error("保存笔记出错:", error);
@@ -135,15 +171,15 @@ export default function QuickNoteModal({ isOpen, onClose, onSaved }: QuickNoteMo
             
             <div>
               <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
-                标签 (可选，用逗号分隔)
+                标签 (可选)
               </label>
-              <input
-                type="text"
-                id="tags"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                className="w-full p-2 border rounded-md"
-                placeholder="标签1, 标签2"
+              <MultiSelect
+                options={availableTags}
+                defaultValue={selectedTagIds}
+                onValueChange={handleTagValueChange}
+                placeholder={isLoadingTags ? "加载标签中..." : "选择标签"}
+                className="w-full"
+                modalPopover={true}
               />
             </div>
           </div>
