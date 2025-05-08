@@ -122,10 +122,15 @@ export function createSingleResourceRoute<T, BO extends BusinessObject>(
       const body = await request.json();
       const userId = await getCurrentUserId();
       // 确保请求体中包含ID
+      if (!id) {
+        throw new Error("failed to get id from params")
+      }
       const data = { ...body, id, userId };
       // 取巧一下，如果没有data，就将整个作为data
       if (!body.data) {
         return await updateResource({ data: data, userId: userId });
+      } else {
+        body.data.id = id;
       }
       return await updateResource(data);
 

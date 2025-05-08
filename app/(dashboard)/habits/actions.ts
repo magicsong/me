@@ -82,32 +82,6 @@ export async function getUserRewards() {
   return getUserRewardsFromDB(userId);
 }
 
-// 添加更新习惯的函数
-export async function updateHabit(id: string, data: HabitBO) {
-  const userId = await getCurrentUserId();
-  try {
-    const response = await fetch(`/api/habit/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ data: { ...data, userId } }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || '更新习惯失败');
-    }
-
-    const result = await response.json();
-
-    return result;
-  } catch (error) {
-    console.error('更新习惯出错:', error);
-    throw error;
-  }
-}
-
 // 获取习惯的难度历史
 export async function getHabitDifficultyHistory(habitId: number) {
   const userId = await getCurrentUserId();

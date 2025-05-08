@@ -126,3 +126,31 @@ export async function getHabitDetail(habitId: number) {
     }
     throw new Error(data.error);
 }
+
+
+// 添加更新习惯的函数
+export async function updateHabit(id: string, data: Partial<HabitBO>) {
+  try {
+    const response = await fetch(`/api/habit/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '更新习惯失败');
+    }
+
+    const result = await response.json();
+    if (!result.success){
+        throw new Error(result.error || '更新习惯失败');
+    }
+    return result;
+  } catch (error) {
+    console.error('更新习惯出错:', error);
+    throw error;
+  }
+}

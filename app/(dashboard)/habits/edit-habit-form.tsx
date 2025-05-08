@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch'; // 导入Switch组件
 import { Pin } from 'lucide-react'; // 导入Pin图标
-import { updateHabit } from './actions';
 import { Slider } from '@/components/ui/slider';
+import { updateHabit } from './client-actions';
 
 type Habit = {
   id: string;
