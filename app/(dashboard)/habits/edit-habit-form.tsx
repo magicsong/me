@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch'; // 导入Switch组件
+import { Pin } from 'lucide-react'; // 导入Pin图标
 import { updateHabit } from './actions';
 import { Slider } from '@/components/ui/slider';
 
@@ -22,6 +24,7 @@ type Habit = {
   frequency: 'daily' | 'weekly' | 'monthly';
   category?: 'health' | 'productivity' | 'mindfulness' | 'learning' | 'social';
   rewardPoints?: number;
+  isPinned?: boolean; // 添加isPinned属性
 };
 
 interface EditHabitFormProps {
@@ -36,6 +39,7 @@ export function EditHabitForm({ habit, onSuccess }: EditHabitFormProps) {
   const [frequency, setFrequency] = useState(habit.frequency);
   const [category, setCategory] = useState(habit.category || 'health');
   const [rewardPoints, setRewardPoints] = useState(habit.rewardPoints || 10);
+  const [isPinned, setIsPinned] = useState(habit.isPinned || false); // 添加置顶状态
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,7 +50,8 @@ export function EditHabitForm({ habit, onSuccess }: EditHabitFormProps) {
         description,
         frequency,
         category,
-        rewardPoints
+        rewardPoints,
+        isPinned // 添加isPinned到更新数据中
       });
       onSuccess?.();
     } catch (error) {
@@ -108,6 +113,24 @@ export function EditHabitForm({ habit, onSuccess }: EditHabitFormProps) {
             <SelectItem value="social">社交</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+      
+      {/* 添加置顶开关 */}
+      <div className="flex items-center justify-between space-y-0 rounded-md border p-4">
+        <div className="space-y-0.5">
+          <div className="flex items-center">
+            <Label htmlFor="isPinned" className="text-base">置顶习惯</Label>
+            <Pin className="ml-2 h-4 w-4 text-amber-500" />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            置顶的习惯会优先显示在习惯列表顶部
+          </p>
+        </div>
+        <Switch
+          id="isPinned"
+          checked={isPinned}
+          onCheckedChange={setIsPinned}
+        />
       </div>
       
       <div className="space-y-2">

@@ -12,9 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch'; // 导入Switch组件
 import { createHabit } from './actions';
 import { useRouter } from 'next/navigation';
 import { Slider } from '@/components/ui/slider';
+import { Pin } from 'lucide-react'; // 导入Pin图标
 
 interface CreateHabitFormProps {
   onSuccess?: () => void;
@@ -24,14 +26,20 @@ export function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rewardPoints, setRewardPoints] = useState(10);
+  const [isPinned, setIsPinned] = useState(false); // 添加置顶状态
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true);
     try {
+      // 将isPinned值添加到表单数据
+      formData.append('isPinned', isPinned.toString());
+      
       await createHabit(formData);
       router.refresh();
       // 清空表单
       (document.getElementById('habit-form') as HTMLFormElement).reset();
+      // 重置isPinned状态
+      setIsPinned(false);
       // 调用成功回调
       onSuccess?.();
     } catch (error) {
@@ -85,6 +93,24 @@ export function CreateHabitForm({ onSuccess }: CreateHabitFormProps) {
             <SelectItem value="social">社交</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+      
+      {/* 添加置顶开关 */}
+      <div className="flex items-center justify-between space-y-0 rounded-md border p-4">
+        <div className="space-y-0.5">
+          <div className="flex items-center">
+            <Label htmlFor="isPinned" className="text-base">置顶习惯</Label>
+            <Pin className="ml-2 h-4 w-4 text-amber-500" />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            置顶的习惯会优先显示在习惯列表顶部
+          </p>
+        </div>
+        <Switch
+          id="isPinned"
+          checked={isPinned}
+          onCheckedChange={setIsPinned}
+        />
       </div>
       
       {/* 奖励点数 */}

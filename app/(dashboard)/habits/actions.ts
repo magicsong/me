@@ -24,6 +24,7 @@ import {
 } from '@/lib/db-rewards';
 import { HabitEntry } from '@/lib/persist/habit-entry';
 import { getCurrentUserId } from '@/lib/utils';
+import { HabitBO } from '@/app/api/types';
 
 export async function createHabit(formData: FormData) {
   const userId = await getCurrentUserId();
@@ -82,36 +83,29 @@ export async function getUserRewards() {
 }
 
 // 添加更新习惯的函数
-export async function updateHabit(id: string, data: {
-  name: string;
-  description?: string;
-  frequency?: 'daily' | 'weekly' | 'monthly';
-  category?: string;
-  rewardPoints?: number;
-}) {
+export async function updateHabit(id: string, data: HabitBO) {
   const userId = await getCurrentUserId();
+  try {
+    const response = await fetch(`/api/habit/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: { ...data, userId } }),
+    });
 
-  // 验证
-  if (!data.name) throw new Error('习惯名称不能为空');
-
-  // 确保解构出独立的字段传递给数据库函数
-  const { name, description, frequency, category, rewardPoints } = data;
-
-  // 更新数据库 - 分别传递各个字段
-  await updateHabitInDB(
-    Number(id),
-    userId,
-    {
-      name,
-      description,
-      frequency,
-      category,       // 确保这是一个字符串
-      rewardPoints    // 确保这是一个数字
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '更新习惯失败');
     }
-  );
 
-  revalidatePath('/habits');
-  return { success: true };
+    const result = await response.json();
+
+    return result;
+  } catch (error) {
+    console.error('更新习惯出错:', error);
+    throw error;
+  }
 }
 
 // 获取习惯的难度历史

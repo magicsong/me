@@ -119,6 +119,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       failedToday: dataObject.checkinStatus === 'failed',
       failureReason: dataObject.failureReason,
       checkInDays: dataObject.checkin_days,
+      isPinned: dataObject.is_pinned,
     };
   }
   fieldsMoveToExtraOptionsWhenGet(): string[] {
@@ -138,6 +139,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       status: businessObject.status,
       streak: businessObject.streak,
       checkin_days: businessObject.checkInDays,
+      is_pinned: businessObject.isPinned,
     };
   }
 

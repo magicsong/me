@@ -254,9 +254,6 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
                 const dataObject = this.toDataObject(item);
                 return dataObject;
             });
-            const dataObjects = this.toDataObjects(request.data);
-            // 确保每个数据对象都包含用户ID
-
             const createdItems = await this.persistenceService.createMany(dataObjectsWithUserId as Partial<T>[]);
 
             // 转换回业务对象返回

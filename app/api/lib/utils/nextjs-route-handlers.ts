@@ -237,6 +237,7 @@ export function createNextRouteHandlers<T, BO extends BusinessObject>(handler: I
       const body = await request.json();
       const { isAIGeneration, isBatch, ...rest } = body;
       let myRequest: BaseRequest<BO> | BaseBatchRequest<BO> = rest;
+      myRequest.userId = userId;
       if (rest.data && typeof rest.data === 'object') {
         myRequest.data.userId = userId;
       }
@@ -244,7 +245,7 @@ export function createNextRouteHandlers<T, BO extends BusinessObject>(handler: I
         console.log('没有data字段，使用默认数据');
         myRequest.data = { ...rest, userId };
       }
-      
+
       if (isAIGeneration) {
         if (isBatch) {
           // AI批量生成

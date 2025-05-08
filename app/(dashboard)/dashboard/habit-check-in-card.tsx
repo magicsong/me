@@ -11,6 +11,7 @@ import {
   CalendarIcon, CheckCheck,
   CheckCircle2, Circle,
   Clock,
+  Pin,
   Trophy, XCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation'; // 添加导航钩子
@@ -60,7 +61,13 @@ export function HabitCheckInCard() {
         throw new Error('获取习惯数据失败');
       }
       const data = await response.json();
-      setHabits(data.data || []);
+      // 对习惯进行排序，将置顶的习惯放在前面
+      const habitsData = data.data || [];
+      habitsData.sort((a, b) => {
+        if (a.isPinned === b.isPinned) return 0;
+        return a.isPinned ? -1 : 1; // isPinned 为 true 的排在前面
+      });
+      setHabits(habitsData);
     } catch (error) {
       console.error('获取习惯数据错误:', error);
       toast.error('获取习惯数据失败，请稍后再试');
@@ -107,10 +114,11 @@ export function HabitCheckInCard() {
 
     try {
       // 1. 完成打卡
-      await completeHabit(data.habitId, { comment: data.comment, 
-        difficulty: data.difficulty, 
+      await completeHabit(data.habitId, {
+        comment: data.comment,
+        difficulty: data.difficulty,
         tierId: data.tierId,
-        completedAt: new Date().toUTCString() 
+        completedAt: new Date().toUTCString()
       });
       // 使用 sonner 显示成功消息
       toast.success("🎉 已完成！继续加油！", {
@@ -253,7 +261,13 @@ export function HabitCheckInCard() {
 
                   {/* 在列表项中显示完成或失败状态 */}
                   <div className="flex-1">
-                    <div className="font-medium">{habit.name}</div>
+                    <div className="font-medium">{habit.name}
+                      {habit.isPinned && (
+                        <span className="ml-2 text-amber-500 flex items-center" title="置顶习惯">
+                          <Pin className="h-3 w-3" />
+                        </span>
+                      )}
+                    </div>
                     {habit.description && (
                       <div className="text-xs text-muted-foreground">{habit.description}</div>
                     )}

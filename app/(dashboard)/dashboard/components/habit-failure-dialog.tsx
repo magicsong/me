@@ -23,13 +23,14 @@ import { Lightbulb, XCircle, BookOpen } from "lucide-react";
 import { HabitBO } from "@/app/api/types";
 
 // 类型定义
-type FailureReason = 
+type FailureReason =
+  | "没有延迟满足"  
   | "时间管理问题" 
   | "精力不足" 
   | "外部干扰" 
   | "目标设置不合理" 
   | "忘记了" 
-  | "身体不适" 
+  | "身体不适"
   | "其他";
 
 type HabitFailureDialogProps = {
@@ -99,6 +100,7 @@ export function HabitFailureDialog({
   const renderEncouragementTip = () => {
     // 根据不同的失败原因提供针对性建议
     const tips = {
+      "没有延迟满足": "延迟满足的核心在于以终为始，主动节制眼前诱惑，持续执行能放大长期收益的理性规划",
       "时间管理问题": "尝试使用番茄工作法或时间块技术，为习惯预留固定时间段。",
       "精力不足": "考虑调整习惯执行的时间，选择你精力最充沛的时段。",
       "外部干扰": "创建一个无干扰环境，或告诉他人你需要专注时间。",
