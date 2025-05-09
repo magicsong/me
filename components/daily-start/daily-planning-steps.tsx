@@ -1,3 +1,4 @@
+import { PlanResult } from '@/app/api/todo/types';
 import { TodoBO } from "@/app/api/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,6 @@ import { Switch } from "@/components/ui/switch";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { PlanResultTimelineView } from '../PlanResultTimelineView'; // 添加导入
-import { PlanResult } from '@/app/api/todo/types';
 
 import {
   ArrowRightIcon,
@@ -20,14 +20,16 @@ import {
   SparklesIcon,
   SunIcon,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
+import { LoadingModal } from "../ui/loading-modal";
+import { saveSchedule } from "./actions";
 import { QuadrantPlanner } from "./quadrant-planner";
 import { TaskSuggestionDialog } from "./task-suggestion-dialog";
-import { LoadingModal } from "../ui/loading-modal";
-import { format } from "date-fns";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
-import { saveSchedule } from "./actions";
+import { format } from 'date-fns/format';
+import { BaseResponse } from '@/lib/types';
+import { InsightData } from '@/lib/types/ai-insight';
 
 interface DailyPlanningStepsProps {
   onStartFocusing: () => void;
@@ -45,6 +47,7 @@ export function DailyPlanningSteps({
   const [currentStep, setCurrentStep] = useState(1);
   const [isCompleted, setIsCompleted] = useState(false);
   const [intention, setIntention] = useState("");
+  const [aiSummary, setAiSummary] = useState(""); // 新增AI总结状态
   const [updateExisting, setUpdateExisting] = useState(false);
   // 保留时间安排相关状态
   const [timeSchedule, setTimeSchedule] = useState("");
@@ -76,17 +79,16 @@ export function DailyPlanningSteps({
     }
   }, []);
 
-  // 添加这个useEffect来加载昨天总结中的明日展望作为今日意图的默认值
+  // 修改useEffect来分别加载昨天总结中的明日展望和AI总结
   useEffect(() => {
     const fetchDefaultIntention = async () => {
       try {
         // 获取昨日的日期
-
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-        // 调用API获取今日习惯数据（包含昨日明日展望作为intention）
+        // 调用API获取昨日总结数据
         const response = await fetch(`/api/daily-summary?date=${yesterdayStr}`);
 
         if (!response.ok) {
@@ -96,18 +98,43 @@ export function DailyPlanningSteps({
 
         const data = await response.json();
 
-        // 如果返回了intention且当前未设置，则设置为默认值
-        if (data.success && data.data[0] && data.data[0].content.tomorrowGoals) {
-          setIntention(data.data[0].content.tomorrowGoals);
-          toast.info('已加载昨日规划的明日展望');
+        // 如果返回了数据
+        if (data.success && data.data[0]) {
+          const summaryData = data.data[0];
+
+          // 设置昨日明日目标为今日意图
+          if (summaryData.content && summaryData.content.tomorrowGoals) {
+            setIntention(summaryData.content.tomorrowGoals);
+            toast.info('已加载昨日规划的明日展望');
+          }
+
+          // 获取AI总结
+          const startDateStr = format(yesterday, 'yyyy-MM-dd');
+          const endDateStr = format(yesterday, 'yyyy-MM-dd');
+          const kind = 'daily_summary';
+          const aiResponse = await fetch(
+            `/api/ai/insight?startDate=${startDateStr}&endDate=${endDateStr}&kind=${kind}`,
+            { method: 'GET' }
+          );
+
+          if (aiResponse.ok) {
+            const result = await aiResponse.json() as BaseResponse<InsightData>;
+            if (result.success && result.data && result.data[0]?.content) {
+              // 设置AI总结为单独的状态
+              setAiSummary(result.data[0].content);
+              toast.info('已加载昨日AI总结');
+            }
+          } else {
+            console.error('获取AI总结失败:', await aiResponse.text());
+          }
         }
       } catch (error) {
         console.error('获取默认intention失败:', error);
       }
     };
 
-    // 只有当intention为空时才获取默认值
-    if (!intention.trim()) {
+    // 只有当intention和aiSummary为空时才获取默认值
+    if (!intention.trim() && !aiSummary.trim()) {
       fetchDefaultIntention();
     }
   }, []); // 组件挂载时执行一次
@@ -507,9 +534,22 @@ export function DailyPlanningSteps({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <h3 className="font-medium">今日意图:</h3>
-            <p className="text-muted-foreground bg-secondary/20 p-3 rounded-md">{intention || "未设置今日意图"}</p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h3 className="font-medium">今日意图:</h3>
+                <p className="text-muted-foreground bg-secondary/20 p-3 rounded-md whitespace-pre-line break-words">{intention || "未设置今日意图"}</p>
+              </div>
+
+              {aiSummary && (
+                <div className="space-y-2">
+                  <h3 className="font-medium">AI昨日总结 (参考):</h3>
+                  <div className="bg-secondary/20 p-4 rounded-md shadow-md border border-secondary/30 max-h-[300px] overflow-y-auto">
+                    <p className="text-muted-foreground whitespace-pre-line break-words">{aiSummary}</p>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <Button className="w-full mt-4" onClick={onStartFocusing}>
               开始专注
@@ -589,12 +629,28 @@ export function DailyPlanningSteps({
             <div className="space-y-4">
               <h3 className="font-semibold">今日规划</h3>
               <p className="text-muted-foreground">描述今天的主要目标和意图</p>
-              <Textarea
-                placeholder="今天我想要..."
-                value={intention}
-                onChange={(e) => setIntention(e.target.value)}
-                className="min-h-[100px]"
-              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="intention">今日意图</Label>
+                  <Textarea
+                    id="intention"
+                    placeholder="今天我想要..."
+                    value={intention}
+                    onChange={(e) => setIntention(e.target.value)}
+                    className="min-h-[200px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ai-summary">AI昨日总结 (参考)</Label>
+                  <div className="bg-secondary/20 p-4 rounded-md shadow-md border border-secondary/30 max-h-[300px] overflow-y-auto">
+                    <p className="text-muted-foreground whitespace-pre-line break-words">
+                      {aiSummary || "暂无AI总结"}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-4">
                 <div className="flex items-center space-x-2 mb-2">
