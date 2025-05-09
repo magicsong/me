@@ -10,7 +10,7 @@ export async function completeHabit(
         tierId?: number;
         comment?: string;
         difficulty?: string;
-        completedAt?: string;
+        completedAt?: Date;
         status?: string;
         failureReason?: string;
     }
@@ -26,7 +26,7 @@ export async function completeHabit(
             tierId: options?.tierId,
             comment: options?.comment,
             difficulty: options?.difficulty,
-            completedAt: options?.completedAt,
+            completedAt: options?.completedAt?.toISOString(),
             status: options?.status,
             failureReason: options?.failureReason
 
@@ -41,21 +41,13 @@ export async function completeHabit(
 }
 
 // 修改 completeHabitOnDate 函数，使用新的 completeHabit 函数
-export async function completeHabitOnDate(habitId: number, date: string) {
+export async function completeHabitOnDate(habitId: number, targetDate: Date) {
     // 检查环境变量是否允许补打卡
     if (process.env.NEXT_PUBLIC_ALLOW_BACKFILL !== 'true') {
         throw new Error('补打卡功能未启用');
     }
-
-    // 确保日期有效
-    const targetDate = new Date(date);
-    if (isNaN(targetDate.getTime())) {
-        throw new Error('无效的日期格式');
-    }
-    targetDate.setHours(0, 0, 0, 0); // 设置时间为00:00:00
-
     // 使用 completeHabit 进行补打卡
-    return completeHabit(habitId, { completedAt: targetDate.toISOString() });
+    return completeHabit(habitId, { completedAt: targetDate });
 }
 
 

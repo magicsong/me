@@ -118,7 +118,7 @@ export function HabitCheckInCard() {
         comment: data.comment,
         difficulty: data.difficulty,
         tierId: data.tierId,
-        completedAt: new Date().toUTCString()
+        completedAt: new Date(),
       });
       // 使用 sonner 显示成功消息
       toast.success("🎉 已完成！继续加油！", {

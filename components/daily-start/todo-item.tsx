@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TodoBO } from "@/app/api/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { CheckIcon, TrashIcon, PencilIcon, TimerIcon, TagIcon, PlusIcon, XIcon } from "lucide-react";
+import { CheckIcon, TrashIcon, PencilIcon, TimerIcon, TagIcon, PlusIcon, XIcon, BrainIcon, Loader2 } from "lucide-react";
 import { TodoPriority } from "./todo-priority";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -53,6 +53,7 @@ interface TodoItemProps {
   onUpdateTags: (todoId: number, tagIds: number[]) => Promise<boolean>;
   onStartPomodoro?: (todoId: number) => void;
   onCreateTag: (name: string, color: string) => Promise<{ id: number; name: string; color: string }>;
+  onCreateSubTasks?: (todoId: number, subTasks: Array<{ title: string, description?: string }>) => Promise<boolean>;
 }
 
 export function TodoItem({
@@ -66,7 +67,8 @@ export function TodoItem({
   onDelete,
   onUpdateTags,
   onStartPomodoro,
-  onCreateTag
+  onCreateTag,
+  onCreateSubTasks
 }: TodoItemProps) {
   const [isCompleting, setIsCompleting] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -75,6 +77,9 @@ export function TodoItem({
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#3b82f6"); // 默认蓝色
   const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [isAiSplitOpen, setIsAiSplitOpen] = useState(false);
+  const [isGeneratingSubTasks, setIsGeneratingSubTasks] = useState(false);
+  const [generatedSubTasks, setGeneratedSubTasks] = useState<Array<{ title: string, description?: string }>>([]);
   const router = useRouter();
   const form = useForm<Partial<TodoBO>>({
     defaultValues: {
@@ -226,6 +231,66 @@ export function TodoItem({
     }
   };
 
+  const handleAiSplit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAiSplitOpen(true);
+  };
+
+  const generateSubTasks = async () => {
+    setIsGeneratingSubTasks(true);
+    try {
+      const response = await fetch(`/api/ai/split-task`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: todo.title,
+          description: todo.description,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('AI拆分任务失败');
+      }
+
+      const data = await response.json();
+      setGeneratedSubTasks(data.subTasks || []);
+    } catch (error) {
+      console.error('AI拆分任务失败:', error);
+      alert('AI拆分任务失败，请重试');
+    } finally {
+      setIsGeneratingSubTasks(false);
+    }
+  };
+
+  const handleSaveSubTasks = async () => {
+    if (onCreateSubTasks && generatedSubTasks.length > 0) {
+      try {
+        await onCreateSubTasks(todo.id, generatedSubTasks);
+        setIsAiSplitOpen(false);
+        setGeneratedSubTasks([]);
+      } catch (error) {
+        console.error('保存子任务失败:', error);
+        alert('保存子任务失败，请重试');
+      }
+    }
+  };
+
+  const handleEditSubTask = (index: number, field: 'title' | 'description', value: string) => {
+    const newSubTasks = [...generatedSubTasks];
+    if (field === 'title') {
+      newSubTasks[index].title = value;
+    } else {
+      newSubTasks[index].description = value;
+    }
+    setGeneratedSubTasks(newSubTasks);
+  };
+
+  const handleRemoveSubTask = (index: number) => {
+    setGeneratedSubTasks(prev => prev.filter((_, i) => i !== index));
+  };
+
   return (
     <>
       <div
@@ -246,6 +311,14 @@ export function TodoItem({
           <div className="flex items-center gap-2">
             <TodoPriority priority={todo.priority} showLabel={false} />
             <span className="font-medium truncate">{todo.title}</span>
+
+            {/* 显示番茄钟计数 */}
+            {todo.pomodoroCount && todo.pomodoroCount > 0 && (
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                <TimerIcon className="h-3 w-3" />
+                <span>{todo.pomodoroCount}个番茄钟</span>
+              </Badge>
+            )}
           </div>
 
           {todo.description && (
@@ -308,6 +381,17 @@ export function TodoItem({
           >
             <TimerIcon className="h-4 w-4" />
             <span>番茄钟</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-1 h-8"
+            onClick={handleAiSplit}
+            title="AI拆分任务"
+          >
+            <BrainIcon className="h-4 w-4" />
+            <span>AI拆分</span>
           </Button>
 
           <Button
@@ -584,6 +668,89 @@ export function TodoItem({
               </Button>
             </DialogFooter>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAiSplitOpen} onOpenChange={setIsAiSplitOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>AI拆分任务</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="bg-muted p-3 rounded-md">
+              <h3 className="font-medium">原任务:</h3>
+              <p className="font-medium">{todo.title}</p>
+              {todo.description && (
+                <p className="text-sm text-muted-foreground">{todo.description}</p>
+              )}
+            </div>
+
+            {!generatedSubTasks.length && !isGeneratingSubTasks && (
+              <Button
+                onClick={generateSubTasks}
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <BrainIcon className="h-4 w-4" />
+                <span>开始AI任务拆分</span>
+              </Button>
+            )}
+
+            {isGeneratingSubTasks && (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="ml-2">AI正在为您拆分任务...</p>
+              </div>
+            )}
+
+            {generatedSubTasks.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="font-medium">拆分后的子任务:</h3>
+                {generatedSubTasks.map((subTask, index) => (
+                  <div key={index} className="border rounded-md p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <Input
+                          value={subTask.title}
+                          onChange={(e) => handleEditSubTask(index, 'title', e.target.value)}
+                          className="font-medium"
+                          placeholder="子任务标题"
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveSubTask(index)}
+                        className="text-red-500"
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={subTask.description || ''}
+                      onChange={(e) => handleEditSubTask(index, 'description', e.target.value)}
+                      placeholder="子任务描述（可选）"
+                      className="text-sm"
+                      rows={2}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsAiSplitOpen(false)}>
+              取消
+            </Button>
+            <Button
+              type="button"
+              disabled={generatedSubTasks.length === 0}
+              onClick={handleSaveSubTasks}
+            >
+              保存子任务
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

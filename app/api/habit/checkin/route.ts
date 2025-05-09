@@ -32,9 +32,6 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-    if (!completedAt){
-      return NextResponse.json({ success: false, error: '缺少完成时间' }, { status: 400 }); 
-    }
     const result = await habitService.checkInHabit(
       Number(habitId),
       userId,
@@ -42,7 +39,7 @@ export async function POST(request: NextRequest) {
         tierId: tierId ? Number(tierId) : undefined,
         comment,
         difficulty: difficulty,
-        completedAt: completedAt || undefined,
+        completedAt: completedAt || new Date().toISOString(),
         status: status || "successful",
         failureReason: failureReason,
       }

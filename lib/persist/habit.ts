@@ -179,7 +179,7 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
       tierId?: number;
       comment?: string;
       difficulty?: string;
-      completedAt?: Date | string;
+      completedAt?: string;
       status?: string,
       failureReason?: string,
     }
@@ -190,7 +190,11 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
     try {
       const { tierId, comment, difficulty, completedAt } = options || {};
       const checkInDate = completedAt ? new Date(completedAt) : new Date();
-      const dateStr = format(checkInDate, 'yyyy-MM-dd');
+      const startDate = new Date(checkInDate);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(checkInDate);
+      endDate.setHours(23, 59, 59, 999);
 
       // 检查指定日期是否已打卡
       const existingCheckIn = await this.db
@@ -200,7 +204,7 @@ export class HabitPersistenceService extends BaseRepository<typeof habits, Habit
           and(
             eq(habit_entries.habit_id, habitId),
             eq(habit_entries.user_id, userId),
-            sql`DATE(${habit_entries.completed_at}) = ${dateStr}`
+            sql`${habit_entries.completed_at} BETWEEN ${startDate} AND ${endDate}`
           )
         )
         .limit(1);

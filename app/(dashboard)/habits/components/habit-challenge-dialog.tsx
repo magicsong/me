@@ -72,7 +72,7 @@ export function HabitChallengeDialog({
     async function handleCompleteTier(habitId: number, tierId: number) {
         try {
             setCompletingTier(tierId);
-            await completeHabit(habitId, tierId);
+            await completeHabit(habitId, {tierId});
 
             if (onRefresh) {
                 onRefresh();

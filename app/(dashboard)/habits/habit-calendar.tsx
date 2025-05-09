@@ -171,19 +171,11 @@ export function HabitCalendar({
     try {
       // Create a date with selected date's year/month/day but current time
       const now = new Date();
-      const backfillDate = new Date(
-        selectedDate.getFullYear(),
-        selectedDate.getMonth(),
-        selectedDate.getDate(),
-        now.getHours(),
-        now.getMinutes(),
-        now.getSeconds(),
-        now.getMilliseconds()
-      );
+      selectedDate.setHours(now.getHours());
 
       await completeHabitOnDate(
         habit.id,
-        backfillDate.toISOString()
+        selectedDate
       );
 
       // 刷新习惯历史
