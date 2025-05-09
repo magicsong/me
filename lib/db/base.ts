@@ -435,12 +435,6 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
                 console.log(`字段 ${key} 在表 ${this.table.name} 中不存在`);
                 continue;
             }
-            // 在处理 date 字段前添加
-        if (key === 'date') {
-            console.log('date字段值:', value);
-            console.log('date字段类型:', typeof value);
-            console.log('date字段在表中存在:', key in this.table);
-        }
 
             if (typeof value === 'object' && !Array.isArray(value)) {
                 const complexFilter = value as any;

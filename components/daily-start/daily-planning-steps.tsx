@@ -30,6 +30,7 @@ import { TaskSuggestionDialog } from "./task-suggestion-dialog";
 import { format } from 'date-fns/format';
 import { BaseResponse } from '@/lib/types';
 import { InsightData } from '@/lib/types/ai-insight';
+import { stat } from 'fs';
 
 interface DailyPlanningStepsProps {
   onStartFocusing: () => void;
@@ -121,8 +122,10 @@ export function DailyPlanningSteps({
             const result = await aiResponse.json() as BaseResponse<InsightData>;
             if (result.success && result.data && result.data[0]?.content) {
               // 设置AI总结为单独的状态
-              setAiSummary(result.data[0].content);
-              toast.info('已加载昨日AI总结');
+              if (result.data[0].content.trim()) {
+                setAiSummary(result.data[0].content.trim());
+                toast.info('已加载昨日AI总结');
+              }
             }
           } else {
             console.error('获取AI总结失败:', await aiResponse.text());
@@ -150,7 +153,7 @@ export function DailyPlanningSteps({
       yesterday.setMinutes(0);
       const yesterdayStr = yesterday.toUTCString();
       // 获取昨天未完成的任务
-      const response = await fetch(`/api/todo?plannedDate_lt=${yesterdayStr}&status_ne=completed`);
+      const response = await fetch(`/api/todo?plannedDate_lt=${yesterdayStr}&status=in_progress`);
 
       if (!response.ok) {
         throw new Error('获取昨日任务失败');
@@ -299,13 +302,15 @@ export function DailyPlanningSteps({
       const created = data.data.created?.map((todo: any) => ({
         ...todo,
         priority: todo.priority || 'medium',  // 默认中等优先级
-        expanded: false
+        expanded: false,
+        status: 'in_progress' // 默认状态为进行中
       })) || [];
 
       const updated = data.data.updated?.map((todo: any) => ({
         ...todo,
         priority: todo.priority || 'medium',  // 默认中等优先级
-        expanded: false
+        expanded: false,
+        status: 'in_progress' // 默认状态为进行中
       })) || [];
 
       // 存储完整的任务数据用于弹窗展示

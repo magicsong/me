@@ -26,25 +26,28 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
 
   setDefaultsBO(businessObject: Partial<TodoBO>, isUpdate: boolean): Partial<TodoBO> {
     const now = new Date();
+    
+    // 创建一个新对象，保留所有原始字段
+    const result = { ...businessObject };
 
     // 设置默认值
     if (!isUpdate) {
-      businessObject.createdAt = now.toISOString();
-      businessObject.updatedAt = now.toISOString();
-      if (!businessObject.plannedDate) {
-        businessObject.plannedDate = now.toISOString();
+      result.createdAt = now.toISOString();
+      result.updatedAt = now.toISOString();
+      if (!result.plannedDate) {
+        result.plannedDate = now.toISOString();
       }
       // 设置默认的状态和优先级
-      if (!businessObject.status) {
-        businessObject.status = 'pending';
+      if (!result.status) {
+        result.status = 'pending';
       }
-      if (!businessObject.priority) {
-        businessObject.priority = 'medium';
+      if (!result.priority) {
+        result.priority = 'medium';
       }
     } else {
-      businessObject.updatedAt = now.toISOString();
+      result.updatedAt = now.toISOString();
     }
-    return businessObject;
+    return result;
   }
   protected generateId(): string {
     // 在这个实现中，我们依赖于数据库来生成 ID

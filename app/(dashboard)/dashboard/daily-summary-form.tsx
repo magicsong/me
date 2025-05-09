@@ -98,6 +98,22 @@ export function DailySummaryForm({
     }
   }, [isOpen, summaryDate]);
 
+  type DailySummary = {
+    date: string;
+    dateType: 'today' | 'yesterday';
+    completedTasks: string[];
+    completionCount: number;
+    completionScore: number;
+    goodThings: string[];
+    learnings: string;
+    challenges: string;
+    improvements: string;
+    mood: string;
+    energyLevel: string;
+    sleepQuality: string;
+    tomorrowGoals: string;
+    failedTasks: string[];
+  };
   // 加载已有总结数据
   useEffect(() => {
     async function loadExistingSummary() {
@@ -110,10 +126,7 @@ export function DailySummaryForm({
         const result = await fetchDailySummary(dateStr);
 
         if (result.success && result.data) {
-          const summaryData = result.data.content;
-          if (result.data.ai_summary) {
-            summaryData.AiSummary = result.data.ai_summary;
-          }
+          const summaryData = result.data.content as DailySummary;
           // 填充表单数据
           if (summaryData.completionScore) setCompletionScore(summaryData.completionScore);
           if (summaryData.goodThings?.length) setGoodThings(
@@ -163,7 +176,7 @@ export function DailySummaryForm({
   const handleSubmit = async () => {
     setSubmitting(true);
 
-    const formData = {
+    const formData: DailySummary = {
       date: getDateString(),
       dateType: summaryDate,
       completedTasks: completedTasks, // 直接使用传入的已完成任务

@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
+import { pl } from 'date-fns/locale';
 
 interface TodoItemProps {
   todo: TodoBO;
@@ -54,12 +55,12 @@ interface TodoItemProps {
   onCreateTag: (name: string, color: string) => Promise<{ id: number; name: string; color: string }>;
 }
 
-export function TodoItem({ 
-  todo, 
-  tags, 
+export function TodoItem({
+  todo,
+  tags,
   allTags = [],
-  selected, 
-  onSelect, 
+  selected,
+  onSelect,
   onUpdate,
   onComplete,
   onDelete,
@@ -91,7 +92,7 @@ export function TodoItem({
   const handleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onComplete || isCompleting) return;
-    
+
     setIsCompleting(true);
     try {
       await onComplete(todo.id);
@@ -99,19 +100,19 @@ export function TodoItem({
       setIsCompleting(false);
     }
   };
-  
+
   const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     if (confirm('确定要删除此任务吗？')) {
       await onDelete(todo.id);
     }
   };
-  
+
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsEditOpen(true);
   };
-  
+
   const handleSubmitEdit = async (data: Partial<TodoBO>) => {
     await onUpdate({
       ...todo,
@@ -120,28 +121,46 @@ export function TodoItem({
     setIsEditOpen(false);
   };
 
-  const handleStartPomodoro = (e: React.MouseEvent) => {
+  const handleStartPomodoro = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    // 如果任务状态为 pending，先将其更新为 in_progress
+    if (todo.status === 'pending') {
+      try {
+        // 创建更新对象，只更新状态字段
+        const updatedTodo = {
+          ...todo,
+          status: 'in_progress',
+        };
+        if (!updatedTodo.plannedStartTime) {
+          updatedTodo.plannedStartTime = new Date().toISOString();
+        }
+        // 调用更新函数
+        await onUpdate(updatedTodo);
+      } catch (error) {
+        console.error('更新任务状态失败:', error);
+        // 即使状态更新失败，仍然继续启动番茄钟
+      }
+    }
     if (onStartPomodoro) {
-      onStartPomodoro(todo.id);
-    } else{
+      await onStartPomodoro(todo.id);
+    } else {
       router.push(`/pomodoro?todoId=${todo.id}`);
-    } 
+    }
   };
-  
+
   const handleTagsEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedTagIds(todo.tagIds || []);
     setIsTagsOpen(true);
   };
-  
+
   const handleTagsSubmit = async () => {
     try {
       // 获取当前标签和选中标签的差集
       const currentTagIds = todo.tagIds || [];
       const tagsToAdd = selectedTagIds.filter(id => !currentTagIds.includes(id));
       const tagsToRemove = currentTagIds.filter(id => !selectedTagIds.includes(id));
-      
+
       // 如果有要添加的标签，调用添加API
       if (tagsToAdd.length > 0) {
         const response = await fetch(`/api/todo/${todo.id}/tags`, {
@@ -151,42 +170,42 @@ export function TodoItem({
           },
           body: JSON.stringify({ tagIds: tagsToAdd }),
         });
-        
+
         if (!response.ok) {
           throw new Error('添加标签失败');
         }
       }
-      
+
       // 如果有要移除的标签，调用删除API
       if (tagsToRemove.length > 0) {
-        const queryParams = new URLSearchParams({ 
-          tagIds: tagsToRemove.join(',') 
+        const queryParams = new URLSearchParams({
+          tagIds: tagsToRemove.join(',')
         }).toString();
-        
+
         const response = await fetch(`/api/todo/${todo.id}/tags?${queryParams}`, {
           method: 'DELETE',
         });
-        
+
         if (!response.ok) {
           throw new Error('移除标签失败');
         }
       }
-      
+
       // 如果外部提供了回调函数，也调用它
       if (onUpdateTags) {
         await onUpdateTags(todo.id, selectedTagIds);
       }
-      
+
       setIsTagsOpen(false);
     } catch (error) {
       console.error('更新标签失败:', error);
       alert('更新标签时出错，请重试');
     }
   };
-  
+
   const toggleTag = (tagId: number) => {
-    setSelectedTagIds(prev => 
-      prev.includes(tagId) 
+    setSelectedTagIds(prev =>
+      prev.includes(tagId)
         ? prev.filter(id => id !== tagId)
         : [...prev, tagId]
     );
@@ -194,7 +213,7 @@ export function TodoItem({
 
   const handleCreateTag = async () => {
     if (!onCreateTag || !newTagName.trim()) return;
-    
+
     setIsCreatingTag(true);
     try {
       const newTag = await onCreateTag(newTagName.trim(), newTagColor);
@@ -209,7 +228,7 @@ export function TodoItem({
 
   return (
     <>
-      <div 
+      <div
         id={`todo-item-${todo.id}`}
         className={`
           flex items-center p-2 rounded-md border border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all
@@ -217,30 +236,30 @@ export function TodoItem({
           ${isCompleting ? 'todo-completing' : ''}
         `}
       >
-        <Checkbox 
-          checked={selected} 
+        <Checkbox
+          checked={selected}
           onCheckedChange={onSelect}
           className="mr-3"
         />
-        
+
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <TodoPriority priority={todo.priority} showLabel={false} />
             <span className="font-medium truncate">{todo.title}</span>
           </div>
-          
+
           {todo.description && (
             <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{todo.description}</p>
           )}
-          
+
           {tags && tags.length > 0 && (
             <div className="flex flex-wrap mt-2 gap-1">
               {tags.map((tag) => (
-                <Badge 
-                  key={tag.id} 
-                  variant="outline" 
-                  className="text-xs py-0" 
-                  style={{backgroundColor: `${tag.color}20`, borderColor: tag.color}}
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="text-xs py-0"
+                  style={{ backgroundColor: `${tag.color}20`, borderColor: tag.color }}
                 >
                   {tag.name}
                 </Badge>
@@ -248,7 +267,7 @@ export function TodoItem({
             </div>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2 ml-2">
           <Button
             variant="custom"
@@ -260,7 +279,7 @@ export function TodoItem({
           >
             <CheckIcon className="h-4 w-4" />
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -270,7 +289,7 @@ export function TodoItem({
             <PencilIcon className="h-4 w-4" />
             <span>编辑</span>
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -280,7 +299,7 @@ export function TodoItem({
             <TagIcon className="h-4 w-4" />
             <span>标签</span>
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -290,7 +309,7 @@ export function TodoItem({
             <TimerIcon className="h-4 w-4" />
             <span>番茄钟</span>
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -302,13 +321,13 @@ export function TodoItem({
           </Button>
         </div>
       </div>
-      
+
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>编辑任务</DialogTitle>
           </DialogHeader>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmitEdit)} className="space-y-4">
               <FormField
@@ -323,7 +342,7 @@ export function TodoItem({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="description"
@@ -336,7 +355,7 @@ export function TodoItem({
                   </FormItem>
                 )}
               />
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -363,7 +382,7 @@ export function TodoItem({
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="priority"
@@ -390,7 +409,7 @@ export function TodoItem({
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="plannedDate"
@@ -428,7 +447,7 @@ export function TodoItem({
                   </FormItem>
                 )}
               />
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -442,7 +461,7 @@ export function TodoItem({
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="plannedEndTime"
@@ -456,7 +475,7 @@ export function TodoItem({
                   )}
                 />
               </div>
-              
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
                   取消
@@ -467,13 +486,13 @@ export function TodoItem({
           </Form>
         </DialogContent>
       </Dialog>
-      
+
       <Dialog open={isTagsOpen} onOpenChange={setIsTagsOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>管理标签</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2 my-4">
               {allTags.length === 0 ? (
@@ -482,9 +501,9 @@ export function TodoItem({
                 </div>
               ) : (
                 allTags.map(tag => (
-                  <Badge 
-                    key={tag.id} 
-                    variant={selectedTagIds.includes(tag.id) ? "default" : "outline"} 
+                  <Badge
+                    key={tag.id}
+                    variant={selectedTagIds.includes(tag.id) ? "default" : "outline"}
                     className="cursor-pointer text-sm py-1 px-2"
                     style={{
                       backgroundColor: selectedTagIds.includes(tag.id) ? tag.color : 'transparent',
@@ -501,7 +520,7 @@ export function TodoItem({
                 ))
               )}
             </div>
-            
+
             {onCreateTag && (
               <div className="border p-3 rounded-md space-y-3">
                 <h4 className="text-sm font-medium">添加新标签</h4>
@@ -518,8 +537,8 @@ export function TodoItem({
                     onChange={(e) => setNewTagColor(e.target.value)}
                     className="w-14 p-1 h-10"
                   />
-                  <Button 
-                    type="button" 
+                  <Button
+                    type="button"
                     size="sm"
                     onClick={handleCreateTag}
                     disabled={!newTagName.trim() || isCreatingTag}
@@ -542,8 +561,8 @@ export function TodoItem({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-xs">预览：</div>
-                  <Badge 
-                    variant="default" 
+                  <Badge
+                    variant="default"
                     className="text-sm py-1 px-2"
                     style={{
                       backgroundColor: newTagColor,
@@ -555,7 +574,7 @@ export function TodoItem({
                 </div>
               </div>
             )}
-            
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsTagsOpen(false)}>
                 取消

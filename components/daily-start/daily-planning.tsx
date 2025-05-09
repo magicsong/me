@@ -12,7 +12,9 @@ import {
   ClockIcon,
   CalendarIcon,
   CheckIcon,
-  XIcon
+  XIcon,
+  ChevronUpIcon,
+  ChevronDownIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import { TodoBO } from "@/app/api/types";
@@ -35,19 +37,32 @@ export function DailyPlanning({
   const [selectedTodos, setSelectedTodos] = useState<number[]>([]);
   const [activeTab, setActiveTab] = useState("today");
   const [showCompleted, setShowCompleted] = useState(false);
+  const [pendingCollapsed, setPendingCollapsed] = useState<boolean>(false);
   const router = useRouter();
   // 根据showCompleted状态过滤任务
   const filteredTodos = useMemo(() => {
-    if (showCompleted) {
-      return todos;
-    } else {
-      return todos.filter(todo => todo.status !== "completed");
+    let result = todos;
+    if (!showCompleted) {
+      result = todos.filter(todo => todo.status !== "completed");
     }
+
+    // 按状态对任务进行排序，让in_progress排在前面
+    return [...result].sort((a, b) => {
+      // 优先按状态排序：in_progress > pending > completed
+      if (a.status === "in_progress" && b.status !== "in_progress") return -1;
+      if (a.status !== "in_progress" && b.status === "in_progress") return 1;
+      if (a.status === "pending" && b.status === "completed") return -1;
+      if (a.status === "completed" && b.status === "pending") return 1;
+
+      // 状态相同时，按优先级排序
+      const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
   }, [todos, showCompleted]);
 
   // 过滤未完成的昨日任务
   const incompleteTodos = yesterdayTodos.filter(
-    (todo) => todo.status !== "completed"
+    (todo) => todo.status === "in_progress"
   );
 
   // 使用useMemo获取今日任务的分类统计，确保todos变化时重新计算
@@ -93,7 +108,7 @@ export function DailyPlanning({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ todo }),
+        body: JSON.stringify({ data: todo }),
       });
 
       const result = await response.json();
@@ -552,42 +567,135 @@ export function DailyPlanning({
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    {/* 按优先级分组展示 */}
-                    {['urgent', 'high', 'medium', 'low'].map(priority => {
-                      const priorityTodos = filteredTodos.filter(todo => todo.priority === priority);
-                      if (priorityTodos.length === 0) return null;
+                  <div className="space-y-6">
+  {/* 先按状态分组展示 */}
+  {["in_progress", "pending"].map(status => {
+    const statusTodos = filteredTodos.filter(todo => todo.status === status);
+    if (statusTodos.length === 0) return null;
 
-                      return (
-                        <div key={priority} className="space-y-2">
-                          <h3 className={`text-sm font-medium px-2 py-1 rounded-md inline-block
-                            ${priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                              priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                                priority === 'medium' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'}`}>
-                            {priority === 'urgent' ? '紧急' :
-                              priority === 'high' ? '重要' :
-                                priority === 'medium' ? '普通' : '低优先级'}
-                            ({priorityTodos.length})
-                          </h3>
-                          <div className="space-y-2 ml-2">
-                            {priorityTodos.map((todo) => (
-                              <TodoItem
-                                key={todo.id}
-                                todo={todo}
-                                tags={todo.tags}
-                                selected={selectedTodos.includes(todo.id)}
-                                onSelect={(selected) => handleSelectTodo(todo.id, selected)}
-                                onUpdate={updateTodo}
-                                onComplete={completeTodo}
-                                onDelete={handleDelete}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+    return (
+      <div key={status}>
+        <Card className={`
+          ${status === 'in_progress' ? 'border-blue-300 shadow-sm' : 'border-gray-200'}
+        `}>
+          <CardHeader className={`py-3 ${status === 'in_progress' ? 'bg-blue-50' : 'bg-gray-50'}`}>
+            <div className="flex justify-between items-center">
+              <h3 className={`text-sm font-medium rounded-md inline-flex items-center gap-2
+                ${status === 'in_progress' ? 'text-blue-700' : 'text-gray-700'}`}>
+                {status === 'in_progress' ? (
+                  <>
+                    <ClockIcon className="h-4 w-4" />
+                    进行中
+                  </>
+                ) : (
+                  <>
+                    <CalendarIcon className="h-4 w-4" />
+                    等待排期处理
+                  </>
+                )}
+                <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
+                  {statusTodos.length}
+                </span>
+              </h3>
+              
+              {status === 'pending' && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setPendingCollapsed(!pendingCollapsed)}
+                  className="h-8 w-8 p-0"
+                >
+                  {pendingCollapsed ? (
+                    <ChevronDownIcon className="h-4 w-4" />
+                  ) : (
+                    <ChevronUpIcon className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          
+          {(status !== 'pending' || !pendingCollapsed) && (
+            <CardContent className="pt-4">
+              {/* 在每个状态组内按优先级分组展示 */}
+              <div className="space-y-4">
+                {['urgent', 'high', 'medium', 'low'].map(priority => {
+                  const priorityTodos = statusTodos.filter(todo => todo.priority === priority);
+                  if (priorityTodos.length === 0) return null;
+
+                  return (
+                    <div key={priority} className="space-y-2">
+                      <h4 className={`text-xs font-medium px-2 py-1 rounded-md inline-block
+                        ${priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                         priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                         priority === 'medium' ? 'bg-blue-100 text-blue-800' :
+                         'bg-gray-100 text-gray-800'}`}>
+                        {priority === 'urgent' ? '紧急' :
+                         priority === 'high' ? '重要' :
+                         priority === 'medium' ? '普通' : '低优先级'}
+                        ({priorityTodos.length})
+                      </h4>
+                      <div className="space-y-2 ml-2">
+                        {priorityTodos.map((todo) => (
+                          <TodoItem
+                            key={todo.id}
+                            todo={todo}
+                            tags={todo.tags}
+                            selected={selectedTodos.includes(todo.id)}
+                            onSelect={(selected) => handleSelectTodo(todo.id, selected)}
+                            onUpdate={updateTodo}
+                            onComplete={completeTodo}
+                            onDelete={handleDelete}
+                            onStartPomodoro={() => handleStartFocusing(String(todo.id))}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      </div>
+    );
+  })}
+
+  {/* 如果启用了显示已完成任务 */}
+  {showCompleted && (
+    <Card className="border-green-200">
+      <CardHeader className="py-3 bg-green-50">
+        <div className="flex justify-between items-center">
+          <h3 className="text-sm font-medium text-green-800 inline-flex items-center gap-2">
+            <CheckIcon className="h-4 w-4" />
+            已完成
+            <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs">
+              {todos.filter(todo => todo.status === "completed").length}
+            </span>
+          </h3>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4">
+        <div className="space-y-2 opacity-70">
+          {todos
+            .filter(todo => todo.status === "completed")
+            .map((todo) => (
+              <TodoItem
+                key={todo.id}
+                todo={todo}
+                tags={todo.tags}
+                selected={selectedTodos.includes(todo.id)}
+                onSelect={(selected) => handleSelectTodo(todo.id, selected)}
+                onUpdate={updateTodo}
+                onDelete={handleDelete}
+              />
+            ))
+          }
+        </div>
+      </CardContent>
+    </Card>
+  )}
+</div>
                 </>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
