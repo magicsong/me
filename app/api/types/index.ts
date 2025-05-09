@@ -17,6 +17,7 @@ export interface TodoBO extends BusinessObject {
   updatedAt: string;
   tagIds?: number[];
   tags: TagBO[];
+  pomodoroTimeMinutes?: number;
 }
 
 // 批量处理Todo请求
