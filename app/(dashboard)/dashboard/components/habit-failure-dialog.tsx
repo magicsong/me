@@ -53,14 +53,14 @@ export function HabitFailureDialog({
 }: HabitFailureDialogProps) {
   // 状态管理
   const [submitting, setSubmitting] = useState(false);
-  const [selectedReason, setSelectedReason] = useState<FailureReason>("时间管理问题");
+  const [selectedReason, setSelectedReason] = useState<FailureReason>("没有延迟满足");
   const [comment, setComment] = useState("");
   const [showTip, setShowTip] = useState(true);
   
   // 当对话框开启时重置状态
   useEffect(() => {
     if (isOpen) {
-      setSelectedReason("时间管理问题");
+      setSelectedReason("没有延迟满足");
       setComment("");
       setSubmitting(false);
       setShowTip(true);
@@ -164,6 +164,7 @@ export function HabitFailureDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="时间管理问题">时间管理问题</SelectItem>
+                <SelectItem value="没有延迟满足">没有延迟满足</SelectItem>
                 <SelectItem value="精力不足">精力不足</SelectItem>
                 <SelectItem value="外部干扰">外部干扰</SelectItem>
                 <SelectItem value="目标设置不合理">目标设置不合理</SelectItem>

@@ -18,6 +18,14 @@ import { fetchDailySummary } from './actions';
 import { useToast } from '@/components/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
+// 在文件顶部添加类型定义
+export type FailedHabit = {
+  name: string;
+  failReason?: string;
+  streak?: number;
+  id: string | number;
+};
+
 type DailySummaryFormProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -27,7 +35,7 @@ type DailySummaryFormProps = {
   totalTasks: number;
   summaryDate: 'today' | 'yesterday';
   completedHabits: string[],
-  failedHabits: string[],
+  failedHabits: FailedHabit[],
 };
 
 const emojis = ['😊', '😃', '😐', '😔', '😢'];
@@ -113,6 +121,7 @@ export function DailySummaryForm({
     sleepQuality: string;
     tomorrowGoals: string;
     failedTasks: string[];
+    failedHabits: FailedHabit[];
   };
   // 加载已有总结数据
   useEffect(() => {
@@ -191,6 +200,7 @@ export function DailySummaryForm({
       sleepQuality,
       tomorrowGoals,
       failedTasks: failedTasks, // 使用传入的未完成任务
+      failedHabits: failedHabits, // 使用传入的未坚持习惯
     };
 
     try {
@@ -315,7 +325,7 @@ export function DailySummaryForm({
                           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                           已坚持的习惯
                         </Label>
-                        <div className="border rounded-md p-3 bg-slate-50/70 h-[120px] overflow-y-auto">
+                        <div className="border rounded-md p-3 bg-slate-50/70 h-[180px] overflow-y-auto">
                           {completedHabits.length > 0 ? (
                             <div className="space-y-2">
                               {completedHabits.map((habit) => (
@@ -339,11 +349,23 @@ export function DailySummaryForm({
                         </Label>
                         <div className="border rounded-md p-3 bg-slate-50/70 h-[120px] overflow-y-auto">
                           {failedHabits.length > 0 ? (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               {failedHabits.map((habit) => (
-                                <div key={habit} className="flex items-center space-x-2">
-                                  <XCircle className="h-4 w-4 text-amber-500" />
-                                  <span className="text-sm">{habit}</span>
+                                <div key={habit.id} className="border-b border-slate-200 pb-2 last:border-none last:pb-0">
+                                  <div className="flex items-center space-x-2">
+                                    <XCircle className="h-4 w-4 text-amber-500 shrink-0" />
+                                    <span className="text-sm font-medium">{habit.name}</span>
+                                    {habit.streak > 0 && (
+                                      <span className="bg-amber-100 text-amber-800 text-xs px-1.5 py-0.5 rounded-full">
+                                        之前已坚持 {habit.streak} 天
+                                      </span>
+                                    )}
+                                  </div>
+                                  {habit.failReason && (
+                                    <div className="mt-1 ml-6 text-xs text-slate-600">
+                                      <span className="text-amber-600 font-medium">未完成原因：</span> {habit.failReason}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>

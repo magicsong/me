@@ -44,7 +44,8 @@ function convertToDailySummaryContext(dbData: JournalEntry): DailySummaryContext
       mood: '',
       energyLevel: '',
       sleepQuality: '',
-      tomorrowGoals: ''
+      tomorrowGoals: '',
+      failedHabits: [],
     };
   }
 

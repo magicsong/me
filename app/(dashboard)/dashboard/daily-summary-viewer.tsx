@@ -43,7 +43,7 @@ import {
 import { useEffect, useState, useMemo } from 'react';
 import { fetchDailySummary, saveDailySummary } from './actions';
 import { AISummarySection } from './components/ai-summary-section';
-import { DailySummaryForm } from './daily-summary-form';
+import { DailySummaryForm, FailedHabit } from './daily-summary-form';
 import { getHabits } from '../habits/client-actions';
 import { DailySummaryContext, TodoBO } from '@/app/api/types';
 import { fetchTodosByDate } from '../actions';
@@ -60,7 +60,7 @@ export function DailySummaryViewer() {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]); // 完成的普通任务
   const [completedHabits, setCompletedHabits] = useState<string[]>([]); // 完成的习惯任务
   const [failedTasks, setFailedTasks] = useState<string[]>([]); // 未完成的普通任务
-  const [failedHabits, setFailedHabits] = useState<string[]>([]); // 未完成的习惯
+  const [failedHabits, setFailedHabits] = useState<FailedHabit[]>([]); // 未完成的习惯
   const [totalTasks, setTotalTasks] = useState(0);
   const [habitsLoading, setHabitsLoading] = useState(false);
 
@@ -146,7 +146,13 @@ export function DailySummaryViewer() {
 
         // 直接设置习惯数据，不再添加前缀
         setCompletedHabits(completed.map(habit => habit.name));
-        setFailedHabits(failed.map(habit => habit.name));
+        // 设置未完成习惯数据（保留更多信息）
+        setFailedHabits(failed.map(habit => ({
+          name: habit.name,
+          failReason: habit.failReason || '未记录失败原因',
+          streak: habit.streakDays || 0,
+          id: habit.id
+        })));
       } else {
         setCompletedHabits([]);
         setFailedHabits([]);
@@ -201,9 +207,32 @@ export function DailySummaryViewer() {
     try {
       // 准备API调用参数
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      // 将复杂的failedHabits对象数组转换为格式化字符串数组
+      // 格式: "习惯名称 (之前已坚持X天): 未完成原因"
+      const formattedFailedHabits = data.failedHabits?.map((habit: FailedHabit) => {
+        let habitStr = habit.name;
+
+        // 添加坚持天数信息（如果有）
+        if (habit.streak && habit.streak > 0) {
+          habitStr += ` (之前已坚持${habit.streak}天)`;
+        }
+
+        // 添加未完成原因（如果有）
+        if (habit.failReason && habit.failReason !== '未记录失败原因') {
+          habitStr += `: ${habit.failReason}`;
+        }
+
+        return habitStr;
+      }) || [];
+
+      // 创建要提交的数据对象，替换原始failedHabits
+      const submitData = {
+        ...data,
+        failedHabits: formattedFailedHabits
+      };
 
       // 调用API保存数据
-      const result = await saveDailySummary(dateStr, data);
+      const result = await saveDailySummary(dateStr, submitData);
 
       if (result.success) {
         // 成功保存后重新加载数据
