@@ -62,7 +62,7 @@ export function DailyPlanning({
 
   // 过滤未完成的昨日任务
   const incompleteTodos = yesterdayTodos.filter(
-    (todo) => todo.status === "in_progress"
+    (todo) => todo.status !== "completed"
   );
 
   // 使用useMemo获取今日任务的分类统计，确保todos变化时重新计算

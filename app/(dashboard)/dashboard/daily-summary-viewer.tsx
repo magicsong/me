@@ -451,7 +451,7 @@ export function DailySummaryViewer() {
                                   {failedHabits.map((habit, index) => (
                                     <div key={`failed-habit-${index}`} className="flex items-center opacity-60">
                                       <Circle className="h-3.5 w-3.5 text-gray-400 mr-2" />
-                                      <span className="text-sm text-slate-500 line-through">{habit}</span>
+                                      <span className="text-sm text-slate-500 line-through">{habit.name}</span>
                                     </div>
                                   ))}
                                 </div>

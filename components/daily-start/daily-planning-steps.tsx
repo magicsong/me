@@ -153,7 +153,7 @@ export function DailyPlanningSteps({
       yesterday.setMinutes(0);
       const yesterdayStr = yesterday.toUTCString();
       // 获取昨天未完成的任务
-      const response = await fetch(`/api/todo?plannedDate_lt=${yesterdayStr}&status=in_progress`);
+      const response = await fetch(`/api/todo?plannedDate_lt=${yesterdayStr}&status_ne=completed`);
 
       if (!response.ok) {
         throw new Error('获取昨日任务失败');

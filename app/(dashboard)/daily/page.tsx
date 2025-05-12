@@ -89,7 +89,7 @@ export default function DailyStartPage() {
       todayStart.setHours(0, 0, 0, 0);
 
       // 使用小于运算符获取所有过去的待办事项（包括昨天）
-      const response = await fetch(`/api/todo?plannedDate_lt=${todayStart.toISOString()}`);
+      const response = await fetch(`/api/todo?plannedDate_lt=${todayStart.toISOString()}&status_ne=completed`);
       const result = await response.json();
 
       if (result.success) {
