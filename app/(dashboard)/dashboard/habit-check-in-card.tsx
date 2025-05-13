@@ -29,6 +29,8 @@ type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
 export function HabitCheckInCard() {
   const [animatingHabitId, setAnimatingHabitId] = useState<number | null>(null);
   const [selectedHabit, setSelectedHabit] = useState<HabitBO | null>(null);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedHabits, setSelectedHabits] = useState<HabitBO[]>([]);
 
   // 添加 habits 状态及相关计数
   const [habits, setHabits] = useState<HabitBO[]>([]);
@@ -44,6 +46,68 @@ export function HabitCheckInCard() {
   // 添加失败对话框状态
   const [failureDialogOpen, setFailureDialogOpen] = useState(false);
   const router = useRouter(); // 添加路由跳转钩子
+
+  // 处理习惯选择/取消选择
+  const toggleHabitSelection = (habit: HabitBO, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // 有挑战的习惯不允许批量打卡
+    if (habit.challengeTiers && habit.challengeTiers.length > 0) {
+      toast.warning(`${habit.name} 包含挑战，需单独打卡`);
+      return;
+    }
+
+    // 已完成或失败的习惯不能选择
+    if (habit.completedToday || habit.failedToday) {
+      return;
+    }
+
+    setSelectedHabits(prev => {
+      const isSelected = prev.some(h => h.id === habit.id);
+      if (isSelected) {
+        return prev.filter(h => h.id !== habit.id);
+      } else {
+        return [...prev, habit];
+      }
+    });
+  };
+
+  // 批量打卡提交
+  const handleBatchSubmit = async () => {
+    if (selectedHabits.length === 0) {
+      toast.info("请先选择要打卡的习惯");
+      return;
+    }
+
+    // 显示确认对话框
+    if (window.confirm(`确认要为选中的 ${selectedHabits.length} 个习惯打卡吗？`)) {
+      try {
+        // 批量处理所有选中的习惯
+        await Promise.all(
+          selectedHabits.map(habit =>
+            completeHabit(habit.id, {
+              comment: "批量打卡",
+              completedAt: new Date(),
+            })
+          )
+        );
+
+        toast.success(`🎉 成功完成 ${selectedHabits.length} 个习惯打卡！`, {
+          duration: 3000,
+        });
+
+        // 刷新习惯数据
+        fetchHabits();
+        // 清除选中状态
+        setSelectedHabits([]);
+        // 退出多选模式
+        setIsMultiSelectMode(false);
+      } catch (error) {
+        console.error('批量打卡失败:', error);
+        toast.error('批量打卡失败，请重试');
+      }
+    }
+  };
 
   // 处理开始专注按钮点击
   function handleStartFocus(e: React.MouseEvent, habit: HabitBO) {
@@ -89,8 +153,12 @@ export function HabitCheckInCard() {
   }, [habits, selectedHabit]);
 
   // 处理习惯点击 - 显示日历
-  const handleHabitClick = (habit: HabitBO) => {
-    setSelectedHabit(habit);
+  const handleHabitClick = (habit: HabitBO, e: React.MouseEvent) => {
+    if (isMultiSelectMode) {
+      toggleHabitSelection(habit, e);
+    } else {
+      setSelectedHabit(habit);
+    }
   };
 
   // 处理打卡开始
@@ -195,6 +263,31 @@ export function HabitCheckInCard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">📅 今日习惯打卡（ {completedCount} / {totalCount} 已完成）</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsMultiSelectMode(!isMultiSelectMode);
+                    if (!isMultiSelectMode) {
+                      setSelectedHabits([]);
+                    }
+                  }}
+                >
+                  {isMultiSelectMode ? "退出批量模式" : "批量打卡"}
+                </Button>
+
+                {isMultiSelectMode && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={selectedHabits.length === 0}
+                    onClick={handleBatchSubmit}
+                  >
+                    打卡 ({selectedHabits.length})
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="flex items-center justify-between mt-2">
               <Progress
@@ -228,14 +321,16 @@ export function HabitCheckInCard() {
                     opacity: habit.completedToday || habit.failedToday ? 0.7 : 1  // 同时处理完成和失败状态
                   }}
                   transition={{ duration: 0.3 }}
-                  className={`flex items-center p-3 rounded-md cursor-pointer border ${selectedHabit?.id === habit.id ? 'border-primary bg-primary/5' :
-                    habit.completedToday
-                      ? 'bg-muted border-muted text-muted-foreground'  // 成功完成的样式
-                      : habit.failedToday
-                        ? 'bg-red-50/50 border-red-100 text-muted-foreground'  // 失败的样式
-                        : 'hover:bg-muted/50'
+                  className={`flex items-center p-3 rounded-md cursor-pointer border 
+                      ${isMultiSelectMode && selectedHabits.some(h => h.id === habit.id) ? 'border-primary-600 bg-primary-50 ring-2 ring-primary-200' : ''}
+                      ${selectedHabit?.id === habit.id ? 'border-primary bg-primary/5' :
+                      habit.completedToday
+                        ? 'bg-muted border-muted text-muted-foreground'
+                        : habit.failedToday
+                          ? 'bg-red-50/50 border-red-100 text-muted-foreground'
+                          : 'hover:bg-muted/50'
                     }`}
-                  onClick={() => handleHabitClick(habit)}
+                  onClick={(e) => handleHabitClick(habit, e)}
                 >
                   <div className="flex-shrink-0 mr-3">
                     {habit.completedToday ? (
@@ -350,6 +445,13 @@ export function HabitCheckInCard() {
                   </div>
                 </motion.div>
               ))
+            )}
+            {/* 在 CardContent 中添加 */}
+            {isMultiSelectMode && (
+              <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md mb-2">
+                <p>批量打卡模式 - 点击习惯进行选择</p>
+                <p className="text-xs text-muted-foreground">注意: 包含挑战的习惯不能批量打卡</p>
+              </div>
             )}
           </CardContent>
         </Card>
