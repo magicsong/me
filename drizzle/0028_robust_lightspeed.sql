@@ -1,0 +1,1 @@
+ALTER TABLE "habits" ADD COLUMN "active_tier_id" integer;

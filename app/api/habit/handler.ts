@@ -120,6 +120,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       failureReason: dataObject.failureReason,
       checkInDays: dataObject.checkin_days,
       isPinned: dataObject.is_pinned,
+      activeTierId: dataObject.active_tier_id || null,
     };
   }
   fieldsMoveToExtraOptionsWhenGet(): string[] {
@@ -140,6 +141,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       streak: businessObject.streak,
       checkin_days: businessObject.checkInDays,
       is_pinned: businessObject.isPinned,
+      active_tier_id: businessObject.activeTierId || null,
     };
   }
 

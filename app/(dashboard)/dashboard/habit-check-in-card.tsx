@@ -151,7 +151,35 @@ export function HabitCheckInCard() {
       setSelectedHabit(habits[0]);
     }
   }, [habits, selectedHabit]);
+  async function handleCompleteTier(habit: HabitBO, tierId: number) {
+    setAnimatingHabitId(habit.id);
 
+    try {
+      await completeHabit(habit.id, {
+        tierId: tierId,
+        completedAt: new Date(),
+      });
+      
+      // 获取挑战名称和奖励点数
+      const tierName = habit.challengeTiers?.find(tier => tier.id === tierId)?.name || '默认挑战';
+      const rewardPoints = habit.challengeTiers?.find(tier => tier.id === tierId)?.reward_points || 0;
+      
+      toast.success(`🏆 挑战完成: ${tierName} (+${rewardPoints}点)`, {
+        duration: 3000,
+      });
+
+      // 刷新习惯数据
+      fetchHabits();
+    } catch (error) {
+      console.error('完成挑战失败:', error);
+      toast.error('完成挑战失败，请重试');
+    } finally {
+      // 动画结束后清除状态
+      setTimeout(() => {
+        setAnimatingHabitId(null);
+      }, 500);
+    }
+  }
   // 处理习惯点击 - 显示日历
   const handleHabitClick = (habit: HabitBO, e: React.MouseEvent) => {
     if (isMultiSelectMode) {
@@ -366,7 +394,18 @@ export function HabitCheckInCard() {
                     {habit.description && (
                       <div className="text-xs text-muted-foreground">{habit.description}</div>
                     )}
-
+                    {/* 显示默认挑战 */}
+                    {!habit.completedToday && !habit.failedToday && habit.activeTierId && habit.challengeTiers && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Trophy className="h-3 w-3 text-blue-500" />
+                        <span className="text-xs font-medium text-blue-600">
+                          默认挑战: {habit.challengeTiers?.find(tier => tier.id === habit.activeTierId)?.name || 'Unknown'}
+                        </span>
+                        <Badge variant="outline" className="text-xs ml-1 h-5 px-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100">
+                          +{habit.challengeTiers?.find(tier => tier.id === habit.activeTierId)?.reward_points || 'Unknown'}
+                        </Badge>
+                      </div>
+                    )}
                     {/* 显示成功完成 */}
                     {habit.completedToday && habit.completedTier && (
                       <div className="flex items-center gap-1 mt-1">
@@ -410,15 +449,30 @@ export function HabitCheckInCard() {
 
                     {!habit.completedToday && !habit.failedToday && (
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8"
-                          onClick={(e) => handleCheckInStart(e, habit)}
-                        >
-                          <CheckCheck className="h-4 w-4 mr-1" />
-                          打卡
-                        </Button>
+                        {habit.activeTierId && habit.challengeTiers ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation(); // 阻止冒泡
+                              handleCompleteTier(habit, habit.activeTierId);
+                            }}
+                          >
+                            <Trophy className="h-4 w-4 mr-1" />
+                            完成挑战
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={(e) => handleCheckInStart(e, habit)}
+                          >
+                            <CheckCheck className="h-4 w-4 mr-1" />
+                            打卡
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -429,7 +483,7 @@ export function HabitCheckInCard() {
                           专注
                         </Button>
                         <Button
-                          variant="destructive"  // 使用更醒目的样式
+                          variant="destructive"
                           size="sm"
                           className="h-8"
                           onClick={(e) => {

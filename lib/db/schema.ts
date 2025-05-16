@@ -23,6 +23,7 @@ export const habits = pgTable("habits", {
 	streak: integer("streak").default(0),
 	checkin_days: jsonb("checkin_days").default([1,2,3,4,5,6,7]).notNull(),
 	is_pinned: boolean("is_pinned").default(false),
+	active_tier_id: integer("active_tier_id"),
 });
 
 export const habit_entries = pgTable("habit_entries", {

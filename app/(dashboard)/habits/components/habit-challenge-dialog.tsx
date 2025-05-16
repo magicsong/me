@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trophy, CheckCircle2 } from 'lucide-react';
+import { Trophy, CheckCircle2, Star } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -36,6 +36,7 @@ export function HabitChallengeDialog({
     const [generatingTiers, setGeneratingTiers] = useState(false);
     const [tiersError, setTiersError] = useState<string | null>(null);
     const [completingTier, setCompletingTier] = useState<number | null>(null);
+    const [settingDefaultTier, setSettingDefaultTier] = useState<number | null>(null);
     const [currentStatus, setCurrentStatus] = useState<string>('');
 
     async function handleGenerateTiers(id: number) {
@@ -86,6 +87,42 @@ export function HabitChallengeDialog({
             setTiersError('完成挑战失败：' + (error as Error).message);
         } finally {
             setCompletingTier(null);
+        }
+    }
+
+    async function handleSetDefaultTier(habitId: number, tierId: number) {
+        try {
+            setSettingDefaultTier(tierId);
+            
+            // 调用API更新习惯，设置默认挑战
+            const response = await fetch(`/api/habit/${habitId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: habitId,
+                    fields: {'activeTierId': tierId},
+                    userId: habitDetail?.userId,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('设置默认挑战失败');
+            }
+
+            // 刷新数据
+            if (onRefresh) {
+                onRefresh();
+            } else {
+                router.refresh();
+            }
+
+        } catch (error) {
+            console.error('设置默认挑战失败:', error);
+            setTiersError('设置默认挑战失败：' + (error as Error).message);
+        } finally {
+            setSettingDefaultTier(null);
         }
     }
 
@@ -167,11 +204,13 @@ export function HabitChallengeDialog({
                                         const tierColors = getTierColors(tier.level);
                                         const isCompleting = completingTier === tier.id;
                                         const isCompleted = habitDetail.completedTier === tier.id;
+                                        const isDefault = habitDetail.activeTierId === tier.id;
+                                        const isSettingDefault = settingDefaultTier === tier.id;
 
                                         return (
                                             <div
                                                 key={tier.id}
-                                                className={`border-l-4 p-4 rounded-md ${tierColors} ${isCompleted ? 'ring-2 ring-amber-400' : ''} transition-all duration-200`}
+                                                className={`border-l-4 p-4 rounded-md ${tierColors} ${isCompleted ? 'ring-2 ring-amber-400' : ''} ${isDefault ? 'ring-1 ring-blue-400' : ''} transition-all duration-200`}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <div>
@@ -185,6 +224,11 @@ export function HabitChallengeDialog({
                                                                     <CheckCircle2 className="h-3 w-3 mr-1" /> 今日已完成
                                                                 </Badge>
                                                             )}
+                                                            {isDefault && (
+                                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                                    <Star className="h-3 w-3 mr-1" /> 默认
+                                                                </Badge>
+                                                            )}
                                                         </h4>
                                                         <p className="text-sm text-muted-foreground mt-1">
                                                             {tier.description}
@@ -194,21 +238,37 @@ export function HabitChallengeDialog({
                                                         <Badge variant="outline" className="text-amber-600">
                                                             +{tier.reward_points} 奖励
                                                         </Badge>
-                                                        <Button
-                                                            size="sm"
-                                                            variant={isCompleted ? "secondary" : "outline"}
-                                                            className="ml-2"
-                                                            disabled={isCompleting || isCompleted}
-                                                            onClick={() => handleCompleteTier(habitDetail.id, tier.id)}
-                                                        >
-                                                            {isCompleting ? (
-                                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                                            ) : isCompleted ? (
-                                                                <>
-                                                                    <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" /> 已完成
-                                                                </>
-                                                            ) : '选择完成'}
-                                                        </Button>
+                                                        <div className="flex gap-1">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className={`${isDefault ? 'bg-blue-50' : ''}`}
+                                                                disabled={isSettingDefault || isDefault}
+                                                                onClick={() => handleSetDefaultTier(habitDetail.id, tier.id)}
+                                                            >
+                                                                {isSettingDefault ? (
+                                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                                                ) : isDefault ? (
+                                                                    <>
+                                                                        <Star className="h-4 w-4 mr-1 text-blue-500" /> 默认
+                                                                    </>
+                                                                ) : '设为默认'}
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant={isCompleted ? "secondary" : "outline"}
+                                                                disabled={isCompleting || isCompleted}
+                                                                onClick={() => handleCompleteTier(habitDetail.id, tier.id)}
+                                                            >
+                                                                {isCompleting ? (
+                                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                                                ) : isCompleted ? (
+                                                                    <>
+                                                                        <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" /> 已完成
+                                                                    </>
+                                                                ) : '选择完成'}
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

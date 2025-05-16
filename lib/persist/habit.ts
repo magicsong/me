@@ -16,6 +16,7 @@ export type HabitData = typeof habits.$inferSelect & {
   completedTier?: number | null;
   failureReason?: string,
   checkinStatus?: string,
+  defaultChallengeTierId?: number | null,
 };
 
 // 习惯创建输入类型

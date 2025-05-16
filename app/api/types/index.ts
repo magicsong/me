@@ -100,6 +100,7 @@ export interface HabitBO extends BusinessObject {
   failureReason?: string;
   checkInDays: number[];
   isPinned: boolean;
+  activeTierId?: number;
 }
 
 export interface ChallengeTierBO extends BusinessObject {
