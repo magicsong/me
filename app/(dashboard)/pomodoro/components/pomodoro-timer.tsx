@@ -10,11 +10,10 @@ import { Check, Pause, Play } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 // 引入倒计时组件
-import { BaseRequest } from '@/app/api/lib/types';
+import { BaseRequest, BaseResponse } from '@/app/api/lib/types';
 import { PomodoroBO, TodoBO } from '@/app/api/types';
 import { CountdownCircleTimer } from 'react-countdown-circle-timer';
 import { getHabitDetail } from '../../habits/client-actions';
-import { is } from 'drizzle-orm';
 // 预设时间选项（分钟）
 const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
 
@@ -53,6 +52,7 @@ export function PomodoroTimer({
   const [sourceType, setSourceType] = useState<'todo' | 'habit' | 'custom'>('custom');  // 添加来源类型
   const [hasUrlParams, setHasUrlParams] = useState(false);  // 添加URL参数状态
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isTodoCompleted, setIsTodoCompleted] = useState(false); // 新增状态：跟踪待办事项是否已完成
 
   // 初始化音频
   useEffect(() => {
@@ -255,7 +255,7 @@ export function PomodoroTimer({
         if (!todoResponse.ok) {
           throw new Error('完成待办事项失败');
         }
-
+        setIsTodoCompleted(true); // 设置待办事项已完成状态
         toast({
           title: "成功",
           description: "已完成番茄钟和关联的待办事项",
@@ -471,6 +471,7 @@ export function PomodoroTimer({
           setTimeLeft(durationInSeconds);
           setIsRunning(true);
           setIsCompleted(false);
+          setIsTodoCompleted(false); // 设置待办事项已完成状态
 
           // 通知父组件状态改变
           onPomodoroChange({
@@ -531,7 +532,8 @@ export function PomodoroTimer({
     setTimeLeft(duration * 60);
     setIsCompleted(false);
     setIsFinished(false); // 重置结束状态
-
+    setHasUrlParams(false);
+    setIsTodoCompleted(false);
     // 如果有关联的番茄钟ID，更新其状态为取消
     if (pomodoroId) {
       await updateServerPomodoroStatus(pomodoroId, 'canceled');
@@ -552,15 +554,10 @@ export function PomodoroTimer({
   }, []);
   // ...existing code...
   const restartSamePomodoro = useCallback(async () => {
-    console.log("再次开始同样的番茄钟");
     setIsRunning(true);
     setIsCompleted(false);
     setIsFinished(false);
     setPomodoroId(null);
-
-    // 保留相同的标题、描述、时长等设置
-    // 不重置任何内容，直接开始
-
     // 立即开始新的番茄钟
     try {
       const durationInMinutes = Number(duration);
@@ -586,16 +583,18 @@ export function PomodoroTimer({
       });
 
       if (response.ok) {
-        const newPomodoro = await response.json();
-        setPomodoroId(newPomodoro.id);
+        console.log("再次开始同样的番茄钟");
+        const newPomodoro = await response.json() as BaseResponse<PomodoroBO>;
+        setPomodoroId(newPomodoro.data?.id);
 
         // 设置本地状态
         setTimeLeft(durationInSeconds);
         setIsRunning(true);
         setIsCompleted(false);
+        setIsTodoCompleted(false);
 
         // 通知父组件状态改变
-        onPomodoroChange(newPomodoro);
+        onPomodoroChange(newPomodoro.data);
 
         toast({
           title: "番茄钟开始",
@@ -897,15 +896,17 @@ export function PomodoroTimer({
               >
                 <Check className="mr-2" /> 完成！开始新的番茄钟
               </Button>
-              <Button
-                size="lg"
-                onClick={restartSamePomodoro}
-                variant="default"
-                type="button"
-                className="flex-1"
-              >
-                <Play className="mr-2" /> 再次开始同样的番茄钟
-              </Button>
+          {!isTodoCompleted && (
+                <Button
+                  size="lg"
+                  onClick={restartSamePomodoro}
+                  variant="default"
+                  type="button"
+                  className="flex-1"
+                >
+                  <Play className="mr-2" /> 再次开始同样的番茄钟
+                </Button>
+              )}
             </div>
           )}
         </div>

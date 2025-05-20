@@ -264,7 +264,7 @@ export function createNextRouteHandlers<T, BO extends BusinessObject>(handler: I
           return createApiResponse(true, response.data, response.error, response.success ? 201 : 400);
         }
         const response = await handler.handleCreate(myRequest as BaseRequest<BO>);
-        return createApiResponse(true, response.data, response.error, response.success ? 201 : 400);
+        return createApiResponse(true, response.data, response.error, response.success ? 200 : 400);
       }
     } catch (error) {
       console.error('POST请求处理错误:', error);

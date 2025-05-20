@@ -146,3 +146,4 @@ export async function updateHabit(id: string, data: Partial<HabitBO>) {
     throw error;
   }
 }
+

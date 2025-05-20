@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Timer, CheckCircle, ArrowRight } from 'lucide-react';
+import { Timer, CheckCircle, ArrowRight, CheckSquare } from 'lucide-react';
 import { usePomodoro } from '../app/contexts/pomodoro-context';
 
 export function PomodoroReminder() {
@@ -12,7 +12,7 @@ export function PomodoroReminder() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const pathname = usePathname();
   const router = useRouter(); // 移到组件顶层
-  const { activePomodoro, completePomodoro } = usePomodoro();
+  const { activePomodoro, completePomodoro, completePomodoroAndTodo } = usePomodoro();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevTimeLeftRef = useRef<number>(0); // 添加一个引用来存储上一次的 timeLeft 值
 
@@ -125,17 +125,33 @@ export function PomodoroReminder() {
         </div>
       )}
 
-      <Button
-        size="sm"
-        variant="outline"
-        className="flex gap-1 items-center w-full"
-        onClick={completePomodoro}
-        disabled={timeLeft > 0}
-        title={timeLeft > 0 ? "请等待番茄钟计时结束" : "完成番茄钟"}
-      >
-        <CheckCircle size={16} />
-        完成
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="flex gap-1 items-center flex-1"
+          onClick={completePomodoro}
+          disabled={timeLeft > 0}
+          title={timeLeft > 0 ? "请等待番茄钟计时结束" : "完成番茄钟"}
+        >
+          <CheckCircle size={16} />
+          完成
+        </Button>
+
+        {activePomodoro?.todoId && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex gap-1 items-center flex-1"
+            onClick={completePomodoroAndTodo}
+            disabled={timeLeft > 0}
+            title={timeLeft > 0 ? "请等待番茄钟计时结束" : "完成番茄钟和待办"}
+          >
+            <CheckSquare size={16} />
+            完成待办
+          </Button>
+        )}
+      </div>
     </Card>
   );
 }
