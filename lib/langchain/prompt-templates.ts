@@ -4,8 +4,21 @@ import { DailySummaryContext, ThreeDaySummaryContext, WeeklySummaryContext } fro
  * 生成每日总结的提示模板
  */
 export function getDailySummaryPrompt(dateStr: string, context: DailySummaryContext): string {
-  return `
-    上面是我们之前的对话，以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
+  const prompts = [`   以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
+    完成习惯: ${context.completedHabits ? context.completedHabits.join(', ') : '无'}
+    失败习惯：${context.failedHabits ? context.failedHabits.join(', ') : '无'}
+    完成任务：${context.completedTasks ? context.completedTasks.join(', ') : '无'}
+    失败任务：${context.failedTasks ? context.failedTasks.join(', ') : '无'}
+    三件好事: ${context.goodThings ? context.goodThings.join(', ') : '无'}
+    今日收获: ${context.learnings || '无'}
+    挑战: ${context.challenges || '无'}
+    改进点: ${context.improvements || '无'}
+    心情: ${context.mood || '无'}
+    精力水平: ${context.energyLevel || '无'}
+    睡眠质量: ${context.sleepQuality || '无'}
+    明日目标: ${context.tomorrowGoals || '无'} 请根据以上信息，用一句话总结我这一天的情况，包括亮点和改进空间，适当分析一下趋势。
+    使用客观但鼓励的语气，直接给出总结，不需要"你的总结是"这样的开头。`, 
+    `以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
     完成习惯: ${context.completedHabits ? context.completedHabits.join(', ') : '无'}
     失败习惯：${context.failedHabits ? context.failedHabits.join(', ') : '无'}
     完成任务：${context.completedTasks ? context.completedTasks.join(', ') : '无'}
@@ -19,9 +32,12 @@ export function getDailySummaryPrompt(dateStr: string, context: DailySummaryCont
     睡眠质量: ${context.sleepQuality || '无'}
     明日目标: ${context.tomorrowGoals || '无'}
     
-    请根据以上信息，总结我这一天的情况，指出亮点，尽量易懂友好一些，同时如果引用了一些比较难以理解的名词，比如”杠铃策略“等，请给出简短解释。可以结合前面的对话，分析几天趋势
-    使用客观但鼓励的语气，发现问题需要客观柔和指出，针对问题提出友好意见，结合明日规划，给出相应的建议，需要有条理，副标题内容，有序罗列。直接给出总结，不需要"你的总结是"这样的开头。
-  `;
+    请根据以上信息，总结我这一天的情况，指出亮点，尽量易懂友好一些，同时如果引用了一些比较难以理解的名词，请给出简短解释。可以结合前面的对话，分析几天趋势
+    使用客观但鼓励的语气，发现问题需要客观柔和指出，针对问题提出友好意见，结合明日规划，给出相应的建议，需要有条理，副标题内容，有序罗列。直接给出总结，不需要"你的总结是"这样的开头。`
+  ];
+  // 随机选择一个prompt
+  const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+  return randomPrompt;
 }
 
 /**
@@ -29,13 +45,13 @@ export function getDailySummaryPrompt(dateStr: string, context: DailySummaryCont
  */
 export function getThreeDaySummaryPrompt(dateStr: string, context: ThreeDaySummaryContext): string {
   const { dailySummaries, startDate, endDate } = context;
-  
+
   if (!dailySummaries || dailySummaries.length === 0) {
     return `请根据空数据生成三天总结。日期范围: ${startDate || '未知'} 到 ${endDate || '未知'}`;
   }
   // 构建每日数据的字符串表示
   let dailyDataString = '';
-  
+
   dailySummaries.forEach((summary, index) => {
     dailyDataString += `
     === 第${index + 1}天 (${summary.date}) ===
@@ -72,7 +88,7 @@ export function getWeeklySummaryPrompt(dateStr: string, context: WeeklySummaryCo
       .map(([habit, rate]) => `${habit}: ${Math.round(rate * 100)}%`)
       .join(', ');
   }
-  
+
   // 构建周目标完成情况的字符串表示
   let goalsCompletionString = '无相关数据';
   if (context.weeklyGoals && context.weeklyGoals.length > 0) {
