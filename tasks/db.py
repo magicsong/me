@@ -1,11 +1,30 @@
-import psycopg2
-import pandas as pd
-from contextlib import contextmanager
-from typing import Dict, List, Any, Generator, Optional, Tuple
 import logging
-from sqlalchemy import create_engine
+import os
+from contextlib import contextmanager
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
+import pandas as pd
+import psycopg2
 from config import config
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# 加载.env文件中的环境变量
+load_dotenv()
+
+# 获取数据库连接URL
+DATABASE_URL = os.getenv("POSTGRES_URL")
+
+# 创建SQLAlchemy引擎
+engine = create_engine(DATABASE_URL)
+
+# 创建会话工厂
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 创建Base类，用于创建模型类
+Base = declarative_base()
 
 logger = logging.getLogger(__name__)
 
@@ -76,3 +95,21 @@ class Database:
 
 # 创建全局数据库实例
 db = Database()
+
+def get_db_connection():
+    """
+    获取数据库连接
+    :return: SQLAlchemy数据库连接对象
+    """
+    return engine.connect()
+
+def get_db_session():
+    """
+    获取数据库会话
+    :return: SQLAlchemy会话对象
+    """
+    db = SessionLocal()
+    try:
+        return db
+    finally:
+        db.close()

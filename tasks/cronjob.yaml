@@ -205,3 +205,73 @@ spec:
             - secretRef:
                 name: me-app-secrets  # 确保包含数据库连接信息和AWS凭证
           restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-habit-stats
+  labels:
+    app: me-analytics
+spec:
+  schedule: "30 1 * * *"  # 每天凌晨1点30执行
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: habit-stats
+            image: ghcr.io/magicsong/me-tasks:latest  # 替换为您的镜像仓库地址
+            args:
+            - habits
+            - "${USER_ID}"  # 从环境变量中获取用户ID
+            - --days
+            - "30"
+            resources:
+              limits:
+                cpu: "1"
+                memory: "1Gi"
+              requests:
+                cpu: "200m"
+                memory: "256Mi"
+            envFrom:
+            - secretRef:
+                name: me-app-secrets  # 确保包含数据库连接信息和用户ID
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: weekly-habit-stats
+  labels:
+    app: me-analytics
+spec:
+  schedule: "0 3 * * 0"  # 每周日凌晨3点执行
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: habit-stats
+            image: ghcr.io/magicsong/me-tasks:latest  # 替换为您的镜像仓库地址
+            args:
+            - habits
+            - "${USER_ID}"  # 从环境变量中获取用户ID
+            - --days
+            - "90"
+            resources:
+              limits:
+                cpu: "1"
+                memory: "1Gi"
+              requests:
+                cpu: "200m"
+                memory: "256Mi"
+            envFrom:
+            - secretRef:
+                name: me-app-secrets  # 确保包含数据库连接信息和用户ID
+          restartPolicy: OnFailure

@@ -38,6 +38,16 @@ def main():
     charts_parser.add_argument('--end-date',
                     help='结束日期 (YYYY-MM-DD)')
     
+    # 习惯统计子命令
+    habits_parser = subparsers.add_parser('habits', help='习惯打卡统计')
+    habits_parser.add_argument('user_id', help='用户ID')
+    habits_parser.add_argument('--update', action='store_true',
+                    help='只更新统计数据，不生成报告')
+    habits_parser.add_argument('--days', type=int, default=30,
+                    help='分析的天数 (默认: 30)')
+    habits_parser.add_argument('--format', choices=['json', 'csv', 'all'], default='all', 
+                    help='输出格式 (默认: all)')
+    
     # 数据库探索子命令
     db_parser = subparsers.add_parser('explore-db', help='数据库探索工具')
     db_parser.add_argument('--table',
@@ -121,6 +131,18 @@ def main():
             from export_to_storage import main as export_main
             sys.argv = [sys.argv[0]] + sys.argv[2:]  # 移除'export'命令
             return export_main()
+        
+        elif args.command == 'habits':
+            if args.update:
+                from habit_stats import HabitStatsService
+                with HabitStatsService() as service:
+                    updated = service.update_all_user_stats(args.user_id)
+                    logger.info(f"已更新 {updated} 个习惯的统计数据")
+            else:
+                from habit_report import main as habit_report_main
+                sys.argv = ["habit_report.py", args.user_id, "--days", str(args.days), "--format", args.format]
+                habit_report_main()
+                logger.info(f"习惯统计报告生成完成")
         
         logger.info(f"成功完成 {args.command} 任务")
         return 0
