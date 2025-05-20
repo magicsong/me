@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
-import { PomodoroTimer } from './components/pomodoro-timer';
-import { PomodoroList } from './components/pomodoro-list';
-import { PomodoroTagManager } from './components/pomodoro-tag-manager';
-import { PomodoroStats } from './components/pomodoro-stats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePomodoro } from '../../contexts/pomodoro-context';
+import { PomodoroList } from './components/pomodoro-list';
+import { PomodoroStats } from './components/pomodoro-stats';
+import { PomodoroTimer } from './components/pomodoro-timer';
 
 export default function PomodoroPage() {
   const { activePomodoro, setActivePomodoro } = usePomodoro();

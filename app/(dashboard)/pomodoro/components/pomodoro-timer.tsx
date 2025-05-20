@@ -1,21 +1,15 @@
 'use client';
 
 import { useToast } from '@/components/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Check, Pause, Play } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
-// 引入倒计时组件
-import { BaseRequest, BaseResponse } from '@/app/api/lib/types';
-import { PomodoroBO, TodoBO } from '@/app/api/types';
-import { CountdownCircleTimer } from 'react-countdown-circle-timer';
-import { getHabitDetail } from '../../habits/client-actions';
-// 预设时间选项（分钟）
-const PRESET_DURATIONS = [5, 10, 15, 20, 25, 30, 45, 60];
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { BaseRequest } from '@/app/api/lib/types';
+import { PomodoroBO } from '@/app/api/types';
+import { usePomodoroState } from './hooks/use-pomodoro-state';
+import { usePomodoroTimer } from './hooks/use-pomodoro-timer';
+import { useTodoIntegration } from './hooks/use-todo-integration';
+import { PomodoroForm } from './ui/pomodoro-form';
+import { PomodoroCountdown } from './ui/pomodoro-countdown';
+import { PomodoroControls } from './ui/pomodoro-controls';
 
 // 定义类型
 interface PomodoroTimerProps {
@@ -30,48 +24,38 @@ export function PomodoroTimer({
   onPomodoroChange
 }: PomodoroTimerProps) {
   const { toast } = useToast();
-  const searchParams = useSearchParams();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [duration, setDuration] = useState(25);
-  const [customDuration, setCustomDuration] = useState('25'); // 设置默认值
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [isFinished, setIsFinished] = useState(false); // 新增状态：计时结束但未确认完成
-  const [selectedTag, setSelectedTag] = useState('');
+  const [state, actions] = usePomodoroState(activePomodoro);
+  const { 
+    title, description, duration, customDuration,
+    timeLeft, isRunning, isCompleted, isFinished,
+    selectedTag, pomodoroId, relatedTodoId, relatedHabitId,
+    sourceType, isTodoCompleted 
+  } = state;
+  
+  const { 
+    setTitle, setDescription, setDuration, setCustomDuration,
+    setTimeLeft, setIsRunning, setIsCompleted, setIsFinished,
+    setSelectedTag, setPomodoroId, setRelatedTodoId, setRelatedHabitId,
+    setSourceType, setIsTodoCompleted 
+  } = actions;
+  
   const [tags, setTags] = useState<any[]>([]);
-  const [pomodoroId, setPomodoroId] = useState<number | null>(null);
-  const [relatedTodoId, setRelatedTodoId] = useState<number | null>(null);
-  const [isLoadingTodo, setIsLoadingTodo] = useState(false);
-  const [todos, setTodos] = useState<TodoBO[]>([]);  // 添加todos状态
-  const [isLoadingTodos, setIsLoadingTodos] = useState(false);  // 添加加载状态
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [relatedHabitId, setRelatedHabitId] = useState<number | null>(null);  // 添加关联的习惯ID
-  const [sourceType, setSourceType] = useState<'todo' | 'habit' | 'custom'>('custom');  // 添加来源类型
-  const [hasUrlParams, setHasUrlParams] = useState(false);  // 添加URL参数状态
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isTodoCompleted, setIsTodoCompleted] = useState(false); // 新增状态：跟踪待办事项是否已完成
-
-  // 初始化音频
-  useEffect(() => {
-    try {
-      audioRef.current = new Audio('/sounds/complete.mp3');
-      // 预加载音频
-      audioRef.current.load();
-    } catch (error) {
-      console.error('初始化音频失败:', error);
-    }
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
+  
+  // 定时器和音频相关逻辑
+  const { playSound, formatTime } = usePomodoroTimer(state, actions, playSoundOnComplete);
+  
+  // 待办事项集成
+  const { 
+    todos, isLoadingTodos, isLoadingTodo, 
+    fetchTodos, handleTodoSelection
+  } = useTodoIntegration(
+    setTitle, 
+    setDescription, 
+    setRelatedTodoId,
+    setRelatedHabitId,
+    setSourceType
+  );
+  
   // 加载标签
   useEffect(() => {
     try {
@@ -83,147 +67,24 @@ export function PomodoroTimer({
       console.error('加载标签失败:', error);
     }
   }, []);
+  
+  // 更新服务器端番茄钟状态
+  const updateServerPomodoroStatus = useCallback(async (id: number, status: 'running' | 'completed' | 'canceled' | 'paused') => {
+    if (!id) return;
 
-  // 从URL参数获取todo或habit信息
-  useEffect(() => {
-    if (isInitialized) {
-      return;
+    try {
+      const updatedPomodoro = await fetch(`/api/pomodoro/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+
+      return updatedPomodoro.ok;
+    } catch (error) {
+      console.error(`更新番茄钟状态失败 (${status}):`, error);
+      return false;
     }
-    const todoId = searchParams.get('todoId');
-    const habitId = searchParams.get('habitId');
-
-    if (todoId) {
-      setHasUrlParams(true);
-      setRelatedTodoId(Number(todoId));
-      setRelatedHabitId(null);
-      setSourceType('todo');
-
-      // 从API获取完整的待办事项信息
-      (async () => {
-        const todoDetails = await fetchTodoDetails(todoId);
-        if (todoDetails) {
-          setTitle(todoDetails.title || '');
-          if (todoDetails.description) {
-            setDescription(todoDetails.description);
-          }
-        }
-      })();
-    } else if (habitId) {
-      setHasUrlParams(true);
-      setRelatedHabitId(Number(habitId));
-      setRelatedTodoId(null);
-      setSourceType('habit');
-      // 从API获取完整的习惯信息
-      (async () => {
-        const habitDetails = await fetchHabitDetails(habitId);
-        if (habitDetails) {
-          setTitle(habitDetails.name || '');
-          if (habitDetails.description) {
-            setDescription(habitDetails.description);
-          }
-        }
-      })();
-    }
-    setIsInitialized(true)
   }, []);
-
-  // 恢复活动中的番茄钟
-  useEffect(() => {
-    if (activePomodoro) {
-      const endTime = new Date(activePomodoro.startTime).getTime() + activePomodoro.duration * 1000 * 60;
-      setTitle(activePomodoro.title || '');
-      setDescription(activePomodoro.description || '');
-      setDuration(activePomodoro.duration || 25);
-      setCustomDuration((activePomodoro.duration || 25).toString());
-      const remainingTime = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-      setTimeLeft(remainingTime);
-      setIsRunning(remainingTime > 0);
-      setIsFinished(remainingTime === 0);
-      //setSelectedTag(activePomodoro.tagId || '');
-      if (activePomodoro.id) {
-        setPomodoroId(activePomodoro.id);
-      }
-      if (activePomodoro.todoId) {
-        setRelatedTodoId(activePomodoro.todoId);
-        setSourceType('todo');
-      }
-      if (activePomodoro.habitId) {
-        setRelatedHabitId(activePomodoro.habitId);
-        setSourceType('habit');
-      }
-    }
-  }, [activePomodoro]);
-
-  // 获取待办事项详情
-  const fetchTodoDetails = useCallback(async (todoId: string) => {
-
-    try {
-      setIsLoadingTodo(true);
-      const response = await fetch(`/api/todolist/todos/${todoId}`);
-
-      if (!response.ok) {
-        throw new Error('获取待办事项失败');
-      }
-
-      const todoData = await response.json();
-      return todoData;
-    } catch (error) {
-      console.error('获取待办事项详情失败:', error);
-      toast({
-        title: "错误",
-        description: "无法加载待办事项信息",
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsLoadingTodo(false);
-    }
-  }, [toast]);
-
-  // 获取待办事项列表
-  const fetchTodos = useCallback(async () => {
-    if (!isInitialized) {
-      return;
-    }
-    try {
-      setIsLoadingTodos(true);
-      const response = await fetch('/api/todo?status=pending');
-
-      if (!response.ok) {
-        throw new Error('获取待办事项列表失败');
-      }
-
-      const resp = await response.json();
-      if (!resp.success) {
-        throw new Error(resp.error);
-      }
-      //convertToClientToDos
-      const activeTodos = resp.data.map((todo: TodoBO) => ({
-        ...todo,
-      }));
-      setTodos(activeTodos);
-
-      // 如果有活动任务且当前没有选定的任务，默认选择第一个，但不能覆盖URL里的参数
-      if (!hasUrlParams) {
-        if (activeTodos.length > 0 && !relatedTodoId && !title) {
-          setRelatedTodoId(activeTodos[0].id);
-          setTitle(activeTodos[0].title || '');
-          if (activeTodos[0].description) {
-            setDescription(activeTodos[0].description);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('获取待办事项列表失败:', error);
-      toast({
-        title: "错误",
-        description: "无法加载待办事项列表",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingTodos(false);
-    }
-  }, [relatedTodoId, title, toast, hasUrlParams, isInitialized]);
 
   // 添加一个新函数，用于完成待办事项
   const completeTodoAndPomodoro = useCallback(async () => {
@@ -255,7 +116,7 @@ export function PomodoroTimer({
         if (!todoResponse.ok) {
           throw new Error('完成待办事项失败');
         }
-        setIsTodoCompleted(true); // 设置待办事项已完成状态
+        setIsTodoCompleted(true);
         toast({
           title: "成功",
           description: "已完成番茄钟和关联的待办事项",
@@ -274,126 +135,16 @@ export function PomodoroTimer({
 
     // 通知状态改变
     onPomodoroChange(null);
-  }, [isInitialized, pomodoroId, relatedTodoId, onPomodoroChange]);
-
-  // 获取习惯详情
-  const fetchHabitDetails = useCallback(async (habitId: string) => {
-    try {
-      setIsLoadingTodo(true); // 复用加载状态
-      return await getHabitDetail(Number(habitId));
-    } catch (error) {
-      console.error('获取习惯详情失败:', error);
-      toast({
-        title: "错误",
-        description: "无法加载习惯信息",
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setIsLoadingTodo(false);
-    }
-  }, [toast]);
-
-  // 初始化时加载待办事项列表
-  useEffect(() => {
-    if (!isInitialized) {
-      return;
-    }
-    fetchTodos();
-  }, [isInitialized, fetchTodos]);
-
-  // 处理待办事项选择
-  const handleTodoSelection = useCallback((todoId: string) => {
-    if (!isInitialized) {
-      return;
-    }
-    const selectedTodo = todos.find(todo => todo.id === Number(todoId));
-    if (selectedTodo && !hasUrlParams) {
-      setRelatedTodoId(Number(todoId));
-      setTitle(selectedTodo.title || '');
-      setDescription(selectedTodo.description || '');
-      setSourceType('todo');
-    }
-  }, [isInitialized, todos]);
-
-  // 处理计时器
-  useEffect(() => {
-    if (isRunning && timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prevTime) => {
-          const newTime = prevTime - 1;
-          if (newTime <= 0) {
-            // 修改：计时结束时不自动完成
-            setIsRunning(false);
-            setIsFinished(true); // 设置为已结束状态
-
-            // 播放提示音但不完成番茄钟
-            if (playSoundOnComplete && audioRef.current) {
-              try {
-                const playPromise = audioRef.current.play();
-                if (playPromise !== undefined) {
-                  playPromise.catch(error => {
-                    console.error('播放完成提示音失败:', error);
-                  });
-                }
-              } catch (error) {
-                console.error('播放完成提示音失败:', error);
-              }
-            }
-
-            return 0;
-          }
-          return newTime;
-        });
-      }, 1000);
-    } else if (!isRunning && timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isRunning, timeLeft, playSoundOnComplete]);
-
-  // 更新服务器端番茄钟状态
-  const updateServerPomodoroStatus = useCallback(async (id: number, status: 'running' | 'completed' | 'canceled' | 'paused') => {
-    if (!id) return;
-
-    try {
-      // 使用pomodoro.ts中的函数来更新状态，而不是直接调用API
-      const updatedPomodoro = await fetch(`/api/pomodoro/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-
-      return updatedPomodoro.ok;
-    } catch (error) {
-      console.error(`更新番茄钟状态失败 (${status}):`, error);
-      return false;
-    }
-  }, []);
+  }, [pomodoroId, relatedTodoId, toast, fetchTodos, onPomodoroChange]);
 
   // 番茄钟完成处理
   const completePomodoro = useCallback(async () => {
     setIsRunning(false);
     setIsCompleted(true);
-    setIsFinished(false); // 重置结束状态，确保不会同时显示多个按钮
+    setIsFinished(false);
 
-    if (playSoundOnComplete && audioRef.current) {
-      try {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.error('播放完成提示音失败:', error);
-          });
-        }
-      } catch (error) {
-        console.error('播放完成提示音失败:', error);
-      }
-    }
+    // 播放音效
+    playSound();
 
     // 如果有现有的番茄钟ID，更新其状态
     if (pomodoroId) {
@@ -413,7 +164,7 @@ export function PomodoroTimer({
     }
     // 通知状态改变
     onPomodoroChange(null);
-  }, [pomodoroId]);
+  }, [pomodoroId, onPomodoroChange, playSound]);
 
   // 开始番茄钟
   const startPomodoro = useCallback(async () => {
@@ -443,9 +194,8 @@ export function PomodoroTimer({
 
       const durationInSeconds = durationInMinutes * 60;
       const startTime = Date.now();
-      const endTime = startTime + durationInSeconds * 1000;
-      const requst = {} as BaseRequest<Partial<PomodoroBO>>;
-      requst.data = {
+      const request = {} as BaseRequest<Partial<PomodoroBO>>;
+      request.data = {
         title,
         description,
         duration: durationInMinutes,
@@ -453,6 +203,7 @@ export function PomodoroTimer({
         todoId: relatedTodoId ? relatedTodoId : undefined,
         habitId: relatedHabitId ? relatedHabitId : undefined
       }
+
       // 先创建服务器端番茄钟
       try {
         const response = await fetch('/api/pomodoro', {
@@ -460,7 +211,7 @@ export function PomodoroTimer({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(requst),
+          body: JSON.stringify(request),
         });
 
         if (response.ok) {
@@ -471,7 +222,7 @@ export function PomodoroTimer({
           setTimeLeft(durationInSeconds);
           setIsRunning(true);
           setIsCompleted(false);
-          setIsTodoCompleted(false); // 设置待办事项已完成状态
+          setIsTodoCompleted(false);
 
           // 通知父组件状态改变
           onPomodoroChange({
@@ -482,7 +233,7 @@ export function PomodoroTimer({
             tagId: selectedTag,
             todoId: relatedTodoId,
             startTime,
-            endTime,
+            endTime: startTime + durationInSeconds * 1000,
           });
 
           toast({
@@ -511,7 +262,7 @@ export function PomodoroTimer({
         variant: "destructive",
       });
     }
-  }, [title, description, duration, selectedTag, relatedTodoId, onPomodoroChange, toast]);
+  }, [title, description, duration, selectedTag, relatedTodoId, relatedHabitId, onPomodoroChange, toast]);
 
   // 暂停/继续番茄钟
   const togglePause = useCallback(async () => {
@@ -531,9 +282,9 @@ export function PomodoroTimer({
     setIsRunning(false);
     setTimeLeft(duration * 60);
     setIsCompleted(false);
-    setIsFinished(false); // 重置结束状态
-    setHasUrlParams(false);
+    setIsFinished(false);
     setIsTodoCompleted(false);
+
     // 如果有关联的番茄钟ID，更新其状态为取消
     if (pomodoroId) {
       await updateServerPomodoroStatus(pomodoroId, 'canceled');
@@ -543,16 +294,8 @@ export function PomodoroTimer({
     // 通知父组件状态改变
     onPomodoroChange(null);
   }, [duration, pomodoroId, onPomodoroChange, updateServerPomodoroStatus]);
-
-  // 处理自定义时长变化
-  const handleCustomDurationChange = useCallback((value: string) => {
-    setCustomDuration(value);
-    const numValue = parseInt(value);
-    if (!isNaN(numValue) && numValue > 0) {
-      setDuration(numValue);
-    }
-  }, []);
-  // ...existing code...
+  
+  // 再次开始同样的番茄钟
   const restartSamePomodoro = useCallback(async () => {
     setIsRunning(true);
     setIsCompleted(false);
@@ -562,7 +305,7 @@ export function PomodoroTimer({
     try {
       const durationInMinutes = Number(duration);
       const durationInSeconds = durationInMinutes * 60;
-      setTimeLeft(durationInSeconds);  // 立即设置计时时间
+      setTimeLeft(durationInSeconds);
       const startTime = Date.now();
       const request = {} as BaseRequest<Partial<PomodoroBO>>;
       request.data = {
@@ -583,8 +326,7 @@ export function PomodoroTimer({
       });
 
       if (response.ok) {
-        console.log("再次开始同样的番茄钟");
-        const newPomodoro = await response.json() as BaseResponse<PomodoroBO>;
+        const newPomodoro = await response.json();
         setPomodoroId(newPomodoro.data?.id);
 
         // 设置本地状态
@@ -613,12 +355,6 @@ export function PomodoroTimer({
       });
     }
   }, [title, description, duration, selectedTag, relatedTodoId, relatedHabitId, onPomodoroChange, toast]);
-  // 格式化时间显示（mm:ss）
-  const formatTime = useCallback((seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }, []);
 
   // 渲染倒计时的时间显示
   const renderTime = useCallback(({ remainingTime }: { remainingTime: number }) => {
@@ -640,157 +376,24 @@ export function PomodoroTimer({
       </div>
     );
   }, [isRunning]);
-  function priorityText(priority: string) {
-    switch (priority) {
-      case 'urgent': return '紧急';
-      case 'high': return '高';
-      case 'medium': return '中';
-      case 'low': return '低';
-      default: return priority;
-    }
-  }
-  // 新增：不同优先级对应不同颜色
-  function priorityColor(priority: string) {
-    switch (priority) {
-      case 'urgent': return 'text-red-600';
-      case 'high': return 'text-orange-500';
-      case 'medium': return 'text-yellow-600';
-      case 'low': return 'text-green-600';
-      default: return 'text-gray-500';
-    }
-  }
+  
+  const handleTimerComplete = useCallback(() => {
+    setIsRunning(false);
+    setIsFinished(true);
+  }, []);
+
   return (
     <div className="space-y-6">
       {!isRunning && !isCompleted && !isFinished && (
-        <div className="grid gap-4">
-          {/* 添加待办事项选择 */}
-          <div>
-            <Label htmlFor="todo">从待办事项选择</Label>
-            <Select
-              value={relatedTodoId || ''}
-              onValueChange={handleTodoSelection}
-              disabled={isRunning || isLoadingTodos}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={isLoadingTodos ? "正在加载待办事项..." : "选择一个待办事项"} />
-              </SelectTrigger>
-              <SelectContent>
-                {todos
-                  .slice()
-                  .sort((a, b) => {
-                    if (a.plannedStartTime && b.plannedStartTime) {
-                      return a.plannedStartTime.localeCompare(b.plannedStartTime);
-                    }
-                    if (a.plannedStartTime) return -1;
-                    if (b.plannedStartTime) return 1;
-                    return 0;
-                  })
-                  .map((todo) => (
-                    <SelectItem key={todo.id} value={todo.id}>
-                      <div className="flex flex-col items-start">
-                        <span>
-                          {todo.title}
-                          <span className={`ml-2 text-xs font-semibold ${priorityColor(todo.priority)}`}>
-                            [{priorityText(todo.priority)}]
-                          </span>
-                        </span>
-                        {todo.plannedStartTime && (
-                          <span className="text-xs text-gray-400">
-                            {todo.plannedStartTime}
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                {todos.length === 0 && !isLoadingTodos && (
-                  <SelectItem value="none" disabled>
-                    没有可用的待办事项
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="title">
-              标题 {relatedTodoId ? '(关联待办事项)' : ''} {isLoadingTodo && '加载中...'}
-            </Label>
-            <Input
-              id="title"
-              placeholder={isLoadingTodo ? "正在加载待办事项..." : "输入番茄钟标题"}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={isRunning || isLoadingTodo}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="description">描述（可选）</Label>
-            <Textarea
-              id="description"
-              placeholder="输入描述..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={isRunning}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="duration">时长（分钟）</Label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {PRESET_DURATIONS.map((preset) => (
-                <Button
-                  key={preset}
-                  variant={duration === preset ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setDuration(preset);
-                    setCustomDuration(preset.toString());
-                  }}
-                  disabled={isRunning}
-                  type="button"
-                >
-                  {preset}
-                </Button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                placeholder="自定义时长"
-                value={customDuration}
-                onChange={(e) => handleCustomDurationChange(e.target.value)}
-                disabled={isRunning}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          {tags.length > 0 && (
-            <div>
-              <Label htmlFor="tag">标签（可选）</Label>
-              <Select
-                value={selectedTag}
-                onValueChange={setSelectedTag}
-                disabled={isRunning}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择标签" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">无标签</SelectItem>
-                  {tags.map((tag) => (
-                    <SelectItem key={tag.id} value={tag.id}>
-                      {tag.name}
-                    </SelectItem>  // 正确闭合标签
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
+        <PomodoroForm
+          state={state}
+          actions={actions}
+          todos={todos}
+          isLoadingTodos={isLoadingTodos}
+          isLoadingTodo={isLoadingTodo}
+          handleTodoSelection={handleTodoSelection}
+          tags={tags}
+        />
       )}
 
       <div className="flex flex-col items-center">
@@ -804,27 +407,15 @@ export function PomodoroTimer({
           </div>
         )}
 
-        {/* 替换原来的倒计时显示 */}
         <div className="mb-6">
           {(isRunning || isFinished || timeLeft > 0) && (
-            <CountdownCircleTimer
-              key={isRunning ? 'running' : 'paused'} // 当状态改变时重新初始化计时器
-              isPlaying={isRunning}
-              duration={duration * 60}
-              initialRemainingTime={timeLeft}
-              colors={['#00C49F', '#F7B801', '#A30000']}
-              colorsTime={[duration * 60, duration * 30, 0]}
-              strokeWidth={12}
-              size={220}
-              trailColor="#e2e8f0"
-              onComplete={() => {
-                setIsRunning(false);
-                setIsFinished(true);
-                return { shouldRepeat: false };
-              }}
-            >
-              {renderTime}
-            </CountdownCircleTimer>
+            <PomodoroCountdown
+              isRunning={isRunning}
+              duration={duration}
+              timeLeft={timeLeft}
+              onComplete={handleTimerComplete}
+              renderTime={renderTime}
+            />
           )}
           {!isRunning && !isFinished && timeLeft === 0 && !isCompleted && (
             <div className="text-6xl font-bold mb-6">
@@ -838,78 +429,19 @@ export function PomodoroTimer({
           )}
         </div>
 
-        <div className="flex gap-4">
-          {!isRunning && !isCompleted && !isFinished && (
-            <Button
-              size="lg"
-              onClick={startPomodoro}
-              type="button"
-            >
-              <Play className="mr-2" /> 开始专注
-            </Button>
-          )}
-
-          {isRunning && (
-            <Button
-              size="lg"
-              onClick={togglePause}
-              variant="outline"
-              type="button"
-            >
-              <Pause className="mr-2" /> {isRunning ? '暂停' : '继续'}
-            </Button>
-          )}
-
-          {isFinished && !isCompleted && (
-            <div className="flex gap-3 w-full">
-              <Button
-                size="lg"
-                onClick={completePomodoro}
-                variant="default"
-                type="button"
-                className="flex-1"
-              >
-                <Check className="mr-2" /> 确认完成
-              </Button>
-
-              {sourceType === 'todo' && (
-                <Button
-                  size="lg"
-                  onClick={completeTodoAndPomodoro}
-                  variant="default"
-                  type="button"
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
-                  <Check className="mr-2" /> 完成待办
-                </Button>
-              )}
-            </div>
-          )}
-          {isCompleted && (
-            <div className="flex gap-3 w-full">
-              <Button
-                size="lg"
-                onClick={resetPomodoro}
-                variant="outline"
-                type="button"
-                className="flex-1"
-              >
-                <Check className="mr-2" /> 完成！开始新的番茄钟
-              </Button>
-          {!isTodoCompleted && (
-                <Button
-                  size="lg"
-                  onClick={restartSamePomodoro}
-                  variant="default"
-                  type="button"
-                  className="flex-1"
-                >
-                  <Play className="mr-2" /> 再次开始同样的番茄钟
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
+        <PomodoroControls
+          isRunning={isRunning}
+          isCompleted={isCompleted}
+          isFinished={isFinished}
+          isTodoCompleted={isTodoCompleted}
+          sourceType={sourceType}
+          onStart={startPomodoro}
+          onTogglePause={togglePause}
+          onComplete={completePomodoro}
+          onCompleteTodoAndPomodoro={completeTodoAndPomodoro}
+          onReset={resetPomodoro}
+          onRestartSame={restartSamePomodoro}
+        />
       </div>
     </div>
   );
