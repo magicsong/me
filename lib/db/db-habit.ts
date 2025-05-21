@@ -1,4 +1,4 @@
-import { habit_challenge_tiers, habit_entries, habits,habit_difficulties as habitDifficulties } from "@/lib/db/schema";
+import { habit_challenge_tiers, habit_entries, habits, habit_stats, habit_difficulties as habitDifficulties } from "@/lib/db/schema";
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
     date,
@@ -803,4 +803,87 @@ export async function getHabitTierStatsFromDB(habitId: number, userId: string) {
         defaultCompletionCount: noTierCount,
         totalTiers: tiers.length
     };
+}
+
+// 获取习惯的统计数据
+export async function getHabitStatsFromDB(habitId: number, userId: string) {
+    const stats = await db.select()
+        .from(habit_stats)
+        .where(and(
+            eq(habit_stats.habit_id, habitId),
+            eq(habit_stats.user_id, userId)
+        ))
+        .limit(1);
+
+    return stats.length > 0 ? stats[0] : null;
+}
+
+// 获取用户所有习惯的统计数据
+export async function getAllHabitStatsForUserFromDB(userId: string) {
+    return await db.select()
+        .from(habit_stats)
+        .where(eq(habit_stats.user_id, userId));
+}
+
+// 获取用户所有习惯的基本信息和统计数据
+export async function getHabitsWithStatsFromDB(userId: string) {
+    const userHabits = await db.select()
+        .from(habits)
+        .where(eq(habits.user_id, userId))
+        .orderBy(desc(habits.created_at));
+
+    const habitsWithStats = await Promise.all(
+        userHabits.map(async (habit) => {
+            const stats = await getHabitStatsFromDB(habit.id, userId);
+            
+            return {
+                ...habit,
+                stats: stats || {
+                    total_check_ins: 0,
+                    current_streak: 0,
+                    longest_streak: 0,
+                    completion_rate: 0,
+                    failed_count: 0,
+                    last_check_in_date: null
+                }
+            };
+        })
+    );
+
+    return habitsWithStats;
+}
+
+// 获取用户完成情况最好的习惯（按连续天数排序）
+export async function getTopStreakHabitsFromDB(userId: string, limit: number = 5) {
+    return await db.select({
+        ...habits,
+        total_check_ins: habit_stats.total_check_ins,
+        current_streak: habit_stats.current_streak,
+        longest_streak: habit_stats.longest_streak,
+        completion_rate: habit_stats.completion_rate,
+        last_check_in_date: habit_stats.last_check_in_date
+    })
+        .from(habits)
+        .innerJoin(habit_stats, and(
+            eq(habits.id, habit_stats.habit_id),
+            eq(habit_stats.user_id, userId)
+        ))
+        .where(eq(habits.user_id, userId))
+        .orderBy(desc(habit_stats.current_streak))
+        .limit(limit);
+}
+
+// 获取用户所有习惯的完成率统计
+export async function getHabitCompletionRatesFromDB(userId: string) {
+    return await db.select({
+        habit_id: habit_stats.habit_id,
+        habit_name: habits.name,
+        completion_rate: habit_stats.completion_rate
+    })
+        .from(habit_stats)
+        .innerJoin(habits, eq(habit_stats.habit_id, habits.id))
+        .where(and(
+            eq(habit_stats.user_id, userId),
+            eq(habits.user_id, userId)
+        ));
 }

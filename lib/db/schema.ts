@@ -26,6 +26,26 @@ export const habits = pgTable("habits", {
 	active_tier_id: integer("active_tier_id"),
 });
 
+export const habit_stats = pgTable("habit_stats", {
+  id: serial("id").primaryKey().notNull(),
+  habit_id: integer("habit_id").notNull().references(() => habits.id),
+  user_id: text("user_id").notNull(),
+  total_check_ins: integer("total_check_ins").notNull(),
+  current_streak: integer("current_streak").notNull(),
+  longest_streak: integer("longest_streak").notNull(),
+  completion_rate: numeric("completion_rate", { precision: 5, scale: 2 }).notNull(),
+  last_check_in_date: timestamp("last_check_in_date", { mode: 'string', withTimezone: true }),
+  failed_count: integer("failed_count").notNull(),
+  updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+}, 
+(table) => {
+  return {
+    unique_habit_user: uniqueIndex("unique_habit_user_idx").on(table.habit_id, table.user_id),
+    idx_habit_stats_habit_id: index("idx_habit_stats_habit_id").using("btree", table.habit_id),
+    idx_habit_stats_user_id: index("idx_habit_stats_user_id").using("btree", table.user_id),
+  }
+});
+
 export const habit_entries = pgTable("habit_entries", {
 	id: serial("id").primaryKey().notNull(),
 	habit_id: integer("habit_id").notNull().references(() => habits.id),
