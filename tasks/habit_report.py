@@ -44,7 +44,7 @@ def generate_habit_completion_trend(stats_service, user_id, days=30):
     habits_stats = stats_service.get_all_user_stats(user_id)
     
     if not habits_stats:
-        print("没有找到习惯数据")
+        print(f"没有找到用户 {user_id} 的习惯数据")
         return None
     
     # 获取日期范围
@@ -152,7 +152,7 @@ def generate_habit_heatmap(stats_service, user_id, weeks=10):
     habits_stats = stats_service.get_all_user_stats(user_id)
     
     if not habits_stats:
-        print("没有找到习惯数据")
+        print(f"没有找到用户 {user_id} 的习惯数据")
         return None
     
     # 获取日期范围（按周）
@@ -291,14 +291,14 @@ def generate_habit_streak_chart(stats_service, user_id):
     habits_stats = stats_service.get_all_user_stats(user_id)
     
     if not habits_stats:
-        print("没有找到习惯数据")
+        print(f"没有找到用户 {user_id} 的习惯数据")
         return None
     
     # 创建DataFrame
     df = pd.DataFrame(habits_stats)
     
     if df.empty:
-        print("没有习惯数据")
+        print(f"没有找到用户 {user_id} 的习惯数据")
         return None
     
     # 只选择需要的列

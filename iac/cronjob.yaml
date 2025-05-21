@@ -126,7 +126,7 @@ spec:
             image: ghcr.io/magicsong/tasks-app:latest  # 替换为您的镜像仓库地址
             args:
             - habits
-            - "${USER_ID}"  # 从环境变量中获取用户ID
+            - --update
             - --days
             - "30"
             resources:
@@ -162,7 +162,7 @@ spec:
             args:
             - main.py
             - habits
-            - "${USER_ID}"  # 从环境变量中获取用户ID
+            - --update
             - --days
             - "90"
             resources:

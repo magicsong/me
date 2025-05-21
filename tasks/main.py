@@ -40,7 +40,7 @@ def main():
     
     # 习惯统计子命令
     habits_parser = subparsers.add_parser('habits', help='习惯打卡统计')
-    habits_parser.add_argument('user_id', help='用户ID')
+    habits_parser.add_argument('--user-id', dest='user_id', help='用户ID，不指定则处理所有用户')
     habits_parser.add_argument('--update', action='store_true',
                     help='只更新统计数据，不生成报告')
     habits_parser.add_argument('--days', type=int, default=30,
@@ -137,12 +137,20 @@ def main():
                 from habit_stats import HabitStatsService
                 with HabitStatsService() as service:
                     updated = service.update_all_user_stats(args.user_id)
-                    logger.info(f"已更新 {updated} 个习惯的统计数据")
+                    if args.user_id:
+                        logger.info(f"已更新用户 {args.user_id} 的 {updated} 个习惯统计数据")
+                    else:
+                        logger.info(f"已更新所有用户的 {updated} 个习惯统计数据")
             else:
+                # 生成报告必须指定用户
+                if not args.user_id:
+                    logger.error("生成报告时必须指定 --user-id 参数")
+                    return 1
+                    
                 from habit_report import main as habit_report_main
                 sys.argv = ["habit_report.py", args.user_id, "--days", str(args.days), "--format", args.format]
                 habit_report_main()
-                logger.info(f"习惯统计报告生成完成")
+                logger.info(f"用户 {args.user_id} 的习惯统计报告生成完成")
         
         logger.info(f"成功完成 {args.command} 任务")
         return 0

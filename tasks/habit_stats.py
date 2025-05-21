@@ -12,12 +12,12 @@ import os
 import datetime
 from datetime import timedelta
 from typing import Dict, List, Optional, Any, Tuple
-import psycopg2
+import logging
 from psycopg2.extras import RealDictCursor
 import pandas as pd
 from db import db
 
-
+logger = logging.getLogger(__name__)
 class HabitStatsService:
     """习惯打卡数据统计服务"""
 
@@ -203,28 +203,88 @@ class HabitStatsService:
                 ))
                 conn.commit()
     
-    def update_all_user_stats(self, user_id: str) -> int:
-        """更新用户所有习惯的统计数据"""
-        # 获取用户所有习惯
-        with self._get_connection() as conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                cursor.execute(
-                    """
-                    SELECT id FROM habits
-                    WHERE user_id = %s
-                    """,
-                    (user_id,)
-                )
-                habits = cursor.fetchall()
+    def update_all_user_stats(self, user_id: Optional[str] = None) -> int:
+        """
+        更新用户所有习惯的统计数据
+    
+        参数:
+            user_id: 用户ID，如果为None则处理所有用户
+    
+        返回:
+            更新的习惯数量
+        """
+        print("DEBUG: 开始执行update_all_user_stats函数")  # 调试点1
+        try:
+            total_updated = 0
         
-        update_count = 0
-        for habit in habits:
-            habit_id = habit['id']
-            stats = self.calculate_check_in_stats(habit_id, user_id)
-            self.save_stats_to_db(habit_id, user_id, stats)
-            update_count += 1
+            # 如果指定了用户ID，则只处理该用户
+            if user_id:
+                print(f"DEBUG: 使用指定的user_id={user_id}")  # 调试点2.1
+                with self._get_connection() as conn:
+                    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                        print("DEBUG: 准备执行SQL查询")  # 调试点4
+                        cursor.execute(
+                            """
+                            SELECT id FROM habits
+                            WHERE user_id = %s
+                            """,
+                            (user_id,)
+                        )
+                        habits = cursor.fetchall()
+                        print(f"DEBUG: SQL执行完成，获取到用户 {user_id} 的 {len(habits)} 条记录")  # 调试点5
+                
+                # 计算每个习惯的统计数据并保存
+                for habit in habits:
+                    habit_id = habit['id']
+                    stats = self.calculate_check_in_stats(habit_id, user_id)
+                    self.save_stats_to_db(habit_id, user_id, stats)
+                    total_updated += 1
+                
+                print(f"用户 {user_id} 的习惯数量: {len(habits)}，已更新 {total_updated} 个")
+                return total_updated
+            else:
+                # 获取所有用户列表
+                print("DEBUG: 未指定用户ID，处理所有用户")  # 调试点2.2
+                with self._get_connection() as conn:
+                    with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                        print("DEBUG: 准备查询所有用户")  # 调试点3
+                        cursor.execute(
+                            """
+                            SELECT DISTINCT user_id FROM habits
+                            """
+                        )
+                        users = cursor.fetchall()
+                        print(f"DEBUG: 总共找到 {len(users)} 个用户")  # 调试点4
             
-        return update_count
+                # 为每个用户更新习惯统计
+                for user in users:
+                    current_user_id = user['user_id']
+                    print(f"DEBUG: 处理用户 {current_user_id}")
+                    with self._get_connection() as conn:
+                        with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                            cursor.execute(
+                                """
+                                SELECT id FROM habits
+                                WHERE user_id = %s
+                                """,
+                                (current_user_id,)
+                            )
+                            habits = cursor.fetchall()
+                            print(f"DEBUG: 用户 {current_user_id} 有 {len(habits)} 个习惯")
+                
+                # 计算每个习惯的统计数据并保存
+                for habit in habits:
+                    habit_id = habit['id']
+                    stats = self.calculate_check_in_stats(habit_id, current_user_id)
+                    self.save_stats_to_db(habit_id, current_user_id, stats)
+                    total_updated += 1
+                
+            print(f"总共更新了 {total_updated} 个习惯的统计数据，涉及 {len(users)} 个用户")
+            return total_updated
+            
+        except Exception as e:
+            print(f"ERROR: update_all_user_stats 执行出错: {e}")  # 调试点6
+            raise
             
     def get_habit_stats(self, habit_id: int, user_id: str) -> Dict[str, Any]:
         """获取习惯统计数据，如果不存在则计算并保存"""
