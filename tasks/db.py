@@ -16,7 +16,9 @@ load_dotenv()
 
 # 获取数据库连接URL
 DATABASE_URL = os.getenv("POSTGRES_URL")
-
+# Ensure DATABASE_URL uses postgresql:// protocol
+if DATABASE_URL and not DATABASE_URL.startswith("postgresql://") and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 # 创建SQLAlchemy引擎
 engine = create_engine(DATABASE_URL)
 

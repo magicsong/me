@@ -13,7 +13,9 @@ class DatabaseConfig(BaseModel):
     password: str = os.getenv("POSTGRES_PASSWORD", "postgres")
     database: str = os.getenv("POSTGRES_DATABASE", "me")
     connection_string: str = os.getenv("POSTGRES_URL", "")
-    
+    if connection_string and not connection_string.startswith("postgresql://") and connection_string.startswith("postgres://"):
+        connection_string = connection_string.replace("postgres://", "postgresql://", 1)
+
     def get_connection_string(self) -> str:
         """获取数据库连接字符串"""
         if self.connection_string:

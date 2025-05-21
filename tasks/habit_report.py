@@ -475,12 +475,16 @@ def main():
     
     args = parser.parse_args()
     
+    user_id = os.environ.get('USER_ID')
+    if not user_id:
+        raise ValueError("未提供 user_id 且环境变量 USER_ID 未设置")
+    
     with HabitStatsService() as service:
         if args.update_only:
-            updated = service.update_all_user_stats(args.user_id)
+            updated = service.update_all_user_stats(user_id)
             print(f"已更新 {updated} 个习惯的统计数据")
         else:
-            result = generate_habit_report(args.user_id, args.days, args.format)
+            result = generate_habit_report(user_id, args.days, args.format)
             print(f"报告生成完成: {result['charts']}")
     
     return 0
