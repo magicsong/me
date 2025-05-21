@@ -50,3 +50,39 @@ jobs:
           echo VERSION=$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
+          
+  # 新增的任务构建和推送 job
+  build-tasks:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build tasks image
+        run: |
+          # 检查 tasks 目录
+          ls -la tasks/
+          cd tasks
+          # 使用 tasks 目录下的 Dockerfile 构建镜像
+          docker build . --file Dockerfile --tag tasks-image --label "runnumber=${GITHUB_RUN_ID}"
+
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      
+      - name: Push tasks image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/tasks-app
+          
+          # 转换为小写
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          
+          # 获取版本信息
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          [ "$VERSION" == "main" ] && VERSION=latest
+          
+          echo "推送镜像: $IMAGE_ID:$VERSION"
+          docker tag tasks-image $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
