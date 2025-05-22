@@ -12,14 +12,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 解析请求内容
-    const { prompt, type } = await request.json();
+    const { prompt, type, resetMemory = false } = await request.json();
     
     if (!prompt) {
       return NextResponse.json({ error: '缺少必要的prompt参数' }, { status: 400 });
     }
 
-    // 根据请求类型生成不同的建议
-    const suggestion = await generateSummaryFeedback(prompt);
+    // 根据请求类型生成不同的建议，并传递resetMemory参数
+    const suggestion = await generateSummaryFeedback(prompt, resetMemory);
     
     return NextResponse.json({ 
       success: true, 

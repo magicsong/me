@@ -116,7 +116,7 @@ export function AISummarySection({
     }
   };
   // 生成AI总结
-  const generateAISummary = async () => {
+  const generateAISummary = async (resetMemory = false) => {
     setIsGeneratingAI(true);
     try {
       // 通过API调用生成AI总结
@@ -127,7 +127,8 @@ export function AISummarySection({
         },
         body: JSON.stringify({
           dateStr: format(currentDate, 'yyyy-MM-dd'),
-          summaryType: 'daily'
+          summaryType: 'daily',
+          resetMemory
         }),
       });
 
@@ -146,8 +147,9 @@ export function AISummarySection({
       setIsGeneratingAI(false);
     }
   };
+  
   // 生成上周总结
-  const generateAISummaryByType = async (type: TabType) => {
+  const generateAISummaryByType = async (type: TabType, resetMemory = false) => {
     // Set appropriate loading state based on type
     if (type === 'daily') {
       setIsGeneratingAI(true);
@@ -179,6 +181,7 @@ export function AISummarySection({
       const requestBody: any = {
         dateStr,
         summaryType: type,
+        resetMemory
       };
 
       if (type !== 'daily') {
@@ -224,8 +227,8 @@ export function AISummarySection({
   };
 
   // Function aliases for UI handlers
-  const generateWeekSummary = () => generateAISummaryByType('weekly');
-  const generateRecentDaysSummary = () => generateAISummaryByType('three_day');
+  const generateWeekSummary = (resetMemory = false) => generateAISummaryByType('weekly', resetMemory);
+  const generateRecentDaysSummary = (resetMemory = false) => generateAISummaryByType('three_day', resetMemory);
   // Tab数据
   const tabs = [
     {
@@ -296,21 +299,34 @@ export function AISummarySection({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-medium text-blue-900">今日一句话总结</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={generateAISummary}
-                    disabled={isGeneratingAI || initialLoading}
-                    className="h-7 text-xs px-2.5 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-                  >
-                    {(isGeneratingAI || initialLoading) ?
-                      <span className="flex items-center">
-                        <span className="mr-1 h-3 w-3 border-2 border-blue-600 rounded-full border-t-transparent animate-spin"></span>
-                        {isGeneratingAI ? "生成中..." : "加载中..."}
-                      </span> :
-                      aiSummary ? "重新生成" : "生成总结"
+                  <div className="flex space-x-2">
+                    {aiSummary && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateAISummary(true)}
+                        disabled={isGeneratingAI || initialLoading}
+                        className="h-7 text-xs px-2.5 text-red-600 hover:text-red-700 hover:bg-red-100 border-red-200"
+                      >
+                        重置记忆
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => generateAISummary(false)}
+                      disabled={isGeneratingAI || initialLoading}
+                      className="h-7 text-xs px-2.5 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                    >
+                      {(isGeneratingAI || initialLoading) ?
+                        <span className="flex items-center">
+                          <span className="mr-1 h-3 w-3 border-2 border-blue-600 rounded-full border-t-transparent animate-spin"></span>
+                          {isGeneratingAI ? "生成中..." : "加载中..."}
+                        </span> :
+                        aiSummary ? "重新生成" : "生成总结"
                     }
                   </Button>
+                  </div>
                 </div>
                 <div className="bg-white/70 rounded-lg p-4 shadow-sm">
                   {aiSummary ?
@@ -328,21 +344,34 @@ export function AISummarySection({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-medium text-purple-900">最近三日总结</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={generateRecentDaysSummary}
-                    disabled={isLoadingRecentSummary}
-                    className="h-7 text-xs px-2.5 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                  >
-                    {isLoadingRecentSummary ?
-                      <span className="flex items-center">
-                        <span className="mr-1 h-3 w-3 border-2 border-purple-600 rounded-full border-t-transparent animate-spin"></span>
-                        获取中...
-                      </span> :
-                      recentDaysSummary ? "刷新总结" : "获取总结"
+                  <div className="flex space-x-2">
+                    {recentDaysSummary && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateRecentDaysSummary(true)}
+                        disabled={isLoadingRecentSummary}
+                        className="h-7 text-xs px-2.5 text-red-600 hover:text-red-700 hover:bg-red-100 border-red-200"
+                      >
+                        重置记忆
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => generateRecentDaysSummary(false)}
+                      disabled={isLoadingRecentSummary}
+                      className="h-7 text-xs px-2.5 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
+                    >
+                      {isLoadingRecentSummary ?
+                        <span className="flex items-center">
+                          <span className="mr-1 h-3 w-3 border-2 border-purple-600 rounded-full border-t-transparent animate-spin"></span>
+                          获取中...
+                        </span> :
+                        recentDaysSummary ? "刷新总结" : "获取总结"
                     }
                   </Button>
+                  </div>
                 </div>
                 <div className="bg-white/70 rounded-lg p-4 shadow-sm">
                   {isLoadingRecentSummary ? (
@@ -366,21 +395,34 @@ export function AISummarySection({
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-medium text-green-900">上周总结</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={generateWeekSummary}
-                    disabled={isLoadingWeekSummary}
-                    className="h-7 text-xs px-2.5 text-green-600 hover:text-green-700 hover:bg-green-100"
-                  >
-                    {isLoadingWeekSummary ?
-                      <span className="flex items-center">
-                        <span className="mr-1 h-3 w-3 border-2 border-green-600 rounded-full border-t-transparent animate-spin"></span>
-                        获取中...
-                      </span> :
-                      weekSummary ? "刷新总结" : "获取总结"
+                  <div className="flex space-x-2">
+                    {weekSummary && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateWeekSummary(true)}
+                        disabled={isLoadingWeekSummary}
+                        className="h-7 text-xs px-2.5 text-red-600 hover:text-red-700 hover:bg-red-100 border-red-200"
+                      >
+                        重置记忆
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => generateWeekSummary(false)}
+                      disabled={isLoadingWeekSummary}
+                      className="h-7 text-xs px-2.5 text-green-600 hover:text-green-700 hover:bg-green-100"
+                    >
+                      {isLoadingWeekSummary ?
+                        <span className="flex items-center">
+                          <span className="mr-1 h-3 w-3 border-2 border-green-600 rounded-full border-t-transparent animate-spin"></span>
+                          获取中...
+                        </span> :
+                        weekSummary ? "刷新总结" : "获取总结"
                     }
                   </Button>
+                  </div>
                 </div>
                 <div className="bg-white/70 rounded-lg p-4 shadow-sm">
                   {isLoadingWeekSummary ? (

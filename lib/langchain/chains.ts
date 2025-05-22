@@ -51,7 +51,7 @@ const createCachedChain = async <T>(chainFunc: () => Promise<T>, cacheKey: strin
 
 export { createCachedChain };
 // 生成总结反馈
-export async function generateSummaryFeedback(summaryContent: string): Promise<string> {
+export async function generateSummaryFeedback(summaryContent: string, resetMemory?: boolean): Promise<string> {
   const userId = await getCurrentUserId();
   const opts = {
     userId, sessionId: "daily-summary", input: summaryContent, memoryParams: {
@@ -60,6 +60,13 @@ export async function generateSummaryFeedback(summaryContent: string): Promise<s
       returnMessages: true,
     }
   } as GenerateOptions;
+  if (resetMemory) {
+    opts.memoryParams = {
+      memoryType: "window",
+      windowSize: 0,
+      returnMessages: true,
+    };
+  }
   return generateContent(opts);
 }
 
