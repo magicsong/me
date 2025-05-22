@@ -1,25 +1,23 @@
 import {
+  Brain,
   CalendarCheck2,
-  Home,
-  LineChart,
-  Package,
-  Package2,
-  PanelLeft,
-  Settings,
-  ShoppingCart,
-  Users2,
-  Timer,
   CheckSquare,
+  FileBarChart,
   FileText,
   History,
-  Brain,
+  Home,
+  LineChart,
   MessageSquare,
-  FileBarChart, // 导入总结图表相关图标
-  Tag
+  Package2,
+  PanelLeft,
+  Settings, // 导入总结图表相关图标
+  Tag,
+  Timer
 } from 'lucide-react';
 import Link from 'next/link';
 
 import { VercelLogo } from '@/components/icons';
+import FloatingNoteButton from '@/components/notes/FloatingNoteButton';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -27,13 +25,11 @@ import {
   TooltipContent,
   TooltipTrigger
 } from '@/components/ui/tooltip';
-import { Analytics } from '@vercel/analytics/react';
 import { ClientBreadcrumb } from './client-breadcrumb';
 import { NavItem } from './nav-item';
 import Providers from './providers';
 import { SearchInput } from './search';
 import { User } from './user';
-import FloatingNoteButton from '@/components/notes/FloatingNoteButton';
 
 export default function DashboardLayout({
   children
@@ -56,7 +52,6 @@ export default function DashboardLayout({
           </main>
         </div>
         <FloatingNoteButton />
-        <Analytics />
       </main>
     </Providers>
   );
