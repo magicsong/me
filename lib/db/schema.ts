@@ -1,7 +1,6 @@
+import { time } from "console"
 import { relations, sql, InferSelectModel } from "drizzle-orm"
 import { index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, serial, text, timestamp, varchar, uniqueIndex, uuid, boolean, foreignKey } from "drizzle-orm/pg-core"
-import { comment } from "postcss"
-import { number } from "zod"
 
 export const frequency = pgEnum("frequency", ['daily', 'weekly', 'monthly','scenario'])
 export const status = pgEnum("status", ['active', 'inactive', 'archived'])
@@ -37,12 +36,36 @@ export const habit_stats = pgTable("habit_stats", {
   last_check_in_date: timestamp("last_check_in_date", { mode: 'string', withTimezone: true }),
   failed_count: integer("failed_count").notNull(),
   updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+  time_range: text("time_range"), // 'week', 'month', 'quarter', 'year'
 }, 
 (table) => {
   return {
     unique_habit_user: uniqueIndex("unique_habit_user_idx").on(table.habit_id, table.user_id),
     idx_habit_stats_habit_id: index("idx_habit_stats_habit_id").using("btree", table.habit_id),
     idx_habit_stats_user_id: index("idx_habit_stats_user_id").using("btree", table.user_id),
+  }
+});
+
+export const global_habit_stats = pgTable("global_habit_stats", {
+  id: serial("id").primaryKey().notNull(),
+  user_id: text("user_id").notNull(),
+  time_range: text("time_range").notNull(), // 'week', 'month', 'quarter', 'year'
+  period_start: timestamp("period_start", { mode: 'string', withTimezone: true }).notNull(),
+  period_end: timestamp("period_end", { mode: 'string', withTimezone: true }).notNull(),
+  overall_completion_rate: numeric("overall_completion_rate", { precision: 5, scale: 2 }).notNull(),
+  total_check_ins: integer("total_check_ins").notNull(),
+  total_failed: integer("total_failed").notNull(),
+  best_habit_id: integer("best_habit_id").references(() => habits.id),
+  worst_habit_id: integer("worst_habit_id").references(() => habits.id),
+  daily_trend: jsonb("daily_trend").default([]),
+  created_at: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+},
+(table) => {
+  return {
+    idx_global_stats_user_id: index("idx_global_stats_user_id").using("btree", table.user_id),
+    idx_global_stats_time_range: index("idx_global_stats_time_range").using("btree", table.time_range),
+    unique_user_period: uniqueIndex("unique_user_period").on(table.user_id, table.time_range, table.period_start),
   }
 });
 

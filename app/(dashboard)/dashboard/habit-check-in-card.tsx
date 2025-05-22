@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { HabitBO } from '@/app/api/types';
 import {
   BookOpen,
+  BarChart3,
   CalendarIcon, CheckCheck,
   CheckCircle2, Circle,
   Clock,
@@ -384,11 +385,23 @@ export function HabitCheckInCard() {
 
                   {/* 在列表项中显示完成或失败状态 */}
                   <div className="flex-1">
-                    <div className="font-medium">{habit.name}
+                    <div className="font-medium flex items-center">
+                      {habit.name}
                       {habit.isPinned && (
                         <span className="ml-2 text-amber-500 flex items-center" title="置顶习惯">
                           <Pin className="h-3 w-3" />
                         </span>
+                      )}
+                      
+                      {/* 统计数据图标指示器 */}
+                      {habit.stats && (
+                        <div className="ml-2 text-xs bg-gray-100 hover:bg-gray-200 rounded px-1.5 py-0.5 transition-colors cursor-help"
+                             title={`总打卡: ${habit.stats.totalCheckIns || 0}次 | 最长连续: ${habit.stats.longestStreak || 0}天 | 失败: ${habit.stats.failedCount || 0}次`}>
+                          <span className="flex items-center gap-0.5">
+                            <BarChart3 className="h-3 w-3" />
+                            <span>{habit.stats.totalCheckIns || 0}次</span>
+                          </span>
+                        </div>
                       )}
                     </div>
                     {habit.description && (
@@ -442,8 +455,19 @@ export function HabitCheckInCard() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <div className="text-sm text-muted-foreground">
-                      {habit.streak > 0 && `${habit.streak}天`}
+                    <div className="text-sm text-muted-foreground flex items-center gap-1" title="习惯统计信息">
+                      {habit.stats?.currentStreak && habit.stats.currentStreak > 0 && (
+                        <span className="flex items-center">
+                          <span className="font-medium">{habit.stats.currentStreak}</span>天连续
+                        </span>
+                      )}
+                      {habit.stats?.completionRate && (
+                        <span className="text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">
+                          {typeof habit.stats.completionRate === 'number' 
+                            ? `${Math.round(habit.stats.completionRate * 100) / 100}%` 
+                            : habit.stats.completionRate}
+                        </span>
+                      )}
                     </div>
                     <CalendarIcon className="h-4 w-4 text-muted-foreground" />
 
@@ -513,12 +537,44 @@ export function HabitCheckInCard() {
         {/* 移动端显示 - 展开收起式日历 */}
         <div className="block md:hidden w-full">
           {selectedHabit && (
-            <Card className="w-full">
-              <HabitCalendar
-                habit={selectedHabit}
-                onClose={() => setSelectedHabit(null)}
-              />
-            </Card>
+            <>
+              {/* 统计信息卡（移动端简化版） */}
+              {selectedHabit.stats && (
+                <Card className="w-full mb-4">
+                  <CardContent className="py-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        <span className="font-medium">习惯统计</span>
+                      </div>
+                      <button 
+                        className="text-xs text-blue-600" 
+                        onClick={() => setSelectedHabit(null)}
+                      >
+                        关闭
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div className="flex items-center">
+                        <span className="text-xs text-muted-foreground mr-1">连续:</span>
+                        <span className="font-semibold">{selectedHabit.stats.currentStreak || 0}天</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs text-muted-foreground mr-1">总打卡:</span>
+                        <span className="font-semibold">{selectedHabit.stats.totalCheckIns || 0}次</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              <Card className="w-full">
+                <HabitCalendar
+                  habit={selectedHabit}
+                  onClose={() => setSelectedHabit(null)}
+                />
+              </Card>
+            </>
           )}
         </div>
 
@@ -526,13 +582,63 @@ export function HabitCheckInCard() {
         <div className="hidden md:flex md:flex-col md:w-5/12 lg:w-2/5 gap-4">
           {/* 日历卡片 */}
           {selectedHabit && (
-            <Card className="w-full">
-              <HabitCalendar
-                habit={selectedHabit}
-                onClose={() => { }}
+            <>
+              {/* 统计信息卡 */}
+              {selectedHabit.stats && (
+                <Card className="w-full mb-4">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-md flex items-center">
+                      <BarChart3 className="mr-2 h-5 w-5" />
+                      习惯统计
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">总打卡次数</span>
+                        <span className="text-xl font-bold">{selectedHabit.stats.totalCheckIns || 0}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">当前连续</span>
+                        <span className="text-xl font-bold">{selectedHabit.stats.currentStreak || 0}<span className="text-sm font-normal">天</span></span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">最长连续</span>
+                        <span className="text-xl font-bold">{selectedHabit.stats.longestStreak || 0}<span className="text-sm font-normal">天</span></span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-muted-foreground">完成率</span>
+                        <span className="text-xl font-bold">
+                          {typeof selectedHabit.stats.completionRate === 'number'
+                            ? `${Math.round(selectedHabit.stats.completionRate * 100) / 100}%`
+                            : selectedHabit.stats.completionRate || '0%'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <div className="text-sm text-muted-foreground mb-1">失败记录</div>
+                      <div className="text-lg font-semibold flex items-center">
+                        <span className="text-amber-500 mr-2">{selectedHabit.stats.failedCount || 0}</span>
+                        <span className="text-sm font-normal">次 (成长机会)</span>
+                      </div>
+                      {selectedHabit.stats.lastCheckInDate && (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          上次打卡: {new Date(selectedHabit.stats.lastCheckInDate).toLocaleDateString('zh-CN')}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              <Card className="w-full">
+                <HabitCalendar
+                  habit={selectedHabit}
+                  onClose={() => { }}
                 className="sticky top-20 w-full"
               />
-            </Card>
+              </Card>
+            </>
           )}
         </div>
       </div>

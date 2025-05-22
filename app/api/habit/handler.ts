@@ -115,12 +115,20 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       completedToday: dataObject.completedToday,
       completedTier: dataObject.completedTier,
       challengeTiers: dataObject.challengeTiers,
-      streak: dataObject.streak || 0,
       failedToday: dataObject.checkinStatus === 'failed',
       failureReason: dataObject.failureReason,
       checkInDays: dataObject.checkin_days,
       isPinned: dataObject.is_pinned,
       activeTierId: dataObject.active_tier_id || null,
+      // 添加stats数据映射
+      stats: dataObject.stats ? {
+        totalCheckIns: dataObject.stats.total_check_ins,
+        currentStreak: dataObject.stats.current_streak,
+        longestStreak: dataObject.stats.longest_streak,
+        completionRate: dataObject.stats.completion_rate,
+        failedCount: dataObject.stats.failed_count,
+        lastCheckInDate: dataObject.stats.last_check_in_date
+      } : undefined,
     };
   }
   fieldsMoveToExtraOptionsWhenGet(): string[] {

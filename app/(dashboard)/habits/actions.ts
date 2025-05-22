@@ -16,6 +16,7 @@ import {
   updateHabitInDB,
   updateHabitTierInDB
 } from '@/lib/db/db-habit';
+import { getHabitStatsByTimeRangeFromDB } from '@/lib/db/db-habit-stats';
 import { revalidatePath } from 'next/cache';
 // 从新文件导入奖励相关函数
 import {
@@ -70,10 +71,10 @@ export async function getHabitHistory(id: string): Promise<HabitEntry[]> {
 }
 
 // 添加获取习惯统计数据的函数
-export async function getHabitStats(timeRange?: 'week' | 'month' | 'year') {
+export async function getHabitStats(timeRange?: 'week' | 'month' | 'quarter' | 'year') {
   const userId = await getCurrentUserId();
   // 从数据库获取习惯统计数据
-  return getHabitStatsFromDB(userId, timeRange);
+  return getHabitStatsByTimeRangeFromDB(userId, timeRange || 'week');
 }
 
 // 获取用户奖励统计数据

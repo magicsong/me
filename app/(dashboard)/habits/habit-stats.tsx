@@ -27,7 +27,7 @@ type StatsData = {
 };
 
 export function HabitStats() {
-  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('week');
+  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter' | 'year'>('week');
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -104,9 +104,10 @@ export function HabitStats() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue={timeRange} onValueChange={(v) => setTimeRange(v as any)}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="week">本周</TabsTrigger>
             <TabsTrigger value="month">本月</TabsTrigger>
+            <TabsTrigger value="quarter">本季度</TabsTrigger>
             <TabsTrigger value="year">今年</TabsTrigger>
           </TabsList>
           

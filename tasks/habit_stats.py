@@ -51,6 +51,30 @@ class HabitStatsService:
                 """)
                 conn.commit()
 
+    def _ensure_global_stats_table(self):
+        """确保global_habit_stats表存在，不存在则创建"""
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                CREATE TABLE IF NOT EXISTS global_habit_stats (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    time_range TEXT NOT NULL,
+                    period_start TIMESTAMP WITH TIME ZONE NOT NULL,
+                    period_end TIMESTAMP WITH TIME ZONE NOT NULL,
+                    overall_completion_rate NUMERIC(5,2) NOT NULL,
+                    total_check_ins INTEGER NOT NULL,
+                    total_failed INTEGER NOT NULL,
+                    best_habit_id INTEGER REFERENCES habits(id),
+                    worst_habit_id INTEGER REFERENCES habits(id),
+                    daily_trend JSONB DEFAULT '[]',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, time_range, period_start)
+                )
+                """)
+                conn.commit()
+
     def get_entries_by_habit_id(self, habit_id: int, user_id: str) -> List[Dict]:
         """获取习惯的所有打卡记录"""
         with self._get_connection() as conn:
@@ -65,13 +89,14 @@ class HabitStatsService:
                 )
                 return cursor.fetchall()
 
-    def calculate_check_in_stats(self, habit_id: int, user_id: str) -> Dict[str, Any]:
+    def calculate_check_in_stats(self, habit_id: int, user_id: str, time_range: str = 'week') -> Dict[str, Any]:
         """
         计算打卡统计数据
         
         参数:
             habit_id: 习惯ID
             user_id: 用户ID
+            time_range: 时间范围，可选值：'week', 'month', 'quarter', 'year'
             
         返回:
             包含统计数据的字典
@@ -145,17 +170,44 @@ class HabitStatsService:
             
             previous_date = current_date
         
-        # 计算完成率（最近30天）
-        thirty_days_ago = (datetime.datetime.now() - timedelta(days=30)).date()
-        days_in_period = 30
+        # 计算完成率（根据指定的时间范围）
+        now = datetime.datetime.now()
+        period_start = datetime.datetime.now()
         
-        check_ins_in_last_30_days = 0
+        # 根据time_range设置时间范围
+        if time_range == 'week':
+            # 设置为本周的第一天（星期一）
+            days_to_monday = period_start.weekday()
+            period_start = period_start - timedelta(days=days_to_monday)
+            days_in_period = (now - period_start).days + 1
+        elif time_range == 'month':
+            # 设置为本月的第一天
+            period_start = period_start.replace(day=1)
+            days_in_period = (now - period_start).days + 1
+        elif time_range == 'quarter':
+            # 设置为本季度的第一天
+            quarter_start_month = (now.month - 1) // 3 * 3 + 1
+            period_start = period_start.replace(month=quarter_start_month, day=1)
+            days_in_period = (now - period_start).days + 1
+        elif time_range == 'year':
+            # 设置为本年的第一天
+            period_start = period_start.replace(month=1, day=1)
+            days_in_period = (now - period_start).days + 1
+        else:
+            # 默认使用30天
+            period_start = now - timedelta(days=30)
+            days_in_period = 30
+        
+        # 将时间设置为每天的开始（0:00:00）
+        period_start = period_start.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        check_ins_in_period = 0
         for date_str in unique_dates:
             date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
-            if date >= thirty_days_ago:
-                check_ins_in_last_30_days += 1
+            if date >= period_start.date():
+                check_ins_in_period += 1
         
-        completion_rate = (check_ins_in_last_30_days / days_in_period) * 100
+        completion_rate = (check_ins_in_period / days_in_period) * 100 if days_in_period > 0 else 0
         
         # 最后打卡日期
         last_check_in_date = None
@@ -383,3 +435,470 @@ class HabitStatsService:
         
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def get_habit_stats_by_time_range(self, user_id: str, time_range: str = 'week') -> Dict[str, Any]:
+        """
+        按时间范围获取习惯统计数据
+        
+        参数:
+            user_id: 用户ID
+            time_range: 时间范围，可选值：'week', 'month', 'quarter', 'year'
+            
+        返回:
+            统计数据结果
+        """
+        self._ensure_stats_table()
+        self._ensure_global_stats_table()
+        
+        # 计算时间范围的开始和结束日期
+        now = datetime.datetime.now()
+        period_start = datetime.datetime.now()
+        period_label = ''
+        
+        # 根据time_range设置时间范围
+        if time_range == 'week':
+            # 设置为本周的第一天（星期一）
+            days_to_monday = period_start.weekday()
+            period_start = period_start - timedelta(days=days_to_monday)
+            period_label = f"{period_start.strftime('%Y-%m-%d')} 至 {now.strftime('%Y-%m-%d')}"
+        elif time_range == 'month':
+            # 设置为本月的第一天
+            period_start = period_start.replace(day=1)
+            period_label = f"{now.year}年{now.month}月"
+        elif time_range == 'quarter':
+            # 设置为本季度的第一天
+            quarter_start_month = (now.month - 1) // 3 * 3 + 1
+            period_start = period_start.replace(month=quarter_start_month, day=1)
+            period_label = f"{now.year}年 Q{(now.month - 1) // 3 + 1}"
+        elif time_range == 'year':
+            # 设置为本年的第一天
+            period_start = period_start.replace(month=1, day=1)
+            period_label = f"{now.year}年"
+        
+        # 将时间设置为每天的开始（0:00:00）
+        period_start = period_start.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # 尝试从全局统计表获取已缓存的数据
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    """
+                    SELECT * FROM global_habit_stats
+                    WHERE user_id = %s 
+                    AND time_range = %s 
+                    AND period_start = %s
+                    LIMIT 1
+                    """,
+                    (user_id, time_range, period_start)
+                )
+                cached_stats = cursor.fetchone()
+                
+                # 如果有缓存数据且是今天更新的，直接返回
+                if cached_stats and datetime.datetime.fromisoformat(str(cached_stats['updated_at']).replace('Z', '+00:00')).date() == now.date():
+                    return self._format_stats_response(cached_stats, period_label, user_id)
+        
+        # 没有缓存或缓存已过期，重新计算统计数据
+        
+        # 1. 获取用户所有习惯
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    """
+                    SELECT * FROM habits
+                    WHERE user_id = %s
+                    AND status = 'active'
+                    """,
+                    (user_id,)
+                )
+                user_habits = cursor.fetchall()
+        
+        if not user_habits:
+            return {
+                "overallCompletionRate": 0,
+                "periodLabel": period_label,
+                "bestHabit": None,
+                "worstHabit": None,
+                "habitStats": [],
+                "dailyTrend": []
+            }
+        
+        # 2. 获取每个习惯在指定时间范围内的打卡记录
+        habit_ids = [habit['id'] for habit in user_habits]
+        
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, habit_id, completed_at, status
+                    FROM habit_entries
+                    WHERE habit_id = ANY(%s)
+                    AND user_id = %s
+                    AND completed_at >= %s
+                    """,
+                    (habit_ids, user_id, period_start)
+                )
+                entries = cursor.fetchall()
+        
+        # 3. 计算每个习惯的统计数据
+        habit_stats = []
+        total_completions = 0
+        total_failed = 0
+        best_habit = None
+        worst_habit = None
+        
+        for habit in user_habits:
+            # 获取习惯的详细统计数据
+            habit_stat = self.get_habit_stats(habit['id'], user_id)
+            
+            # 筛选该习惯在时间范围内的打卡记录
+            habit_entries = [e for e in entries if e['habit_id'] == habit['id']]
+            successful_entries = [e for e in habit_entries if e.get('status') != 'failed']
+            failed_entries = [e for e in habit_entries if e.get('status') == 'failed']
+            
+            # 计算指定时期内的完成率
+            days_since_start = (now - period_start).days + 1
+            
+            # 根据习惯频率和检查日期计算应该打卡的天数
+            expected_check_ins = 0
+            
+            if habit['frequency'] == 'daily':
+                # 过滤出符合打卡日的天数
+                for i in range(days_since_start):
+                    day = period_start + timedelta(days=i)
+                    weekday = day.weekday() + 1  # Python的weekday()返回0-6，转换为1-7
+                    if weekday == 7:  # 如果是周日(6)，转换为7
+                        weekday = 7
+                    
+                    checkin_days = habit.get('checkin_days', [1, 2, 3, 4, 5, 6, 7])
+                    if isinstance(checkin_days, list) and weekday in checkin_days:
+                        expected_check_ins += 1
+            elif habit['frequency'] == 'weekly':
+                expected_check_ins = (days_since_start + 6) // 7  # 向上取整
+            elif habit['frequency'] == 'monthly':
+                # 简单处理，如果跨月则+1
+                if period_start.month != now.month:
+                    expected_check_ins = 2
+                else:
+                    expected_check_ins = 1
+            
+            completion_rate = len(successful_entries) / expected_check_ins if expected_check_ins > 0 else 0
+            
+            stat = {
+                "id": str(habit['id']),
+                "name": habit['name'],
+                "completionRate": completion_rate,
+                "streak": habit_stat.get('current_streak', 0),
+                "totalCompletions": len(successful_entries),
+                "missedDays": expected_check_ins - len(successful_entries) if expected_check_ins > len(successful_entries) else 0
+            }
+            
+            habit_stats.append(stat)
+            total_completions += len(successful_entries)
+            total_failed += len(failed_entries)
+            
+            # 更新最佳和最差习惯
+            if best_habit is None or stat["completionRate"] > best_habit["completionRate"]:
+                best_habit = stat
+            
+            if (worst_habit is None or 
+                (stat["completionRate"] < worst_habit["completionRate"] and expected_check_ins > 0)):
+                worst_habit = stat
+        
+        # 4. 计算每日趋势数据
+        daily_trend = []
+        all_days = set()
+        
+        # 收集所有有记录的日期
+        for entry in entries:
+            date_str = datetime.datetime.fromisoformat(str(entry['completed_at']).replace('Z', '+00:00')).date().isoformat()
+            all_days.add(date_str)
+        
+        # 对每个日期计算完成率
+        for date_str in sorted(all_days):
+            date = datetime.date.fromisoformat(date_str)
+            day_entries = [e for e in entries 
+                          if datetime.datetime.fromisoformat(str(e['completed_at']).replace('Z', '+00:00')).date().isoformat() == date_str]
+            
+            # 根据当天应打卡的习惯计算完成率
+            day_habits = []
+            for habit in user_habits:
+                if habit['frequency'] == 'daily':
+                    weekday = date.weekday() + 1  # Python的weekday()返回0-6，转换为1-7
+                    if weekday == 7:  # 如果是周日(6)，转换为7
+                        weekday = 7
+                    
+                    checkin_days = habit.get('checkin_days', [1, 2, 3, 4, 5, 6, 7])
+                    if isinstance(checkin_days, list) and weekday in checkin_days:
+                        day_habits.append(habit)
+            
+            successful_entries = [e for e in day_entries if e.get('status') != 'failed']
+            completion_rate = len(successful_entries) / len(day_habits) if day_habits else 0
+            
+            daily_trend.append({
+                "date": date.strftime('%Y-%m-%d'),
+                "completionRate": completion_rate
+            })
+        
+        # 5. 计算总体完成率
+        overall_completion_rate = sum(stat["completionRate"] for stat in habit_stats) / len(habit_stats) if habit_stats else 0
+        
+        # 6. 构建并保存全局统计数据
+        global_stat = {
+            "user_id": user_id,
+            "time_range": time_range,
+            "period_start": period_start,
+            "period_end": now,
+            "overall_completion_rate": overall_completion_rate,
+            "total_check_ins": total_completions,
+            "total_failed": total_failed,
+            "best_habit_id": int(best_habit["id"]) if best_habit else None,
+            "worst_habit_id": int(worst_habit["id"]) if worst_habit else None,
+            "daily_trend": daily_trend,
+            "updated_at": now
+        }
+        
+        # 如果有缓存数据则更新，否则创建新记录
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                if cached_stats:
+                    cursor.execute(
+                        """
+                        UPDATE global_habit_stats
+                        SET overall_completion_rate = %s,
+                            total_check_ins = %s,
+                            total_failed = %s,
+                            best_habit_id = %s,
+                            worst_habit_id = %s,
+                            daily_trend = %s,
+                            updated_at = %s
+                        WHERE id = %s
+                        """,
+                        (
+                            global_stat["overall_completion_rate"],
+                            global_stat["total_check_ins"],
+                            global_stat["total_failed"],
+                            global_stat["best_habit_id"],
+                            global_stat["worst_habit_id"],
+                            global_stat["daily_trend"],
+                            global_stat["updated_at"],
+                            cached_stats["id"]
+                        )
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO global_habit_stats
+                        (user_id, time_range, period_start, period_end, 
+                         overall_completion_rate, total_check_ins, total_failed, 
+                         best_habit_id, worst_habit_id, daily_trend, updated_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            global_stat["user_id"],
+                            global_stat["time_range"],
+                            global_stat["period_start"],
+                            global_stat["period_end"],
+                            global_stat["overall_completion_rate"],
+                            global_stat["total_check_ins"],
+                            global_stat["total_failed"],
+                            global_stat["best_habit_id"],
+                            global_stat["worst_habit_id"],
+                            global_stat["daily_trend"],
+                            global_stat["updated_at"]
+                        )
+                    )
+                conn.commit()
+        
+        # 7. 返回统计结果
+        return {
+            "overallCompletionRate": overall_completion_rate,
+            "periodLabel": period_label,
+            "bestHabit": best_habit,
+            "worstHabit": worst_habit,
+            "habitStats": habit_stats,
+            "dailyTrend": daily_trend
+        }
+    
+    def _format_stats_response(self, cached_stat: Dict, period_label: str, user_id: str) -> Dict[str, Any]:
+        """格式化缓存的统计数据返回结果"""
+        # 获取最佳和最差习惯的详细信息
+        best_habit = None
+        worst_habit = None
+        
+        if cached_stat['best_habit_id']:
+            with self._get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT * FROM habits
+                        WHERE id = %s
+                        LIMIT 1
+                        """,
+                        (cached_stat['best_habit_id'],)
+                    )
+                    habit = cursor.fetchone()
+                    
+                    if habit:
+                        habit_stat = self.get_habit_stats(habit['id'], user_id)
+                        best_habit = {
+                            "id": str(habit['id']),
+                            "name": habit['name'],
+                            "completionRate": 1,  # 简化处理，作为最佳习惯可以默认为1
+                            "streak": habit_stat.get('current_streak', 0),
+                            "totalCompletions": habit_stat.get('total_check_ins', 0),
+                            "missedDays": 0
+                        }
+        
+        if cached_stat['worst_habit_id']:
+            with self._get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT * FROM habits
+                        WHERE id = %s
+                        LIMIT 1
+                        """,
+                        (cached_stat['worst_habit_id'],)
+                    )
+                    habit = cursor.fetchone()
+                    
+                    if habit:
+                        habit_stat = self.get_habit_stats(habit['id'], user_id)
+                        worst_habit = {
+                            "id": str(habit['id']),
+                            "name": habit['name'],
+                            "completionRate": 0,  # 简化处理，作为最差习惯可以默认为0
+                            "streak": habit_stat.get('current_streak', 0),
+                            "totalCompletions": habit_stat.get('total_check_ins', 0),
+                            "missedDays": habit_stat.get('days_in_period', 30) - habit_stat.get('total_check_ins', 0)
+                        }
+        
+        # 获取所有习惯的统计信息
+        habit_stats = []
+        
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    """
+                    SELECT h.*, hs.current_streak, hs.total_check_ins
+                    FROM habits h
+                    LEFT JOIN habit_stats hs ON h.id = hs.habit_id AND hs.user_id = %s
+                    WHERE h.user_id = %s
+                    AND h.status = 'active'
+                    """,
+                    (user_id, user_id)
+                )
+                habits = cursor.fetchall()
+                
+                for habit in habits:
+                    # 计算该习惯的完成率（简化处理）
+                    if str(habit['id']) == str(cached_stat['best_habit_id']):
+                        completion_rate = 1
+                    elif str(habit['id']) == str(cached_stat['worst_habit_id']):
+                        completion_rate = 0
+                    else:
+                        # 使用平均值
+                        completion_rate = cached_stat['overall_completion_rate'] / 100
+                    
+                    habit_stats.append({
+                        "id": str(habit['id']),
+                        "name": habit['name'],
+                        "completionRate": completion_rate,
+                        "streak": habit.get('current_streak', 0),
+                        "totalCompletions": habit.get('total_check_ins', 0),
+                        "missedDays": 0  # 简化处理
+                    })
+        
+        return {
+            "overallCompletionRate": cached_stat['overall_completion_rate'] / 100,
+            "periodLabel": period_label,
+            "bestHabit": best_habit,
+            "worstHabit": worst_habit,
+            "habitStats": habit_stats,
+            "dailyTrend": cached_stat['daily_trend']
+        }
+# 命令行入口
+if __name__ == "__main__":
+    import sys
+    import json
+    
+    # 解析命令行参数
+    if len(sys.argv) < 2:
+        print("用法: python habit_stats.py <命令> [参数...]")
+        print("支持的命令:")
+        print("  update <用户ID>               - 更新指定用户的所有习惯统计")
+        print("  stats <用户ID> <习惯ID>       - 获取指定习惯的统计数据")
+        print("  all <用户ID>                  - 获取所有习惯的统计数据")
+        print("  report <用户ID>               - 生成习惯统计报告")
+        print("  stats_by_range <用户ID> <time_range> - 按时间范围获取统计数据 (time_range: week/month/quarter/year)")
+        sys.exit(1)
+    
+    command = sys.argv[1]
+    service = HabitStatsService()
+    
+    try:
+        if command == "update":
+            if len(sys.argv) > 2:
+                user_id = sys.argv[2]
+                count = service.update_all_user_stats(user_id)
+                print(f"已更新 {count} 个习惯的统计数据")
+            else:
+                count = service.update_all_user_stats()
+                print(f"已更新 {count} 个习惯的统计数据")
+                
+        elif command == "stats":
+            if len(sys.argv) < 4:
+                print("错误: 需要提供用户ID和习惯ID")
+                sys.exit(1)
+                
+            user_id = sys.argv[2]
+            habit_id = int(sys.argv[3])
+            stats = service.get_habit_stats(habit_id, user_id)
+            print(json.dumps(stats, indent=2, ensure_ascii=False, default=str))
+            
+        elif command == "all":
+            if len(sys.argv) < 3:
+                print("错误: 需要提供用户ID")
+                sys.exit(1)
+                
+            user_id = sys.argv[2]
+            stats = service.get_all_user_stats(user_id)
+            print(json.dumps(stats, indent=2, ensure_ascii=False, default=str))
+            
+        elif command == "report":
+            if len(sys.argv) < 3:
+                print("错误: 需要提供用户ID")
+                sys.exit(1)
+                
+            user_id = sys.argv[2]
+            report = service.generate_stats_report(user_id)
+            print(json.dumps(report, indent=2, ensure_ascii=False, default=str))
+            
+        elif command == "stats_by_range":
+            if len(sys.argv) < 3:
+                print("错误: 需要提供用户ID")
+                sys.exit(1)
+                
+            user_id = sys.argv[2]
+            time_range = 'week'  # 默认值
+            
+            if len(sys.argv) > 3:
+                time_range = sys.argv[3]
+                if time_range not in ['week', 'month', 'quarter', 'year']:
+                    print("错误: time_range 参数必须是 week/month/quarter/year 之一")
+                    sys.exit(1)
+            
+            stats = service.get_habit_stats_by_time_range(user_id, time_range)
+            print(json.dumps(stats, indent=2, ensure_ascii=False, default=str))
+            
+        else:
+            print(f"错误: 未知命令 '{command}'")
+            sys.exit(1)
+            
+    except Exception as e:
+        import traceback
+        print(f"执行出错: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+    finally:
+        service.close()

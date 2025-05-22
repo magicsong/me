@@ -101,6 +101,14 @@ export interface HabitBO extends BusinessObject {
   checkInDays: number[];
   isPinned: boolean;
   activeTierId?: number;
+  stats?: {
+    totalCheckIns: number;
+    currentStreak: number;
+    longestStreak: number;
+    completionRate: number | string;
+    failedCount: number;
+    lastCheckInDate: string | null;
+  }
 }
 
 export interface ChallengeTierBO extends BusinessObject {
