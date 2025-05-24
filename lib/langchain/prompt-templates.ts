@@ -33,7 +33,44 @@ export function getDailySummaryPrompt(dateStr: string, context: DailySummaryCont
     明日目标: ${context.tomorrowGoals || '无'}
     
     请根据以上信息，总结我这一天的情况，指出亮点，尽量易懂友好一些，同时如果引用了一些比较难以理解的名词，请给出简短解释。可以结合前面的对话，分析几天趋势
-    使用客观但鼓励的语气，发现问题需要客观柔和指出，针对问题提出友好意见，结合明日规划，给出相应的建议，需要有条理，副标题内容，有序罗列。直接给出总结，不需要"你的总结是"这样的开头。`
+    使用客观但鼓励的语气，发现问题需要客观柔和指出，针对问题提出友好意见，结合明日规划，给出相应的建议，需要有条理，副标题内容，有序罗列。直接给出总结，不需要"你的总结是"这样的开头。`,
+    `以下是我${dateStr.includes(new Date().toISOString().split('T')[0]) ? '今天' : dateStr}的日常总结：
+    完成习惯: ${context.completedHabits ? context.completedHabits.join(', ') : '无'}
+    失败习惯：${context.failedHabits ? context.failedHabits.join(', ') : '无'}
+    完成任务：${context.completedTasks ? context.completedTasks.join(', ') : '无'}
+    失败任务：${context.failedTasks ? context.failedTasks.join(', ') : '无'}
+    三件好事: ${context.goodThings ? context.goodThings.join(', ') : '无'}
+    今日收获: ${context.learnings || '无'}
+    挑战: ${context.challenges || '无'}
+    改进点: ${context.improvements || '无'}
+    心情: ${context.mood || '无'}
+    精力水平: ${context.energyLevel || '无'}
+    睡眠质量: ${context.sleepQuality || '无'}
+    明日目标: ${context.tomorrowGoals || '无'}
+    
+    请根据以上信息，按照以下框架生成专业建议：
+    
+    1. **维度拆解**
+       - 成就识别：提取3个突破性成长点（区分技能提升/认知升级/关系进化）
+       - 挑战诊断：用SWOT分析法定位核心矛盾
+       - 模式洞察：指出至少1个重复出现的积极/消极行为模式
+    
+    2. **策略建议**
+       - 短期优化：提供3个可立即实施的行动项（具体动作+预期效果+实施场景）
+       - 长期投资：规划1个月度能力建设项目（资源获取路径/能力验证方式）
+       - 风险对冲：针对可能出现的具体挑战设计应急方案
+    
+    3. **认知升级**
+       - 思维重构：用相关领域的经典理论重新解释当前困境
+       - 杠杆识别：指出被忽视的潜在资源（人脉/数据/经验等）
+       - 心智训练：推荐匹配当前阶段的认知训练方法
+    
+    4. **反馈校准**
+       - 设置3个关键进展指标（可量化/有时限/带阈值）
+       - 设计1个防倒退机制（针对已改善但易复发的问题）
+       - 预判2个可能的认知偏差并给出应对策略
+    
+    请使用启发式追问替代直接建议，每项建议附带实施难度评级（★至★★★★★），包含1个跨领域迁移案例。`
   ];
   // 随机选择一个prompt
   const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
