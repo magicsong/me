@@ -149,9 +149,8 @@ export function DailySummaryViewer() {
         // 设置未完成习惯数据（保留更多信息）
         setFailedHabits(failed.map(habit => ({
           name: habit.name,
-          failReason: habit.failReason || '未记录失败原因',
-          streak: habit.streakDays || 0,
-          id: habit.id
+          failReason: habit.failureReason || '未记录失败原因',
+          id: habit.id || 0,
         })));
       } else {
         setCompletedHabits([]);
