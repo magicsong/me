@@ -84,6 +84,7 @@ export function useTodoIntegration(
       return null;
     } finally {
       setIsLoadingTodo(false);
+      setIsLoadingTodos(false); // 确保加载状态被重置
     }
   }, [toast]);
 
@@ -136,6 +137,7 @@ export function useTodoIntegration(
       return null;
     } finally {
       setIsLoadingTodo(false);
+      setIsLoadingTodos(false); // 确保加载状态被重置
     }
   }, [toast]);
 

@@ -10,6 +10,7 @@ import { useTodoIntegration } from './hooks/use-todo-integration';
 import { PomodoroForm } from './ui/pomodoro-form';
 import { PomodoroCountdown } from './ui/pomodoro-countdown';
 import { PomodoroControls } from './ui/pomodoro-controls';
+import { set } from 'date-fns';
 
 // 定义类型
 interface PomodoroTimerProps {
@@ -123,6 +124,7 @@ export function PomodoroTimer({
         });
         // 完成后刷新待办事项列表
         await fetchTodos();
+        setRelatedTodoId(null); // 清除关联的待办事项ID
       }
     } catch (error) {
       console.error('完成番茄钟和待办事项失败:', error);
@@ -155,6 +157,7 @@ export function PomodoroTimer({
 
         if (response.ok) {
           setPomodoroId(null);
+          setRelatedTodoId(null); // 清除关联的待办事项ID
         } else {
           throw new Error('请求失败');
         }

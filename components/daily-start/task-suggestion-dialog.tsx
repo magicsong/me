@@ -15,8 +15,6 @@ import {
   EditIcon,
   TrashIcon,
   FlagIcon,
-  ChevronDownIcon,
-  ChevronUpIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -35,7 +33,6 @@ interface TaskItem {
   description?: string;
   priority?: 'urgent' | 'high' | 'medium' | 'low';
   editing?: boolean;
-  expanded?: boolean;
 }
 
 interface TaskSuggestionDialogProps {
@@ -76,16 +73,6 @@ export function TaskSuggestionDialog({
     }
   };
 
-  const toggleExpanded = (index: number, isUpdated: boolean) => {
-    onEdit(index, isUpdated, 'expanded', !getTaskExpanded(index, isUpdated));
-  };
-
-  const getTaskExpanded = (index: number, isUpdated: boolean): boolean => {
-    return isUpdated 
-      ? !!generatedTasks.updated[index]?.expanded 
-      : !!generatedTasks.created[index]?.expanded;
-  };
-
   const getPriorityColor = (priority?: string) => {
     switch(priority) {
       case 'urgent': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
@@ -124,8 +111,6 @@ export function TaskSuggestionDialog({
   ];
 
   const renderTask = (task: TaskItem, index: number, isUpdated: boolean) => {
-    const isExpanded = getTaskExpanded(index, isUpdated);
-
     if (task.editing) {
       return (
         <Card key={`${isUpdated ? 'update' : 'new'}-${index}`} className="overflow-hidden">
@@ -206,11 +191,8 @@ export function TaskSuggestionDialog({
         <Card className={isUpdated ? "border-l-4 border-l-blue-400" : ""}>
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
-              <div 
-                className="flex-1 font-medium"
-                onClick={() => toggleExpanded(index, isUpdated)}
-              >
-                <div className="flex items-center cursor-pointer">
+              <div className="flex-1 font-medium">
+                <div className="flex items-center">
                   {isUpdated && <Badge variant="outline" className="mr-2 text-xs">更新</Badge>}
                   <span>{task.title}</span>
                 </div>
@@ -221,17 +203,6 @@ export function TaskSuggestionDialog({
                   {getTaskIcon(task.priority)}
                   {getPriorityLabel(task.priority)}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => toggleExpanded(index, isUpdated)}
-                >
-                  {isExpanded ? 
-                    <ChevronUpIcon className="h-4 w-4" /> : 
-                    <ChevronDownIcon className="h-4 w-4" />
-                  }
-                </Button>
                 <Button 
                   variant="ghost" 
                   size="icon"
@@ -251,15 +222,10 @@ export function TaskSuggestionDialog({
               </div>
             </div>
             
-            {isExpanded && task.description && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-2 pt-2 border-t text-sm text-muted-foreground"
-              >
+            {task.description && (
+              <div className="mt-2 pt-2 border-t text-sm text-muted-foreground">
                 {task.description}
-              </motion.div>
+              </div>
             )}
           </CardContent>
         </Card>
