@@ -56,7 +56,7 @@ export async function generateSummaryFeedback(summaryContent: string, resetMemor
   const opts = {
     userId, sessionId: "daily-summary", input: summaryContent, memoryParams: {
       memoryType: "window",
-      windowSize: 4,
+      windowSize: 2,
       returnMessages: true,
     }
   } as GenerateOptions;

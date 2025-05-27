@@ -124,6 +124,7 @@ spec:
           containers:
           - name: habit-stats
             image: ghcr.io/magicsong/tasks-app:latest  # 替换为您的镜像仓库地址
+            imagePullPolicy: Always
             args:
             - habits
             - --update
@@ -159,6 +160,7 @@ spec:
           containers:
           - name: habit-stats
             image: ghcr.io/magicsong/tasks-app:latest  # 替换为您的镜像仓库地址
+            imagePullPolicy: Always
             args:
             - main.py
             - habits
