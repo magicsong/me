@@ -135,7 +135,8 @@ class HabitStatsService:
         
         # 计算当前连续打卡天数
         current_streak = 0
-        current_date = datetime.datetime.now().date()
+        # 从昨天开始统计，避免当天还没打卡时影响连续打卡记录
+        current_date = datetime.datetime.now().date() - timedelta(days=1)
         
         while True:
             date_str = current_date.strftime('%Y-%m-%d')
@@ -201,13 +202,56 @@ class HabitStatsService:
         # 将时间设置为每天的开始（0:00:00）
         period_start = period_start.replace(hour=0, minute=0, second=0, microsecond=0)
         
+        # 获取习惯详细信息，用于更精确地计算完成率
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(
+                    """
+                    SELECT * FROM habits
+                    WHERE id = %s AND user_id = %s
+                    LIMIT 1
+                    """,
+                    (habit_id, user_id)
+                )
+                habit = cursor.fetchone()
+        
+        # 根据习惯频率和检查日期计算应该打卡的天数
+        expected_check_ins = 0
+        days_since_start = (now - period_start).days + 1
+        
+        if habit:
+            if habit.get('frequency') == 'daily':
+                # 过滤出符合打卡日的天数
+                for i in range(days_since_start):
+                    day = period_start + timedelta(days=i)
+                    weekday = day.weekday() + 1  # Python的weekday()返回0-6，转换为1-7
+                    if weekday == 7:  # 如果是周日(6)，转换为7
+                        weekday = 7
+                    
+                    checkin_days = habit.get('checkin_days', [1, 2, 3, 4, 5, 6, 7])
+                    if isinstance(checkin_days, list) and weekday in checkin_days:
+                        expected_check_ins += 1
+            elif habit.get('frequency') == 'weekly':
+                expected_check_ins = (days_since_start + 6) // 7  # 向上取整
+            elif habit.get('frequency') == 'monthly':
+                # 简单处理，如果跨月则+1
+                if period_start.month != now.month:
+                    expected_check_ins = 2
+                else:
+                    expected_check_ins = 1
+        else:
+            # 如果找不到习惯信息，按照每天都需要打卡计算
+            expected_check_ins = days_in_period
+        
+        # 计算指定时间范围内的实际打卡次数
         check_ins_in_period = 0
         for date_str in unique_dates:
             date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
             if date >= period_start.date():
                 check_ins_in_period += 1
         
-        completion_rate = (check_ins_in_period / days_in_period) * 100 if days_in_period > 0 else 0
+        # 计算完成率
+        completion_rate = (check_ins_in_period / expected_check_ins) * 100 if expected_check_ins > 0 else 0
         
         # 最后打卡日期
         last_check_in_date = None
@@ -328,6 +372,7 @@ class HabitStatsService:
                 for habit in habits:
                     habit_id = habit['id']
                     stats = self.calculate_check_in_stats(habit_id, current_user_id)
+                    print(f"DEBUG: 用户 {current_user_id} 的习惯 {habit_id} 统计数据: {stats}")
                     self.save_stats_to_db(habit_id, current_user_id, stats)
                     total_updated += 1
                 
