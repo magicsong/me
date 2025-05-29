@@ -330,7 +330,7 @@ export function AISummarySection({
                 </div>
                 <div className="bg-white/70 rounded-lg p-4 shadow-sm">
                   {aiSummary ?
-                    <FormattedText text={aiSummary} className="text-sm text-blue-800 leading-relaxed" /> :
+                    <FormattedText text={aiSummary} className="text-sm text-blue-800 leading-relaxed" markdown /> :
                     <p className="text-sm text-muted-foreground italic">
                       {initialLoading ? "正在加载AI总结..." : "AI可以帮你总结这一天的亮点和改进点"}
                     </p>
