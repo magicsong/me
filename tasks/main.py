@@ -59,6 +59,13 @@ def main():
     db_parser.add_argument('--output',
                   help='将结果保存到JSON文件')
     
+    # 每日数据洞察子命令
+    insight_parser = subparsers.add_parser('daily-insight', help='生成每日数据洞察并存储到AI洞察表')
+    insight_parser.add_argument('--user-id', dest='user_id', help='用户ID，不指定则处理所有用户')
+    insight_parser.add_argument('--date', help='指定日期(YYYY-MM-DD)，默认为昨天')
+    insight_parser.add_argument('--force', action='store_true', help='强制重新生成已存在的洞察')
+    insight_parser.add_argument('--chain', action='store_true', help='使用链式分析模式，分步骤处理不同数据类型')
+    
     # 导出到存储子命令
     export_parser = subparsers.add_parser('export', help='导出分析结果到对象存储')
     export_parser.add_argument('--storage', choices=['s3'], default='s3',
@@ -152,11 +159,33 @@ def main():
                 habit_report_main()
                 logger.info(f"用户 {args.user_id} 的习惯统计报告生成完成")
         
+        elif args.command == 'daily-insight':
+            from daily_insight import generate_daily_insights
+            results = generate_daily_insights(
+                user_id=args.user_id, 
+                target_date=args.date, 
+                force=args.force,
+                use_chain=args.chain
+            )
+            if args.user_id:
+                if args.user_id in results['user_results']:
+                    user_result = results['user_results'][args.user_id]
+                    if user_result.get('success', False):
+                        logger.info(f"用户 {args.user_id} 的每日洞察生成成功 (ID: {user_result.get('id')})")
+                    else:
+                        logger.error(f"用户 {args.user_id} 的每日洞察生成失败: {user_result.get('error', user_result.get('reason', '未知错误'))}")
+                else:
+                    logger.warning(f"用户 {args.user_id} 不在活跃用户列表中或处理过程中出错")
+            else:
+                logger.info(f"所有用户的每日洞察生成完成: 成功 {results['success_count']}/{results['total_users']}")
+        
         logger.info(f"成功完成 {args.command} 任务")
         return 0
     
     except Exception as e:
         logger.error(f"执行任务出错: {str(e)}", exc_info=True)
+        if args.command == 'daily-insight':
+            logger.error("生成AI洞察时出现错误，请检查OpenAI配置和网络连接")
         return 1
 
 if __name__ == "__main__":

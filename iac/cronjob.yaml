@@ -178,3 +178,37 @@ spec:
             - secretRef:
                 name: app-secret  # 确保包含数据库连接信息和用户ID
           restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-insight
+  labels:
+    app: me-analytics
+spec:
+  schedule: "0 12 * * *"  # 每天中午12点执行
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: daily-insight
+            image: ghcr.io/magicsong/tasks-app:latest  # 替换为您的镜像仓库地址
+            imagePullPolicy: Always
+            args:
+            - tasks/daily_insight.py
+            - --chain
+            resources:
+              limits:
+                cpu: "1"
+                memory: "1Gi"
+              requests:
+                cpu: "200m"
+                memory: "256Mi"
+            envFrom:
+            - secretRef:
+                name: app-secret  # 确保包含数据库连接信息的Secret
+          restartPolicy: OnFailure

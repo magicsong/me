@@ -38,3 +38,6 @@ next-env.d.ts
 .vscode
 venv
 .venv
+__pycache__
+# macOS
+output
