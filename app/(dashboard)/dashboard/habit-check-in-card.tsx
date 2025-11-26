@@ -52,12 +52,6 @@ export function HabitCheckInCard() {
   const toggleHabitSelection = (habit: HabitBO, e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // 有挑战的习惯不允许批量打卡
-    if (habit.challengeTiers && habit.challengeTiers.length > 0) {
-      toast.warning(`${habit.name} 包含挑战，需单独打卡`);
-      return;
-    }
-
     // 已完成或失败的习惯不能选择
     if (habit.completedToday || habit.failedToday) {
       return;
@@ -85,12 +79,21 @@ export function HabitCheckInCard() {
       try {
         // 批量处理所有选中的习惯
         await Promise.all(
-          selectedHabits.map(habit =>
-            completeHabit(habit.id, {
+          selectedHabits.map(habit => {
+            // 如果习惯有挑战，则完成激活的挑战
+            if (habit.activeTierId && habit.challengeTiers && habit.challengeTiers.length > 0) {
+              return completeHabit(habit.id, {
+                tierId: habit.activeTierId,
+                comment: "批量完成挑战",
+                completedAt: new Date(),
+              });
+            }
+            // 否则进行普通打卡
+            return completeHabit(habit.id, {
               comment: "批量打卡",
               completedAt: new Date(),
-            })
-          )
+            });
+          })
         );
 
         toast.success(`🎉 成功完成 ${selectedHabits.length} 个习惯打卡！`, {
