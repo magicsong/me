@@ -101,6 +101,8 @@ export interface HabitBO extends BusinessObject {
   checkInDays: number[];
   isPinned: boolean;
   activeTierId?: number;
+  // 特定日期支持：当frequency为'weekly'时，指定周几（0-6，0为周日）；当frequency为'monthly'时，指定日期（1-31）
+  scheduledDays?: number[];
   stats?: {
     totalCheckIns: number;
     currentStreak: number;

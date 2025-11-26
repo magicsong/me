@@ -197,14 +197,15 @@ export async function getHabitsFromDB(userId: string, targetDate?: Date): Promis
     return habitsWithProgress;
 }
 
-export async function createHabitInDB(name: string, description: string, frequency: string, userId: string, category: string, rewardPoints: number) {
+export async function createHabitInDB(name: string, description: string, frequency: string, userId: string, category: string, rewardPoints: number, scheduledDays?: number[]) {
     const result = await db.insert(habits).values({
         name,
         description: description || null,
         frequency: frequency as 'daily' | 'weekly' | 'monthly',
         user_id: userId,
         category: category || null,
-        reward_points: rewardPoints || 1
+        reward_points: rewardPoints || 1,
+        scheduled_days: scheduledDays || []
     }).returning();
 
     return result[0];
@@ -356,15 +357,19 @@ export async function updateHabitInDB(id: number, userId: string, data: {
     frequency?: 'daily' | 'weekly' | 'monthly';
     category?: string;
     rewardPoints?: number;
+    isPinned?: boolean;
+    scheduledDays?: number[];
 }) {
-    const { name, description, frequency, category, rewardPoints } = data;
+    const { name, description, frequency, category, rewardPoints, isPinned, scheduledDays } = data;
 
     await db.update(habits).set({
         name,
         description,
         frequency,
         category,
-        reward_points: rewardPoints
+        reward_points: rewardPoints,
+        is_pinned: isPinned,
+        scheduled_days: scheduledDays
     }).where(
         and(
             eq(habits.id, id),

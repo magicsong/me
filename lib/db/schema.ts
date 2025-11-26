@@ -23,6 +23,8 @@ export const habits = pgTable("habits", {
 	checkin_days: jsonb("checkin_days").default([1,2,3,4,5,6,7]).notNull(),
 	is_pinned: boolean("is_pinned").default(false),
 	active_tier_id: integer("active_tier_id"),
+	// 特定日期支持：当frequency为'weekly'时存储周几(0-6)；当frequency为'monthly'时存储日期(1-31)
+	scheduled_days: jsonb("scheduled_days").default([]),
 });
 
 export const habit_stats = pgTable("habit_stats", {

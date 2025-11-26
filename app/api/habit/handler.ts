@@ -120,6 +120,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       checkInDays: dataObject.checkin_days,
       isPinned: dataObject.is_pinned,
       activeTierId: dataObject.active_tier_id || null,
+      scheduledDays: dataObject.scheduled_days || [],
       // 添加stats数据映射
       stats: dataObject.stats ? {
         totalCheckIns: dataObject.stats.total_check_ins,
@@ -150,6 +151,7 @@ export class HabitApiHandler extends BaseApiHandler<HabitData, HabitBO> {
       checkin_days: businessObject.checkInDays,
       is_pinned: businessObject.isPinned,
       active_tier_id: businessObject.activeTierId || null,
+      scheduled_days: businessObject.scheduledDays || [],
     };
   }
 

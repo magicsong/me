@@ -211,6 +211,13 @@
       "when": 1747884455830,
       "tag": "0029_empty_harpoon",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1764160140310,
+      "tag": "0030_reflective_scalphunter",
+      "breakpoints": true
     }
   ]
 }

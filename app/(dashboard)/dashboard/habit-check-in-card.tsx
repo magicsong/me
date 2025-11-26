@@ -117,6 +117,30 @@ export function HabitCheckInCard() {
     router.push(`/pomodoro?habitId=${habit.id}`);
   }
 
+  // 检查习惯是否应该在今天显示
+  function shouldShowHabit(habit: HabitBO): boolean {
+    // 如果没有定义 scheduledDays，则始终显示
+    if (!habit.scheduledDays || habit.scheduledDays.length === 0) {
+      return true;
+    }
+
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0-6，0 为周日
+    const dayOfMonth = today.getDate(); // 1-31
+
+    // 根据频率判断
+    if (habit.frequency === 'weekly') {
+      // weekly 模式：scheduledDays 中存储的是周几 (0-6)
+      return habit.scheduledDays.includes(dayOfWeek);
+    } else if (habit.frequency === 'monthly') {
+      // monthly 模式：scheduledDays 中存储的是日期 (1-31)
+      return habit.scheduledDays.includes(dayOfMonth);
+    }
+
+    // 其他频率（daily 等）始终显示
+    return true;
+  }
+
   // 获取习惯数据
   async function fetchHabits() {
     setLoading(true);
@@ -127,8 +151,12 @@ export function HabitCheckInCard() {
       }
       const data = await response.json();
       // 对习惯进行排序，将置顶的习惯放在前面
-      const habitsData = data.data || [];
-      habitsData.sort((a, b) => {
+      let habitsData: HabitBO[] = data.data || [];
+      
+      // 过滤掉不应该在今天显示的习惯
+      habitsData = habitsData.filter((habit: HabitBO) => shouldShowHabit(habit));
+      
+      habitsData.sort((a: HabitBO, b: HabitBO) => {
         if (a.isPinned === b.isPinned) return 0;
         return a.isPinned ? -1 : 1; // isPinned 为 true 的排在前面
       });

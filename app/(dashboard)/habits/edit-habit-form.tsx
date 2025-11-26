@@ -24,7 +24,8 @@ type Habit = {
   frequency: 'daily' | 'weekly' | 'monthly';
   category?: 'health' | 'productivity' | 'mindfulness' | 'learning' | 'social';
   rewardPoints?: number;
-  isPinned?: boolean; // 添加isPinned属性
+  isPinned?: boolean;
+  scheduledDays?: number[]; // 特定日期：weekly时为周几(0-6)，monthly时为日期(1-31)
 };
 
 interface EditHabitFormProps {
@@ -39,7 +40,8 @@ export function EditHabitForm({ habit, onSuccess }: EditHabitFormProps) {
   const [frequency, setFrequency] = useState(habit.frequency);
   const [category, setCategory] = useState(habit.category || 'health');
   const [rewardPoints, setRewardPoints] = useState(habit.rewardPoints || 10);
-  const [isPinned, setIsPinned] = useState(habit.isPinned || false); // 添加置顶状态
+  const [isPinned, setIsPinned] = useState(habit.isPinned || false);
+  const [scheduledDays, setScheduledDays] = useState<number[]>(habit.scheduledDays || []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,7 +53,8 @@ export function EditHabitForm({ habit, onSuccess }: EditHabitFormProps) {
         frequency,
         category,
         rewardPoints,
-        isPinned // 添加isPinned到更新数据中
+        isPinned,
+        scheduledDays
       });
       onSuccess?.();
     } catch (error) {
@@ -87,7 +90,11 @@ export function EditHabitForm({ habit, onSuccess }: EditHabitFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="frequency">频率</Label>
-        <Select value={frequency} onValueChange={setFrequency}>
+        <Select value={frequency} onValueChange={(value: any) => {
+          setFrequency(value);
+          // 切换频率时清空已选日期
+          setScheduledDays([]);
+        }}>
           <SelectTrigger id="frequency">
             <SelectValue placeholder="选择频率" />
           </SelectTrigger>
@@ -98,6 +105,73 @@ export function EditHabitForm({ habit, onSuccess }: EditHabitFormProps) {
           </SelectContent>
         </Select>
       </div>
+      
+      {/* 根据频率显示特定日期选择 */}
+      {frequency === 'weekly' && (
+        <div className="space-y-2">
+          <Label>选择具体周几</Label>
+          <div className="grid grid-cols-4 gap-2">
+            {['周日', '周一', '周二', '周三', '周四', '周五', '周六'].map((day, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => {
+                  setScheduledDays(prev =>
+                    prev.includes(index)
+                      ? prev.filter(d => d !== index)
+                      : [...prev, index]
+                  );
+                }}
+                className={`p-2 rounded-md border text-sm font-medium transition-colors ${
+                  scheduledDays.includes(index)
+                    ? 'bg-blue-500 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                {day}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {scheduledDays.length === 0
+              ? '未选择：将在每周每天显示'
+              : `已选择: ${scheduledDays.map(d => ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d]).join('、')}`}
+          </p>
+        </div>
+      )}
+      
+      {frequency === 'monthly' && (
+        <div className="space-y-2">
+          <Label>选择具体日期</Label>
+          <div className="grid grid-cols-6 gap-1">
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => {
+                  setScheduledDays(prev =>
+                    prev.includes(day)
+                      ? prev.filter(d => d !== day)
+                      : [...prev, day]
+                  );
+                }}
+                className={`p-1.5 rounded-md border text-xs font-medium transition-colors ${
+                  scheduledDays.includes(day)
+                    ? 'bg-blue-500 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                {day}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {scheduledDays.length === 0
+              ? '未选择：将在每月每天显示'
+              : `已选择: ${scheduledDays.sort((a, b) => a - b).join('、')} 号`}
+          </p>
+        </div>
+      )}
       
       <div className="space-y-2">
         <Label htmlFor="category">价值类别</Label>
