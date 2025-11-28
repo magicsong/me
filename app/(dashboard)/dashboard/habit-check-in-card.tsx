@@ -32,6 +32,7 @@ export function HabitCheckInCard() {
   const [selectedHabit, setSelectedHabit] = useState<HabitBO | null>(null);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedHabits, setSelectedHabits] = useState<HabitBO[]>([]);
+  const [batchDate, setBatchDate] = useState<'today' | 'yesterday'>('today');
 
   // 添加 habits 状态及相关计数
   const [habits, setHabits] = useState<HabitBO[]>([]);
@@ -74,8 +75,15 @@ export function HabitCheckInCard() {
       return;
     }
 
+    // 计算目标日期
+    const targetDate = new Date();
+    if (batchDate === 'yesterday') {
+      targetDate.setDate(targetDate.getDate() - 1);
+    }
+
+    const dateLabel = batchDate === 'today' ? '今天' : '昨天';
     // 显示确认对话框
-    if (window.confirm(`确认要为选中的 ${selectedHabits.length} 个习惯打卡吗？`)) {
+    if (window.confirm(`确认要为${dateLabel}选中的 ${selectedHabits.length} 个习惯打卡吗？`)) {
       try {
         // 批量处理所有选中的习惯
         await Promise.all(
@@ -84,19 +92,19 @@ export function HabitCheckInCard() {
             if (habit.activeTierId && habit.challengeTiers && habit.challengeTiers.length > 0) {
               return completeHabit(habit.id, {
                 tierId: habit.activeTierId,
-                comment: "批量完成挑战",
-                completedAt: new Date(),
+                comment: batchDate === 'today' ? "批量完成挑战" : "昨日批量完成挑战",
+                completedAt: targetDate,
               });
             }
             // 否则进行普通打卡
             return completeHabit(habit.id, {
-              comment: "批量打卡",
-              completedAt: new Date(),
+              comment: batchDate === 'today' ? "批量打卡" : "昨日批量打卡",
+              completedAt: targetDate,
             });
           })
         );
 
-        toast.success(`🎉 成功完成 ${selectedHabits.length} 个习惯打卡！`, {
+        toast.success(`🎉 成功为${dateLabel}完成 ${selectedHabits.length} 个习惯打卡！`, {
           duration: 3000,
         });
 
@@ -322,7 +330,7 @@ export function HabitCheckInCard() {
         <Card className="flex-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">📅 今日习惯打卡（ {completedCount} / {totalCount} 已完成）</CardTitle>
+              <CardTitle className="text-lg">📅 {batchDate === 'today' ? '今日' : '昨日'}习惯打卡（ {completedCount} / {totalCount} 已完成）</CardTitle>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -331,6 +339,7 @@ export function HabitCheckInCard() {
                     setIsMultiSelectMode(!isMultiSelectMode);
                     if (!isMultiSelectMode) {
                       setSelectedHabits([]);
+                      setBatchDate('today');
                     }
                   }}
                 >
@@ -338,14 +347,30 @@ export function HabitCheckInCard() {
                 </Button>
 
                 {isMultiSelectMode && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    disabled={selectedHabits.length === 0}
-                    onClick={handleBatchSubmit}
-                  >
-                    打卡 ({selectedHabits.length})
-                  </Button>
+                  <>
+                    <Button
+                      variant={batchDate === 'today' ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setBatchDate('today')}
+                    >
+                      今天
+                    </Button>
+                    <Button
+                      variant={batchDate === 'yesterday' ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setBatchDate('yesterday')}
+                    >
+                      昨天
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      disabled={selectedHabits.length === 0}
+                      onClick={handleBatchSubmit}
+                    >
+                      打卡 ({selectedHabits.length})
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -558,8 +583,8 @@ export function HabitCheckInCard() {
             {/* 在 CardContent 中添加 */}
             {isMultiSelectMode && (
               <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md mb-2">
-                <p>批量打卡模式 - 点击习惯进行选择</p>
-                <p className="text-xs text-muted-foreground">注意: 包含挑战的习惯不能批量打卡</p>
+                <p>批量打卡模式 - 点击习惯进行选择，为{batchDate === 'today' ? '今天' : '昨天'}打卡</p>
+                <p className="text-xs text-muted-foreground">包含挑战的习惯在批量模式下将自动完成对应挑战</p>
               </div>
             )}
           </CardContent>
