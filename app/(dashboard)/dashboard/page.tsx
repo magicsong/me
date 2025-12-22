@@ -3,7 +3,7 @@
 import { HabitBO } from '@/app/api/types';
 import { DailyQuote } from '@/components/DailyQuote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarCheck2, ClipboardList } from 'lucide-react';
+import { CalendarCheck2, ClipboardList, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getHabitStats } from '../habits/actions';
@@ -15,6 +15,7 @@ export default function DashboardPage() {
   // 使用 useState 保存数据
   const [habits, setHabits] = useState<HabitBO[]>([]);
   const [habitStats, setHabitStats] = useState({ overallCompletionRate: 0, periodLabel: '' });
+  const [clientIP, setClientIP] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   // 计算习惯完成数据
@@ -25,6 +26,11 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
+        // 获取客户端IP
+        const ipResponse = await fetch('/api/ip');
+        const ipData = await ipResponse.json();
+        setClientIP(ipData.ip);
+
         // 获取习惯数据
         const habitsData = await getHabits();
         setHabits(habitsData);
@@ -53,6 +59,10 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <CalendarCheck2 className="h-6 w-6" />
           <h1 className="text-xl font-semibold">今日概览</h1>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Globe className="h-4 w-4" />
+          <span>IP: {clientIP || '加载中...'}</span>
         </div>
       </div>
       {/* 用户信息和每日格言放在同一行 */}
