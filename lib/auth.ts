@@ -16,6 +16,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    // 在用户登录时检查白名单（环境变量 `ALLOWED_USERNAMES`，逗号分隔）
+    // 如果环境变量未配置或为空，则不启用白名单限制
+    async signIn({ user, account, profile }) {
+      try {
+        const raw = process.env.ALLOWED_USERNAMES ?? ""
+        const allowed = raw.split(",").map(s => s.trim()).filter(Boolean)
+        if (allowed.length === 0) return true
+
+        const candidate = (profile && (profile.login || profile.name)) || user?.name || user?.email?.split("@")[0]
+        if (!candidate) return false
+        return allowed.includes(candidate)
+      } catch (e) {
+        return false
+      }
+    },
     async session({ session, token }) {
       if (session.user && token.sub) {
         session.user.id = token.name
@@ -40,5 +55,16 @@ export async function checkAuth() {
   if (!session?.user) {
     redirect("/login")
   }
+
+  // 白名单二次校验：防止通过其他途径获得 session 的用户越权
+  const raw = process.env.ALLOWED_USERNAMES ?? ""
+  const allowed = raw.split(",").map(s => s.trim()).filter(Boolean)
+  if (allowed.length > 0) {
+    const username = session.user.name || session.user.email?.split("@")[0]
+    if (!username || !allowed.includes(username)) {
+      redirect("/login")
+    }
+  }
+
   return session
 }
