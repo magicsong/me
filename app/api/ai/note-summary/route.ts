@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from "@/lib/auth";
-import { generateNoteSummary } from '@/lib/langchain/note-summary-generator';
+import { generateMirrorQuestion } from '@/lib/langchain/mirror-question-generator';
 
 /**
- * 生成笔记 AI 摘要和推荐理由的 API 端点
+ * 意外之镜 - 生成 AI 反问的 API 端点
+ * 接收笔记内容，使用大模型生成深入的反问
+ * 返回：笔记ID、笔记内容、AI反问
  */
 export async function POST(request: NextRequest) {
   try {
-    // 权限检查（可选，如果需要用户登录）
+    // 权限检查
     const session = await auth();
-    const userId = session?.user?.id;
+    const userId = session?.user?.id || 'anonymous';
 
     // 解析请求内容
     const { noteId, title, content } = await request.json();
@@ -21,19 +23,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Generating summary for note ${noteId}`);
+    console.log(`Generating Mirror of Serendipity question for note ${noteId}`);
 
-    // 调用AI生成摘要和推荐理由
-    const result = await generateNoteSummary(noteId, title, content, userId);
+    // 使用大模型生成 AI 反问
+    const aiQuestion = await generateMirrorQuestion(content, title, userId);
 
     return NextResponse.json({
       success: true,
-      summary: result.summary,
-      reason: result.reason,
-      keyPoints: result.keyPoints || []
+      noteId,
+      title,
+      content,
+      aiQuestion: {
+        mode: aiQuestion.mode,
+        question: aiQuestion.question
+      }
     });
   } catch (error) {
-    console.error('笔记摘要生成失败:', error);
+    console.error('生成意外之镜反问失败:', error);
     return NextResponse.json(
       {
         error: '处理请求时发生错误',

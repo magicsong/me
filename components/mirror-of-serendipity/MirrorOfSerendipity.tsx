@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { extractRandomFragment, createBlurredText, getDistanceStatement } from './note-fragment';
 import { generateDailyAIQuestion, generateDailySeed } from './ai-question-generator';
 import { MirrorCard, AIQuestion, NoteFragment } from './types';
-import { Plus, X, Sparkles, ExternalLink } from 'lucide-react';
+import { Plus, X, Sparkles, ExternalLink, Loader2 } from 'lucide-react';
 
 interface MirrorOfSerendipityProps {
   userId?: string;
@@ -28,6 +28,7 @@ export function MirrorOfSerendipity({
   const [userInput, setUserInput] = useState('');
   const [hasInteracted, setHasInteracted] = useState(false);
   const [additions, setAdditions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // 计算日期差距
   const calculateDaysDiff = (createdAt: string | undefined): number => {
@@ -42,38 +43,72 @@ export function MirrorOfSerendipity({
   useEffect(() => {
     if (notes.length === 0) return;
 
-    // 从笔记中随机选择一条
-    const randomNote = notes[Math.floor(Math.random() * notes.length)];
-    const daysDiff = calculateDaysDiff(randomNote.createdAt);
+    const initializeCard = async () => {
+      setIsLoading(true);
+      try {
+        // 从笔记中随机选择一条
+        const randomNote = notes[Math.floor(Math.random() * notes.length)];
+        const daysDiff = calculateDaysDiff(randomNote.createdAt);
 
-    // 生成片段
-    const extractedFragment = extractRandomFragment(randomNote.content || '');
-    setFragment(extractedFragment);
+        // 生成片段
+        const extractedFragment = extractRandomFragment(randomNote.content || '');
+        setFragment(extractedFragment);
 
-    // 生成 AI 问题
-    const seed = generateDailySeed(userId);
-    const question = generateDailyAIQuestion(seed);
-    setAIQuestion(question);
+        // 调用后端 API 获取 AI 反问
+        const response = await fetch('/api/ai/note-summary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            noteId: randomNote.id,
+            title: randomNote.title,
+            content: randomNote.content,
+          }),
+        });
 
-    // 构建卡片
-    const card: MirrorCard = {
-      id: Math.random(),
-      userId,
-      noteId: randomNote.id as number,
-      noteTitle: randomNote.title,
-      noteContent: randomNote.content || '',
-      noteCreatedAt: randomNote.createdAt || '',
-      daysDiff,
-      fragment: extractedFragment,
-      aiQuestion: question,
-      userAdditions: [],
-      ignoreCount: 0,
+        if (!response.ok) {
+          throw new Error('Failed to fetch AI question');
+        }
+
+        const data = await response.json();
+        const question: AIQuestion = {
+          mode: data.aiQuestion.mode,
+          question: data.aiQuestion.question,
+        };
+        setAIQuestion(question);
+
+        // 构建卡片
+        const card: MirrorCard = {
+          id: Math.random(),
+          userId,
+          noteId: randomNote.id as number,
+          noteTitle: randomNote.title,
+          noteContent: randomNote.content || '',
+          noteCreatedAt: randomNote.createdAt || '',
+          daysDiff,
+          fragment: extractedFragment,
+          aiQuestion: question,
+          userAdditions: [],
+          ignoreCount: 0,
+        };
+
+        setCurrentCard(card);
+        setAdditions([]);
+        setUserInput('');
+        setHasInteracted(false);
+      } catch (error) {
+        console.error('Failed to initialize mirror card:', error);
+        // 备用方案：使用本地生成的 AI 问题
+        const seed = generateDailySeed(userId);
+        const question = generateDailyAIQuestion(seed);
+        setAIQuestion(question);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setCurrentCard(card);
-    setAdditions([]);
-    setUserInput('');
-    setHasInteracted(false);
+    initializeCard();
   }, [notes, userId]);
 
   // 处理"补一句"
@@ -95,12 +130,41 @@ export function MirrorOfSerendipity({
     onIgnore?.(currentCard.noteId);
   }, [currentCard, onIgnore]);
 
-  if (!currentCard || !fragment || !aiQuestion) {
+  // 没有笔记
+  if (notes.length === 0) {
     return (
       <Card className="overflow-hidden">
         <div className="h-1.5 w-full rainbow-flow rounded-t-md" />
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">暂无笔记来唤起你的回忆</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 加载中
+  if (isLoading || !currentCard || !fragment || !aiQuestion) {
+    return (
+      <Card className="overflow-hidden">
+        <div className="h-1.5 w-full rainbow-flow rounded-t-md" />
+        
+        <div className="bg-primary/5 border-b border-border/50 px-6 py-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-4 h-4 text-primary/70" />
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+              意外之镜
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed ml-6">
+            重新理解过去的自己
+          </p>
+        </div>
+
+        <CardContent className="pt-8 pb-8 flex items-center justify-center min-h-64">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin text-primary/70" />
+            <p className="text-sm text-muted-foreground">正在思考...</p>
+          </div>
         </CardContent>
       </Card>
     );
