@@ -1,24 +1,45 @@
-export async function POST(request: Request) {
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from "@/lib/auth";
+import { generateNoteSummary } from '@/lib/langchain/note-summary-generator';
+
+/**
+ * 生成笔记 AI 摘要和推荐理由的 API 端点
+ */
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { noteId, title, content } = body || {};
+    // 权限检查（可选，如果需要用户登录）
+    const session = await auth();
+    const userId = session?.user?.id;
 
-    // TODO: 用真实的 LLM/AI 服务对 content 进行摘要/推荐理由生成
-    // 目前返回示例/占位的响应，方便前端开发和展示
-    const summary = content
-      ? (content.length > 200 ? content.slice(0, 200) + '...' : content)
-      : `对笔记 ${title ?? noteId} 的简要总结（示例）`;
+    // 解析请求内容
+    const { noteId, title, content } = await request.json();
+    
+    if (!noteId || !title || !content) {
+      return NextResponse.json(
+        { error: '缺少必要参数：noteId、title、content' },
+        { status: 400 }
+      );
+    }
 
-    const reason = `推荐理由：这条笔记包含 ${
-      (content || '').split('\n').length
-    } 行内容，建议关注其中的关键点与行动项。`;
+    console.log(`Generating summary for note ${noteId}`);
 
-    return new Response(JSON.stringify({ summary, reason }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
+    // 调用AI生成摘要和推荐理由
+    const result = await generateNoteSummary(noteId, title, content, userId);
+
+    return NextResponse.json({
+      success: true,
+      summary: result.summary,
+      reason: result.reason,
+      keyPoints: result.keyPoints || []
     });
-  } catch (err) {
-    console.error('note-summary API error:', err);
-    return new Response(JSON.stringify({ error: 'server error' }), { status: 500 });
+  } catch (error) {
+    console.error('笔记摘要生成失败:', error);
+    return NextResponse.json(
+      {
+        error: '处理请求时发生错误',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
   }
 }

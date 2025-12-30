@@ -11,6 +11,7 @@ import { getHabitStats } from '../habits/actions';
 import { getHabits } from '../habits/client-actions';
 import { DailySummaryViewer } from './daily-summary-viewer';
 import { HabitCheckInCard } from './habit-check-in-card';
+import { getNoteAISummary } from './note-ai-client';
 
 export default function DashboardPage() {
   // 使用 useState 保存数据
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const [habitStats, setHabitStats] = useState({ overallCompletionRate: 0, periodLabel: '' });
   const [clientIP, setClientIP] = useState<string>('');
   const [notes, setNotes] = useState<NoteBO[]>([]);
+  const [noteSummaries, setNoteSummaries] = useState<Record<number | string, { summary: string; reason: string }>>({});
   const [loading, setLoading] = useState(true);
 
   // 计算习惯完成数据
@@ -41,16 +43,32 @@ export default function DashboardPage() {
         const stats = await getHabitStats('week');
         setHabitStats(stats);
 
-        // 获取几条笔记用于"奇思妙境"展示
+        // 获取几条笔记用于“笔记精选”展示（使用现有 note API）
         try {
-          const notesRes = await fetch('/api/note?pageSize=10');
+          const notesRes = await fetch('/api/note?pageSize=3');
           const notesJson = await notesRes.json();
           const notesData = notesJson?.data ?? notesJson;
           if (Array.isArray(notesData)) {
             setNotes(notesData);
+
+            // 为每条笔记请求 AI 推荐理由（并行）
+            const aiTasks = notesData.map(async (n: NoteBO) => {
+              const ai = await getNoteAISummary(n.id as number, n.content, n.title);
+              return { id: n.id, ai };
+            });
+
+            const results = await Promise.all(aiTasks);
+            const map: Record<number | string, { summary: string; reason: string }> = {};
+            results.forEach((r) => {
+              map[r.id] = {
+                summary: r.ai?.summary ?? '',
+                reason: r.ai?.reason ?? '',
+              };
+            });
+            setNoteSummaries(map);
           }
         } catch (err) {
-          console.error('获取笔记失败', err);
+          console.error('获取笔记或 AI 推荐失败', err);
         }
       } catch (error) {
         console.error('获取数据失败:', error);
@@ -65,14 +83,13 @@ export default function DashboardPage() {
   // 处理补一句
   const handleMirrorAddition = async (noteId: number, addition: string) => {
     console.log(`补一句: 笔记 ${noteId}`, addition);
-    // TODO: 可以在这里保存到数据库或发送到后端
+    // TODO: 可以在这里保存到数据库
   };
 
   // 处理忽略
   const handleMirrorIgnore = async (noteId: number) => {
     console.log(`忽略: 笔记 ${noteId}`);
-    // TODO: 可以在这里记录用户的忽略模式，用于后续 AI 分析
-  };
+    // TODO: 可以在这里记录用户的忽略模式
 
   // 加载状态
   if (loading) {
@@ -91,7 +108,6 @@ export default function DashboardPage() {
           <span>IP: {clientIP || '加载中...'}</span>
         </div>
       </div>
-
       {/* 用户信息和每日格言放在同一行 */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         {/* 用户信息部分 */}
@@ -121,19 +137,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 日常总结与意外之镜并列展示 */}
+
+
+      {/* 日常总结与奇思妙境并列展示 */}
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="lg:w-2/3">
           <DailySummaryViewer />
         </div>
 
         <div className="lg:w-1/3">
-          <MirrorOfSerendipity 
-            userId="current-user"
-            notes={notes}
-            onAddition={handleMirrorAddition}
-            onIgnore={handleMirrorIgnore}
-          />
+          <div className="p-0 rounded-lg">
+            <MirrorOfSerendipity 
+              userId="current-user"
+              notes={notes}
+              onAddition={handleMirrorAddition}
+              onIgnore={handleMirrorIgnore}
+            />
+          </div>
         </div>
       </div>
 
@@ -184,7 +204,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-3">
-          <HabitCheckInCard />
+          <HabitCheckInCard/>
         </div>
       </div>
     </>
