@@ -47,6 +47,7 @@ export function DailyQuote() {
       setLoading(true);
       const fetchedQuote = await fetchQuote();
       setQuote(fetchedQuote);
+      // 不再请求额外 AI 建议，组件已由 AI 生成格言内容
     } catch (error) {
       console.error("获取每日格言失败:", error);
       toast({
@@ -77,6 +78,7 @@ export function DailyQuote() {
   
   return (
     <Card className="h-full">
+      <div className="h-1.5 w-full rainbow-flow rounded-t-md" />
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -141,6 +143,8 @@ export function DailyQuote() {
                 </Button>
               )}
             </div>
+
+            {/* 无需额外 AI 建议显示（格言已由 AI 生成） */}
           </div>
         )}
       </CardContent>

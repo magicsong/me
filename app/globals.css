@@ -66,6 +66,28 @@
   }
 }
 
+/* Rainbow flow animation for AI 推荐装饰 (top-level, works in both light/dark) */
+@keyframes rainbow-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.rainbow-flow {
+  background: linear-gradient(90deg, #ff6b6b 0%, #f7b267 20%, #ffd56b 40%, #6be3b3 60%, #6bbcff 80%, #c78bff 100%);
+  background-size: 300% 100%;
+  animation: rainbow-flow 6s linear infinite;
+  min-height: 6px; /* ensure visible */
+}
+
+.rainbow-pill {
+  background: linear-gradient(90deg, rgba(255,107,107,0.18), rgba(247,178,103,0.18), rgba(255,213,107,0.18), rgba(107,227,179,0.18), rgba(107,188,255,0.18), rgba(199,139,255,0.18));
+  background-size: 300% 100%;
+  animation: rainbow-flow 6s linear infinite;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
 @layer base {
   * {
     @apply border-border;

@@ -1,6 +1,6 @@
 "use client";
 
-import { HabitBO } from '@/app/api/types';
+import { HabitBO, NoteBO } from '@/app/api/types';
 import { DailyQuote } from '@/components/DailyQuote';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarCheck2, ClipboardList, Globe } from 'lucide-react';
@@ -10,12 +10,15 @@ import { getHabitStats } from '../habits/actions';
 import { getHabits } from '../habits/client-actions';
 import { DailySummaryViewer } from './daily-summary-viewer';
 import { HabitCheckInCard } from './habit-check-in-card';
+import { getNoteAISummary } from './note-ai-client';
 
 export default function DashboardPage() {
   // 使用 useState 保存数据
   const [habits, setHabits] = useState<HabitBO[]>([]);
   const [habitStats, setHabitStats] = useState({ overallCompletionRate: 0, periodLabel: '' });
   const [clientIP, setClientIP] = useState<string>('');
+  const [notes, setNotes] = useState<NoteBO[]>([]);
+  const [noteSummaries, setNoteSummaries] = useState<Record<number | string, { summary: string; reason: string }>>({});
   const [loading, setLoading] = useState(true);
 
   // 计算习惯完成数据
@@ -38,6 +41,34 @@ export default function DashboardPage() {
         // 获取习惯统计信息
         const stats = await getHabitStats('week');
         setHabitStats(stats);
+
+        // 获取几条笔记用于“笔记精选”展示（使用现有 note API）
+        try {
+          const notesRes = await fetch('/api/note?pageSize=3');
+          const notesJson = await notesRes.json();
+          const notesData = notesJson?.data ?? notesJson;
+          if (Array.isArray(notesData)) {
+            setNotes(notesData);
+
+            // 为每条笔记请求 AI 推荐理由（并行）
+            const aiTasks = notesData.map(async (n: NoteBO) => {
+              const ai = await getNoteAISummary(n.id as number, n.content, n.title);
+              return { id: n.id, ai };
+            });
+
+            const results = await Promise.all(aiTasks);
+            const map: Record<number | string, { summary: string; reason: string }> = {};
+            results.forEach((r) => {
+              map[r.id] = {
+                summary: r.ai?.summary ?? '',
+                reason: r.ai?.reason ?? '',
+              };
+            });
+            setNoteSummaries(map);
+          }
+        } catch (err) {
+          console.error('获取笔记或 AI 推荐失败', err);
+        }
       } catch (error) {
         console.error('获取数据失败:', error);
       } finally {
@@ -96,8 +127,54 @@ export default function DashboardPage() {
 
 
 
-      {/* 添加日常总结查看器 */}
-      <DailySummaryViewer />
+      {/* 日常总结与笔记精选并列展示 */}
+      <div className="flex flex-col lg:flex-row gap-4 mb-6">
+        <div className="lg:w-2/3">
+          <DailySummaryViewer />
+        </div>
+
+        <div className="lg:w-1/3">
+          <Card className="overflow-hidden">
+            <div className="h-1.5 w-full rainbow-flow rounded-t-md" />
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">笔记精选</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!notes || notes.length === 0 ? (
+                <div className="text-sm text-muted-foreground">暂无笔记</div>
+              ) : (
+                (() => {
+                  const note = notes[0];
+                  const ai = noteSummaries[note.id ?? ''];
+                  const createdAt = note.createdAt || note.updatedAt || new Date().toISOString();
+                  const fmt = new Date(createdAt).toLocaleString('zh-CN', { dateStyle: 'medium', timeStyle: 'short' });
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="text-xs text-muted-foreground">{fmt}</div>
+                      <h3 className="text-lg font-semibold">{note.title}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-3">{note.content ?? ''}</p>
+
+                      <div className="pt-2 border-t">
+                        <div className="text-sm font-medium">AI 推荐理由</div>
+                        <p className="text-sm text-muted-foreground italic mt-1">{ai?.reason ?? 'AI 推荐中...'}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-1 rainbow-pill">回忆</span>
+                          <span className="text-xs text-muted-foreground">提醒 • 保存为回忆</span>
+                        </div>
+                        <Link href={`/note/${note.id}`} className="text-sm text-primary">查看完整 →</Link>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* 习惯完成概览卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
