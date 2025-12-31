@@ -375,7 +375,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
         const offset = (page - 1) * pageSize;
         const condition = this.buildWhereCondition(filter);
         const countResult = await this.db
-            .select({ count: SQL`count(*)` })
+            .select({ count: sql`count(*)` })
             .from(this.table)
             .where(condition);
 
@@ -432,7 +432,7 @@ export class BaseRepository<T extends PgTableWithColumns<any>, I extends Record<
             }
             // 检查字段是否存在于表结构中
             if (!(key in this.table)) {
-                console.log(`字段 ${key} 在表 ${this.table.name} 中不存在`);
+                console.log(`字段 ${key} 在表结构中不存在`);
                 continue;
             }
 

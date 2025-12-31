@@ -793,8 +793,14 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
             if (typeof this.persistenceService.getPageWithFilters === 'function') {
                 const result = await this.persistenceService.getPageWithFilters(paginationOptions, filter, userId);
 
+                let items = this.toBusinessObjects(result.items);
+                // 如果handler有截断方法，则应用它
+                if (typeof (this as any).truncateContents === 'function') {
+                    items = (this as any).truncateContents(items);
+                }
+
                 return {
-                    items: this.toBusinessObjects(result.items),
+                    items,
                     total: result.total,
                     page: result.page,
                     pageSize: result.pageSize,
@@ -903,7 +909,7 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
             };
 
             // 转换为持久层的过滤条件
-            const filterCondition: FilterCondition<T> = this.convertFilters(filters);
+            const filterCondition: FilterCondition<T> = this.convertFilters(filters, []);
             // 如果提供了userId，添加到过滤条件
             if (userId) {
                 (filterCondition as any).userId = userId;
@@ -915,8 +921,14 @@ export abstract class BaseApiHandler<T, BO extends BusinessObject = any>
                     paginationOptions, filterCondition, userId
                 );
 
+                let items = this.toBusinessObjects(result.items);
+                // 如果handler有截断方法，则应用它
+                if (typeof (this as any).truncateContents === 'function') {
+                    items = (this as any).truncateContents(items);
+                }
+
                 return {
-                    items: this.toBusinessObjects(result.items),
+                    items,
                     total: result.total,
                     page: result.page,
                     pageSize: result.pageSize,

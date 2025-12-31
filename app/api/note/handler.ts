@@ -3,6 +3,7 @@ import { BaseApiHandler } from "../lib/BaseApiHandler";
 import { BusinessObject } from '../lib/types';
 import { NoteBO } from '../types';
 
+const PREVIEW_CONTENT_LENGTH = 100; // 列表展示时的内容预览长度
 
 export class NoteApiHandler extends BaseApiHandler<NoteData, NoteBO> {
   validateBO(data: NoteBO): boolean {
@@ -18,6 +19,27 @@ export class NoteApiHandler extends BaseApiHandler<NoteData, NoteBO> {
     if (!data.userId) return false;
 
     return true;
+  }
+
+  /**
+   * 截断笔记内容为预览文本（用于列表展示）
+   */
+  truncateContent(note: NoteBO, maxLength: number = PREVIEW_CONTENT_LENGTH): NoteBO {
+    if (!note.content || note.content.length <= maxLength) {
+      return note;
+    }
+    
+    return {
+      ...note,
+      content: note.content.substring(0, maxLength)
+    };
+  }
+
+  /**
+   * 批量截断内容
+   */
+  truncateContents(notes: NoteBO[], maxLength: number = PREVIEW_CONTENT_LENGTH): NoteBO[] {
+    return notes.map(note => this.truncateContent(note, maxLength));
   }
 
   setDefaultsBO(businessObject: Partial<NoteBO>, isUpdate: boolean): Partial<NoteBO> {
