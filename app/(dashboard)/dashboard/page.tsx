@@ -11,6 +11,8 @@ import { getHabitStats } from '../habits/actions';
 import { getHabits } from '../habits/client-actions';
 import { DailySummaryViewer } from './daily-summary-viewer';
 import { HabitCheckInCard } from './habit-check-in-card';
+import { FocusTasksCard } from '@/components/dashboard/focus-tasks-card';
+import { AIAdvisoryCard } from '@/components/dashboard/ai-advisory-card';
 
 export default function DashboardPage() {
   // 使用 useState 保存数据
@@ -82,9 +84,17 @@ export default function DashboardPage() {
   return (
     <>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <CalendarCheck2 className="h-6 w-6" />
           <h1 className="text-xl font-semibold">今日概览</h1>
+          {/* 每日规划按钮 - 简化为小按钮 */}
+          <Link 
+            href="/daily" 
+            className="ml-auto md:ml-4 inline-flex items-center gap-2 px-3 py-1 text-sm rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+          >
+            <ClipboardList className="h-4 w-4" />
+            <span>每日规划</span>
+          </Link>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Globe className="h-4 w-4" />
@@ -92,36 +102,23 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 用户信息和每日格言放在同一行 */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        {/* 用户信息部分 */}
-        <div className="md:w-1/3">
-          {/* 每日规划快速入口 */}
-          <Link href="/daily" className="block mb-4">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer border-dashed">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <ClipboardList className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">前往每日规划</h3>
-                    <p className="text-sm text-muted-foreground">安排今日任务，规划时间分配</p>
-                  </div>
-                </div>
-                <div className="text-primary text-sm font-medium">立即前往 →</div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-
-        {/* 每日推荐语录部分 */}
-        <div className="md:w-2/3">
+      {/* 每日格言、重点任务和AI建议 - 三列并列展示 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="lg:col-span-1">
           <DailyQuote />
+        </div>
+        <div className="lg:col-span-1">
+          <FocusTasksCard maxTasks={3} />
+        </div>
+        <div className="lg:col-span-1">
+          <AIAdvisoryCard 
+            habitCompletionRate={Math.round((completedHabits / totalHabits) * 100) || 0}
+            notesCount={notes.length}
+          />
         </div>
       </div>
 
-      {/* 日常总结与意外之镜并列展示 */}
+      {/* 主要内容区 - 日常总结和意外之镜并列展示（更大比例） */}
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="lg:w-2/3">
           <DailySummaryViewer />
