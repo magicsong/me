@@ -18,13 +18,18 @@ class AIService:
 
     def __init__(self):
         """初始化OpenAI客户端"""
+        import random
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.base_url = os.getenv("OPENAI_URL")
-        self.model = os.getenv("OPENAI_MODEL")
+        openai_models_str = os.getenv("OPENAI_MODELS")
 
-        if not all([self.api_key, self.base_url, self.model]):
+        if not all([self.api_key, self.base_url, openai_models_str]):
             logger.error("缺少OpenAI配置信息，请检查.env文件")
             sys.exit(1)
+        
+        # 从逗号分隔的模型列表中随机选择一个
+        self.models = [m.strip() for m in openai_models_str.split(",")]
+        self.model = random.choice(self.models)
 
         try:
             self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)

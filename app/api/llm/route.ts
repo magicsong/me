@@ -63,6 +63,12 @@ function formatTimeAgo(timestamp: Date): string {
     return '刚刚';
 }
 
+// 从逗号分隔的模型列表中随机选择一个模型
+function getRandomModel(): string {
+  const models = (process.env.OPENAI_MODELS || "gpt-3.5-turbo").split(",").map(m => m.trim());
+  return models[Math.floor(Math.random() * models.length)];
+}
+
 export async function POST(request: Request) {
     try {
         const body: LLMRequest = await request.json();
@@ -71,7 +77,7 @@ export async function POST(request: Request) {
             enableThinking = false,
             temperature = 0.7,
             maxTokens = 1000,
-            model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+            model = getRandomModel(),
             cacheTimeMinutes = 60 // 默认缓存60分钟
         } = body;
 

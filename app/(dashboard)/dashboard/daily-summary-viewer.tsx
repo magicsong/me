@@ -34,6 +34,7 @@ import {
   CheckCircle,
   ChevronRight,
   Circle,
+  Copy,
   Edit,
   FileText,
   Lightbulb,
@@ -288,6 +289,127 @@ export function DailySummaryViewer() {
     }
   };
 
+  // 格式化总结内容为清晰的文本
+  const formatSummaryForCopy = () => {
+    if (!summaryData) return '';
+
+    let text = `📝 ${getDateDisplay()} 每日总结\n`;
+    text += `${'='.repeat(50)}\n\n`;
+
+    // 统计信息
+    text += `✨ 每日成绩\n`;
+    text += `完成分数: ${summaryData.completionScore}/10\n`;
+    text += `完成任务: ${summaryData.completionCount} 项\n`;
+    text += `心情: ${summaryData.mood}\n`;
+    
+    if (summaryData.energyLevel) {
+      text += `精力: ${getEnergyLabel(summaryData.energyLevel).label}\n`;
+    }
+    if (summaryData.sleepQuality) {
+      text += `睡眠: ${getSleepLabel(summaryData.sleepQuality).label}\n`;
+    }
+    text += '\n';
+
+    // 完成的任务和习惯
+    if (completedHabits.length > 0 || completedTasks.length > 0) {
+      text += `✅ 今日完成\n`;
+      if (completedHabits.length > 0) {
+        text += `  习惯:\n`;
+        completedHabits.forEach(habit => {
+          text += `    • ${habit}\n`;
+        });
+      }
+      if (completedTasks.length > 0) {
+        text += `  任务:\n`;
+        completedTasks.forEach(task => {
+          text += `    • ${task}\n`;
+        });
+      }
+      text += '\n';
+    }
+
+    // 未完成的任务和习惯
+    if (failedHabits.length > 0 || failedTasks.length > 0) {
+      text += `❌ 未完成\n`;
+      if (failedHabits.length > 0) {
+        text += `  习惯:\n`;
+        failedHabits.forEach(habit => {
+          text += `    • ${habit.name} - ${habit.failReason}\n`;
+        });
+      }
+      if (failedTasks.length > 0) {
+        text += `  任务:\n`;
+        failedTasks.forEach(task => {
+          text += `    • ${task}\n`;
+        });
+      }
+      text += '\n';
+    }
+
+    // 三件好事
+    if (summaryData.goodThings?.filter(Boolean).length > 0) {
+      text += `⭐ 三件好事\n`;
+      summaryData.goodThings.filter(Boolean).forEach((thing, index) => {
+        text += `  ${index + 1}. ${thing}\n`;
+      });
+      text += '\n';
+    }
+
+    // 学习收获
+    if (summaryData.learnings) {
+      text += `💡  今日收获\n`;
+      text += `${summaryData.learnings}\n\n`;
+    }
+
+    // 遇到的挑战
+    if (summaryData.challenges) {
+      text += `⚡ 遇到的挑战\n`;
+      text += `${summaryData.challenges}\n\n`;
+    }
+
+    // 改进之处
+    if (summaryData.improvements) {
+      text += `🔧  改进之处\n`;
+      text += `${summaryData.improvements}\n\n`;
+    }
+
+    // 明日目标
+    if (summaryData.tomorrowGoals) {
+      text += `🎯 明日目标\n`;
+      text += `${summaryData.tomorrowGoals}\n`;
+    }
+
+    return text;
+  };
+
+  // 复制总结到剪贴板
+  const handleCopySummary = async () => {
+    const summaryText = formatSummaryForCopy();
+    try {
+      await navigator.clipboard.writeText(summaryText);
+      // 显示成功提示
+      const feedback = document.createElement('div');
+      feedback.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in duration-300';
+      feedback.textContent = '✓ 已复制到剪贴板';
+      document.body.appendChild(feedback);
+      
+      setTimeout(() => {
+        feedback.remove();
+      }, 2000);
+    } catch (err) {
+      console.error('复制失败:', err);
+      // 显示错误提示
+      const feedback = document.createElement('div');
+      feedback.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in duration-300';
+      feedback.textContent = '✗ 复制失败，请重试';
+      document.body.appendChild(feedback);
+      
+      setTimeout(() => {
+        feedback.remove();
+      }, 2000);
+    }
+  };
+
   return (
     <>
       {/* 主卡片 */}
@@ -343,6 +465,18 @@ export function DailySummaryViewer() {
               >
                 <Edit className="h-4 w-4" />
               </Button>
+
+              {summaryData && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCopySummary}
+                  aria-label="复制总结"
+                  title="复制格式化的总结"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>

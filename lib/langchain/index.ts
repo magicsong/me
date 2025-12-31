@@ -1,10 +1,16 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { OpenAI } from "openai";
 
+// 从逗号分隔的模型列表中随机选择一个模型
+function getRandomModel(): string {
+  const models = (process.env.OPENAI_MODELS || "gpt-3.5-turbo").split(",").map(m => m.trim());
+  return models[Math.floor(Math.random() * models.length)];
+}
+
 // 初始化LangChain OpenAI模型
 export const chatModel = new ChatOpenAI({
   openAIApiKey: process.env.OPENAI_API_KEY,
-  modelName: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+  modelName: getRandomModel(),
   temperature: 0.7,
   configuration:{
     baseURL: process.env.OPENAI_URL,

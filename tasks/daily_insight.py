@@ -324,11 +324,15 @@ def create_ai_insight_for_user(user_id: str, analysis_data: Dict[str, Any], targ
         # 从环境变量获取OpenAI配置
         openai_api_key = os.getenv("OPENAI_API_KEY")
         openai_base_url = os.getenv("OPENAI_URL")
-        openai_model = os.getenv("OPENAI_MODEL")
+        openai_models_str = os.getenv("OPENAI_MODELS")
         
-        if not all([openai_api_key, openai_base_url, openai_model]):
+        if not all([openai_api_key, openai_base_url, openai_models_str]):
             logger.error("缺少OpenAI配置信息，请检查.env文件")
             sys.exit(1)
+        
+        # 从逗号分隔的模型列表中随机选择一个
+        import random
+        openai_model = random.choice([m.strip() for m in openai_models_str.split(",")])
         
         # 初始化OpenAI客户端
         try:
@@ -368,7 +372,7 @@ def create_ai_insight_for_user(user_id: str, analysis_data: Dict[str, Any], targ
             
             # 调用OpenAI API
             response = client.chat.completions.create(
-                model=openai_model or "gpt-3.5-turbo",  # 确保有默认值
+                model=openai_model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
