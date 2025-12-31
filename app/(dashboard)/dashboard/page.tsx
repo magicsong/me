@@ -87,7 +87,6 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3">
           <CalendarCheck2 className="h-6 w-6" />
           <h1 className="text-xl font-semibold">今日概览</h1>
-          {/* 每日规划按钮 - 简化为小按钮 */}
           <Link 
             href="/daily" 
             className="ml-auto md:ml-4 inline-flex items-center gap-2 px-3 py-1 text-sm rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
@@ -102,7 +101,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 每日格言、重点任务和AI建议 - 三列并列展示 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div className="lg:col-span-1">
           <DailyQuote />
@@ -118,7 +116,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 主要内容区 - 日常总结和意外之镜并列展示（更大比例） */}
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="lg:w-2/3">
           <DailySummaryViewer />

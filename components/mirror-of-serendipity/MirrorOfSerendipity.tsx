@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { NoteBO } from '@/app/api/types';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import Link from 'next/link';
-import { extractRandomFragment, createBlurredText, getDistanceStatement } from './note-fragment';
+import { extractRandomFragment, createBlurredText, getDistanceStatement, stripHtmlTags } from './note-fragment';
 import { generateDailyAIQuestion, generateDailySeed } from './ai-question-generator';
 import { MirrorCard, AIQuestion, NoteFragment } from './types';
 import { Plus, X, Sparkles, ExternalLink, Loader2 } from 'lucide-react';
@@ -209,12 +209,10 @@ export function MirrorOfSerendipity({
       </CardHeader>
 
       {/* 笔记内容主体 */}
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 max-h-96 overflow-y-auto pr-2">
         {/* 笔记内容 */}
-        <div className="space-y-3">
-          <p className="text-base leading-relaxed text-foreground">
-            {blurredContent.display}
-          </p>
+        <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words font-medium">
+          {blurredContent.display}
         </div>
 
         {/* 用户补充 */}
