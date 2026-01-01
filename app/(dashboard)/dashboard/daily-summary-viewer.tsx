@@ -385,28 +385,42 @@ export function DailySummaryViewer() {
   // 复制总结到剪贴板
   const handleCopySummary = async () => {
     const summaryText = formatSummaryForCopy();
-    try {
-      await navigator.clipboard.writeText(summaryText);
-      // 显示成功提示
+
+    const showFeedback = (message: string, success = true) => {
       const feedback = document.createElement('div');
-      feedback.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in duration-300';
-      feedback.textContent = '✓ 已复制到剪贴板';
+      feedback.className = `fixed top-4 right-4 ${success ? 'bg-green-500' : 'bg-red-500'} text-white px-4 py-2 rounded-lg shadow-lg z-50`;
+      feedback.textContent = message;
       document.body.appendChild(feedback);
-      
-      setTimeout(() => {
-        feedback.remove();
-      }, 2000);
+      setTimeout(() => feedback.remove(), 2000);
+    };
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(summaryText);
+        showFeedback('✓ 已复制到剪贴板', true);
+        return;
+      }
+
+      // Fallback for environments without navigator.clipboard
+      const textarea = document.createElement('textarea');
+      textarea.value = summaryText;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      const successful = document.execCommand && document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      if (successful) {
+        showFeedback('✓ 已复制到剪贴板', true);
+      } else {
+        throw new Error('复制失败');
+      }
     } catch (err) {
       console.error('复制失败:', err);
-      // 显示错误提示
-      const feedback = document.createElement('div');
-      feedback.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in fade-in duration-300';
-      feedback.textContent = '✗ 复制失败，请重试';
-      document.body.appendChild(feedback);
-      
-      setTimeout(() => {
-        feedback.remove();
-      }, 2000);
+      showFeedback('✗ 复制失败，请重试', false);
     }
   };
 
