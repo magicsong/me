@@ -554,3 +554,21 @@ export const habit_scenarios = pgTable('habit_scenarios', {
 	user_id: text('user_id').notNull(),
 	created_at: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 });
+
+// 通用remarks表 - 支持任何类型对象的评论/备注
+export const remarks = pgTable('remarks', {
+	id: serial('id').primaryKey().notNull(),
+	user_id: text('user_id').notNull(), // 创建remarks的用户ID
+	entity_type: text('entity_type').notNull(), // 实体类型: 'note', 'todo', 'habit', 等等
+	entity_id: integer('entity_id').notNull(), // 实体的ID
+	content: text('content').notNull(), // remarks内容
+	created_at: timestamp('created_at', { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	updated_at: timestamp('updated_at', { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+},
+(table) => {
+	return {
+		idx_remarks_user_id: index('idx_remarks_user_id').using('btree', table.user_id),
+		idx_remarks_entity: index('idx_remarks_entity').using('btree', table.entity_type, table.entity_id),
+		idx_remarks_created_at: index('idx_remarks_created_at').using('btree', table.created_at),
+	}
+});

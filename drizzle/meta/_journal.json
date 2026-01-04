@@ -218,6 +218,13 @@
       "when": 1764160140310,
       "tag": "0030_reflective_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1767517783386,
+      "tag": "0031_rapid_lady_deathstrike",
+      "breakpoints": true
     }
   ]
 }

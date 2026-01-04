@@ -72,3 +72,28 @@ export interface OutputParser<T> {
   parseCreateOutput(output: string): T;
   parseUpdateOutput(output: string, existingData: T): T;
 }
+
+/**
+ * 通用Remark类型 - 支持任何类型对象的评论/备注
+ */
+export interface Remark {
+  id: number;
+  user_id: string; // 创建remark的用户ID
+  entity_type: string; // 实体类型: 'note', 'todo', 'habit', 等等
+  entity_id: number; // 实体的ID
+  content: string; // remark内容
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateRemarkInput {
+  entity_type: string;
+  entity_id: number;
+  content: string;
+}
+
+export interface RemarkResponse {
+  success: boolean;
+  data?: Remark;
+  error?: string;
+}

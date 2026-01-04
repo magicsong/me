@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from "@/lib/auth";
 import { generateMirrorQuestion } from '@/lib/langchain/mirror-question-generator';
+import { generateCacheKey, getCachedLLMResponse, cacheLLMResponse } from '@/lib/cache';
 
 /**
  * 意外之镜 - 生成 AI 反问的 API 端点
  * 接收笔记内容，使用大模型生成深入的反问
  * 返回：笔记ID、笔记内容、AI反问
+ * 支持3小时缓存
  */
 export async function POST(request: NextRequest) {
   try {
@@ -25,14 +27,58 @@ export async function POST(request: NextRequest) {
 
     console.log(`Generating Mirror of Serendipity question for note ${noteId}`);
 
+    // 生成缓存键
+    const cacheKey = generateCacheKey({
+      entity: 'mirror_question',
+      content,
+      title,
+    });
+
+    // 尝试从缓存获取
+    const cachedResult = await getCachedLLMResponse(cacheKey, userId);
+    if (cachedResult) {
+      console.log(`使用缓存的反问，noteId: ${noteId}`);
+      
+      let aiQuestion;
+      try {
+        aiQuestion = JSON.parse(cachedResult.response_content);
+      } catch {
+        // 如果缓存的内容格式不对，继续生成新的
+        aiQuestion = await generateMirrorQuestion(content, title, userId);
+      }
+
+      return NextResponse.json({
+        success: true,
+        noteId,
+        title,
+        content,
+        cached: true,
+        aiQuestion: {
+          mode: aiQuestion.mode,
+          question: aiQuestion.question
+        }
+      });
+    }
+
     // 使用大模型生成 AI 反问
     const aiQuestion = await generateMirrorQuestion(content, title, userId);
+
+    // 缓存结果
+    await cacheLLMResponse(
+      cacheKey,
+      `Mirror question for: ${title}`,
+      'mirror-question-generator',
+      JSON.stringify(aiQuestion),
+      undefined,
+      userId
+    );
 
     return NextResponse.json({
       success: true,
       noteId,
       title,
       content,
+      cached: false,
       aiQuestion: {
         mode: aiQuestion.mode,
         question: aiQuestion.question

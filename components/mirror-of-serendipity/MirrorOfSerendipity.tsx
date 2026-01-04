@@ -112,15 +112,38 @@ export function MirrorOfSerendipity({
   }, [notes, userId]);
 
   // 处理"补一句"
-  const handleAddition = useCallback(() => {
+  const handleAddition = useCallback(async () => {
     if (!userInput.trim() || !currentCard) return;
 
-    const newAdditions = [...additions, userInput];
-    setAdditions(newAdditions);
-    setUserInput('');
-    setHasInteracted(true);
+    try {
+      // 调用API保存remark
+      const response = await fetch('/api/remarks/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entity_type: 'note',
+          entity_id: currentCard.noteId,
+          content: userInput.trim(),
+        }),
+      });
 
-    onAddition?.(currentCard.noteId, userInput);
+      if (!response.ok) {
+        console.error('保存补充内容失败');
+        return;
+      }
+
+      const newAdditions = [...additions, userInput];
+      setAdditions(newAdditions);
+      setUserInput('');
+      setHasInteracted(true);
+
+      // 调用父组件的回调（如果有的话）
+      onAddition?.(currentCard.noteId, userInput);
+    } catch (error) {
+      console.error('保存补充内容失败:', error);
+    }
   }, [userInput, currentCard, additions, onAddition]);
 
   // 处理"忽略"
