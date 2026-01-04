@@ -4,6 +4,9 @@
  */
 
 import { PromptTemplate } from "@langchain/core/prompts";
+import { RunnableSequence } from "@langchain/core/runnables";
+import { createHash } from "crypto";
+import { createCachedChain } from "./chains";
 import { chatModel } from ".";
 
 export type AIQuestionMode = 'counterquestion' | 'contrast' | 'misread' | 'risk';
@@ -31,19 +34,28 @@ export async function generateMirrorQuestion(
   // 根据模式生成相应的提示词
   const prompt = buildPrompt(noteContent, noteTitle, mode);
 
-  // 调用大模型生成反问
-  let question: string;
-  try {
-    const promptTemplate = PromptTemplate.fromTemplate(prompt);
-    const chain = promptTemplate.pipe(chatModel);
-    
-    const response = await chain.invoke({});
-    question = typeof response.content === 'string' ? response.content : String(response.content);
-  } catch (error) {
-    console.error('Failed to generate mirror question:', error);
-    // 降级方案：返回通用反问
-    question = getDefaultQuestion(mode);
-  }
+  // 生成缓存键：基于用户ID、笔记标题、笔记内容哈希和反问模式
+  const contentHash = createHash('md5').update(noteContent).digest('hex').substring(0, 8);
+  const cacheKey = `mirror-question:${userId}:${noteTitle}:${contentHash}:${mode}`;
+
+  // 调用大模型生成反问，使用缓存
+  const question = await createCachedChain(
+    async () => {
+      try {
+        const promptTemplate = PromptTemplate.fromTemplate(prompt);
+        const chain = RunnableSequence.from([promptTemplate, chatModel]);
+        
+        const response = await chain.invoke({});
+        return typeof response.content === 'string' ? response.content : String(response.content);
+      } catch (error) {
+        console.error('Failed to generate mirror question:', error);
+        // 降级方案：返回通用反问
+        return getDefaultQuestion(mode);
+      }
+    },
+    cacheKey,
+    1440 // 缓存24小时
+  );
 
   return {
     mode,

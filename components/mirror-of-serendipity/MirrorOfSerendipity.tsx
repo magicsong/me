@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { extractRandomFragment, createBlurredText, getDistanceStatement, stripHtmlTags } from './note-fragment';
 import { generateDailyAIQuestion, generateDailySeed } from './ai-question-generator';
 import { MirrorCard, AIQuestion, NoteFragment } from './types';
-import { Plus, X, Sparkles, ExternalLink, Loader2 } from 'lucide-react';
+import { Plus, X, Sparkles, ExternalLink, Loader2, MessageCircle, Clock } from 'lucide-react';
 
 interface MirrorOfSerendipityProps {
   userId?: string;
@@ -22,12 +22,17 @@ export function MirrorOfSerendipity({
   onAddition,
   onIgnore,
 }: MirrorOfSerendipityProps) {
+  interface Addition {
+    content: string;
+    timestamp: Date;
+  }
+
   const [currentCard, setCurrentCard] = useState<MirrorCard | null>(null);
   const [fragment, setFragment] = useState<NoteFragment | null>(null);
   const [aiQuestion, setAIQuestion] = useState<AIQuestion | null>(null);
   const [userInput, setUserInput] = useState('');
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [additions, setAdditions] = useState<string[]>([]);
+  const [additions, setAdditions] = useState<Addition[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // 计算日期差距
@@ -134,7 +139,7 @@ export function MirrorOfSerendipity({
         return;
       }
 
-      const newAdditions = [...additions, userInput];
+      const newAdditions = [...additions, { content: userInput, timestamp: new Date() }];
       setAdditions(newAdditions);
       setUserInput('');
       setHasInteracted(true);
@@ -238,14 +243,33 @@ export function MirrorOfSerendipity({
           {blurredContent.display}
         </div>
 
-        {/* 用户补充 */}
+        {/* 用户补充 - Remark展示 */}
         {additions.length > 0 && (
-          <div className="pt-3 border-t border-border/50">
-            <div className="space-y-2">
+          <div className="pt-4 border-t border-border/50 space-y-3">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageCircle className="w-4 h-4 text-accent" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                我的想法
+              </span>
+            </div>
+            <div className="space-y-3">
               {additions.map((addition, idx) => (
-                <div key={idx} className="flex gap-2 text-sm">
-                  <span className="text-muted-foreground flex-shrink-0">→</span>
-                  <span className="text-foreground">{addition}</span>
+                <div key={idx} className="rounded-lg bg-accent/5 border border-accent/20 p-3 hover:bg-accent/10 transition-colors">
+                  <div className="flex gap-2">
+                    <div className="flex-shrink-0 pt-0.5">
+                      <div className="w-2 h-2 rounded-full bg-accent mt-1.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm leading-relaxed text-foreground break-words">{addition.content}</p>
+                      <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        {addition.timestamp.toLocaleTimeString('zh-CN', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
