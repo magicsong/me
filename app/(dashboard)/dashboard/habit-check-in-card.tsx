@@ -23,6 +23,7 @@ import { HabitCalendar } from '../habits/habit-calendar';
 import { DifficultyFeedback } from './components/difficulty-feedback';
 import { HabitCompletionDialog } from './components/habit-completion-dialog';
 import { HabitFailureDialog } from './components/habit-failure-dialog';
+import { BatchCheckInConfirmationDialog } from './components/batch-checkin-confirmation-dialog';
 // 难度评估类型
 type DifficultyLevel = 'easy' | 'medium' | 'hard' | null;
 
@@ -47,6 +48,11 @@ export function HabitCheckInCard() {
 
   // 添加失败对话框状态
   const [failureDialogOpen, setFailureDialogOpen] = useState(false);
+  
+  // 添加批量打卡确认对话框状态
+  const [batchConfirmDialogOpen, setBatchConfirmDialogOpen] = useState(false);
+  const [isBatchSubmitting, setIsBatchSubmitting] = useState(false);
+  
   const router = useRouter(); // 添加路由跳转钩子
 
   // 处理习惯选择/取消选择
@@ -68,56 +74,63 @@ export function HabitCheckInCard() {
     });
   };
 
-  // 批量打卡提交
-  const handleBatchSubmit = async () => {
+  // 打开批量打卡确认对话框
+  const handleOpenBatchConfirm = () => {
     if (selectedHabits.length === 0) {
       toast.info("请先选择要打卡的习惯");
       return;
     }
+    setBatchConfirmDialogOpen(true);
+  };
 
-    // 计算目标日期
-    const targetDate = new Date();
-    if (batchDate === 'yesterday') {
-      targetDate.setDate(targetDate.getDate() - 1);
-    }
+  // 批量打卡提交
+  const handleBatchSubmit = async () => {
+    setIsBatchSubmitting(true);
+    try {
+      // 计算目标日期
+      const targetDate = new Date();
+      if (batchDate === 'yesterday') {
+        targetDate.setDate(targetDate.getDate() - 1);
+      }
 
-    const dateLabel = batchDate === 'today' ? '今天' : '昨天';
-    // 显示确认对话框
-    if (window.confirm(`确认要为${dateLabel}选中的 ${selectedHabits.length} 个习惯打卡吗？`)) {
-      try {
-        // 批量处理所有选中的习惯
-        await Promise.all(
-          selectedHabits.map(habit => {
-            // 如果习惯有挑战，则完成激活的挑战
-            if (habit.activeTierId && habit.challengeTiers && habit.challengeTiers.length > 0) {
-              return completeHabit(habit.id, {
-                tierId: habit.activeTierId,
-                comment: batchDate === 'today' ? "批量完成挑战" : "昨日批量完成挑战",
-                completedAt: targetDate,
-              });
-            }
-            // 否则进行普通打卡
+      const dateLabel = batchDate === 'today' ? '今天' : '昨天';
+      
+      // 批量处理所有选中的习惯
+      await Promise.all(
+        selectedHabits.map(habit => {
+          // 如果习惯有挑战，则完成激活的挑战
+          if (habit.activeTierId && habit.challengeTiers && habit.challengeTiers.length > 0) {
             return completeHabit(habit.id, {
-              comment: batchDate === 'today' ? "批量打卡" : "昨日批量打卡",
+              tierId: habit.activeTierId,
+              comment: batchDate === 'today' ? "批量完成挑战" : "昨日批量完成挑战",
               completedAt: targetDate,
             });
-          })
-        );
+          }
+          // 否则进行普通打卡
+          return completeHabit(habit.id, {
+            comment: batchDate === 'today' ? "批量打卡" : "昨日批量打卡",
+            completedAt: targetDate,
+          });
+        })
+      );
 
-        toast.success(`🎉 成功为${dateLabel}完成 ${selectedHabits.length} 个习惯打卡！`, {
-          duration: 3000,
-        });
+      toast.success(`🎉 成功为${dateLabel}完成 ${selectedHabits.length} 个习惯打卡！`, {
+        duration: 3000,
+      });
 
-        // 刷新习惯数据
-        fetchHabits();
-        // 清除选中状态
-        setSelectedHabits([]);
-        // 退出多选模式
-        setIsMultiSelectMode(false);
-      } catch (error) {
-        console.error('批量打卡失败:', error);
-        toast.error('批量打卡失败，请重试');
-      }
+      // 刷新习惯数据
+      fetchHabits();
+      // 清除选中状态
+      setSelectedHabits([]);
+      // 退出多选模式
+      setIsMultiSelectMode(false);
+      // 关闭确认对话框
+      setBatchConfirmDialogOpen(false);
+    } catch (error) {
+      console.error('批量打卡失败:', error);
+      toast.error('批量打卡失败，请重试');
+    } finally {
+      setIsBatchSubmitting(false);
     }
   };
 
@@ -326,6 +339,16 @@ export function HabitCheckInCard() {
         onSubmit={handleFailureSubmit}
       />
 
+      {/* 批量打卡确认对话框 */}
+      <BatchCheckInConfirmationDialog
+        isOpen={batchConfirmDialogOpen}
+        onClose={() => setBatchConfirmDialogOpen(false)}
+        onConfirm={handleBatchSubmit}
+        count={selectedHabits.length}
+        dateLabel={batchDate === 'today' ? '今天' : '昨天'}
+        isLoading={isBatchSubmitting}
+      />
+
       <div className="flex flex-col md:flex-row gap-4 w-full">
         <Card className="flex-1">
           <CardHeader className="pb-3">
@@ -365,10 +388,10 @@ export function HabitCheckInCard() {
                     <Button
                       variant="default"
                       size="sm"
-                      disabled={selectedHabits.length === 0}
-                      onClick={handleBatchSubmit}
+                      disabled={selectedHabits.length === 0 || isBatchSubmitting}
+                      onClick={handleOpenBatchConfirm}
                     >
-                      打卡 ({selectedHabits.length})
+                      {isBatchSubmitting ? '处理中...' : `打卡 (${selectedHabits.length})`}
                     </Button>
                   </>
                 )}
