@@ -38,7 +38,12 @@ export function HabitCheckInCard() {
   // 添加 habits 状态及相关计数
   const [habits, setHabits] = useState<HabitBO[]>([]);
   const [loading, setLoading] = useState(true);
-  const completedCount = habits.filter(h => h.completedToday).length;
+  
+  // 根据批量打卡模式的日期动态计算完成数
+  const completedCount = isMultiSelectMode && batchDate === 'yesterday'
+    ? habits.filter(h => h.completedYesterday || h.failedYesterday).length
+    : habits.filter(h => h.completedToday || h.failedToday).length;
+    
   const totalCount = habits.length;
   const progress = totalCount > 0 ? (completedCount / totalCount * 100) : 0;
 
@@ -59,8 +64,14 @@ export function HabitCheckInCard() {
   const toggleHabitSelection = (habit: HabitBO, e: React.MouseEvent) => {
     e.stopPropagation();
 
+    // 根据批量打卡日期判断习惯是否已完成
+    // 在批量模式下，需要检查选定日期的完成状态
+    const isCompleted = batchDate === 'today' 
+      ? (habit.completedToday || habit.failedToday)
+      : (habit.completedYesterday || habit.failedYesterday);
+    
     // 已完成或失败的习惯不能选择
-    if (habit.completedToday || habit.failedToday) {
+    if (isCompleted) {
       return;
     }
 
@@ -139,6 +150,30 @@ export function HabitCheckInCard() {
     e.stopPropagation(); // 阻止冒泡，避免同时触发打开日历
     // 导航到番茄钟页面，并传递habitId参数
     router.push(`/pomodoro?habitId=${habit.id}`);
+  }
+
+  // 根据批量打卡模式的日期判断习惯是否已完成
+  function isHabitCompleted(habit: HabitBO): boolean {
+    if (isMultiSelectMode && batchDate === 'yesterday') {
+      return habit.completedYesterday || habit.failedYesterday;
+    }
+    return habit.completedToday || habit.failedToday;
+  }
+
+  // 根据批量打卡模式的日期获取习惯的完成状态
+  function isHabitCompletedSpecific(habit: HabitBO): boolean {
+    if (isMultiSelectMode && batchDate === 'yesterday') {
+      return !!habit.completedYesterday;
+    }
+    return !!habit.completedToday;
+  }
+
+  // 根据批量打卡模式的日期获取习惯的失败状态
+  function isHabitFailedSpecific(habit: HabitBO): boolean {
+    if (isMultiSelectMode && batchDate === 'yesterday') {
+      return !!habit.failedYesterday;
+    }
+    return !!habit.failedToday;
   }
 
   // 检查习惯是否应该在今天显示
@@ -353,7 +388,7 @@ export function HabitCheckInCard() {
         <Card className="flex-1">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">📅 {batchDate === 'today' ? '今日' : '昨日'}习惯打卡（ {completedCount} / {totalCount} 已完成）</CardTitle>
+              <CardTitle className="text-lg">📅 {isMultiSelectMode ? (batchDate === 'today' ? '今日' : '昨日') : '今日'}习惯打卡（ {completedCount} / {totalCount} 已完成）</CardTitle>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -374,14 +409,22 @@ export function HabitCheckInCard() {
                     <Button
                       variant={batchDate === 'today' ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setBatchDate('today')}
+                      onClick={() => {
+                        setBatchDate('today');
+                        setSelectedHabits([]);
+                        fetchHabits();
+                      }}
                     >
                       今天
                     </Button>
                     <Button
                       variant={batchDate === 'yesterday' ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setBatchDate('yesterday')}
+                      onClick={() => {
+                        setBatchDate('yesterday');
+                        setSelectedHabits([]);
+                        fetchHabits();
+                      }}
                     >
                       昨天
                     </Button>
@@ -426,22 +469,22 @@ export function HabitCheckInCard() {
                   initial={{ scale: 1 }}
                   animate={{
                     scale: animatingHabitId === habit.id ? [1, 1.05, 1] : 1,
-                    opacity: habit.completedToday || habit.failedToday ? 0.7 : 1  // 同时处理完成和失败状态
+                    opacity: isHabitCompleted(habit) ? 0.7 : 1  // 同时处理完成和失败状态
                   }}
                   transition={{ duration: 0.3 }}
                   className={`flex items-center p-3 rounded-md cursor-pointer border 
                       ${isMultiSelectMode && selectedHabits.some(h => h.id === habit.id) ? 'border-primary-600 bg-primary-50 ring-2 ring-primary-200' : ''}
                       ${selectedHabit?.id === habit.id ? 'border-primary bg-primary/5' :
-                      habit.completedToday
+                      isHabitCompletedSpecific(habit)
                         ? 'bg-muted border-muted text-muted-foreground'
-                        : habit.failedToday
+                        : isHabitFailedSpecific(habit)
                           ? 'bg-red-50/50 border-red-100 text-muted-foreground'
                           : 'hover:bg-muted/50'
                     }`}
                   onClick={(e) => handleHabitClick(habit, e)}
                 >
                   <div className="flex-shrink-0 mr-3">
-                    {habit.completedToday ? (
+                    {isHabitCompletedSpecific(habit) ? (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1, rotate: [0, 15, 0] }}
@@ -449,7 +492,7 @@ export function HabitCheckInCard() {
                       >
                         <CheckCircle2 className="h-6 w-6 text-green-500" />
                       </motion.div>
-                    ) : habit.failedToday ? (
+                    ) : isHabitFailedSpecific(habit) ? (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -487,7 +530,7 @@ export function HabitCheckInCard() {
                       <div className="text-xs text-muted-foreground">{habit.description}</div>
                     )}
                     {/* 显示默认挑战 */}
-                    {!habit.completedToday && !habit.failedToday && habit.activeTierId && habit.challengeTiers && (
+                    {!isHabitCompleted(habit) && habit.activeTierId && habit.challengeTiers && (
                       <div className="flex items-center gap-1 mt-1">
                         <Trophy className="h-3 w-3 text-blue-500" />
                         <span className="text-xs font-medium text-blue-600">
@@ -499,7 +542,7 @@ export function HabitCheckInCard() {
                       </div>
                     )}
                     {/* 显示成功完成 */}
-                    {habit.completedToday && habit.completedTier && (
+                    {isHabitCompletedSpecific(habit) && habit.completedTier && (
                       <div className="flex items-center gap-1 mt-1">
                         <Trophy className="h-3 w-3 text-amber-500" />
                         <span className="text-xs font-medium text-amber-600">
@@ -512,7 +555,7 @@ export function HabitCheckInCard() {
                     )}
 
                     {/* 显示失败记录 */}
-                    {habit.failedToday && (
+                    {isHabitFailedSpecific(habit) && (
                       <div className="flex flex-wrap items-center gap-1 mt-1">
                         <div className="bg-blue-50 text-blue-700 rounded-md px-2 py-0.5 text-xs flex items-center gap-1">
                           <BookOpen className="h-3 w-3" />
@@ -528,7 +571,7 @@ export function HabitCheckInCard() {
                     )}
 
                     {/* 添加难度建议显示 */}
-                    {habit.completedToday && (
+                    {isHabitCompletedSpecific(habit) && (
                       <DifficultyFeedback habitId={String(habit.id)} habitName={habit.name} />
                     )}
                   </div>
@@ -550,7 +593,7 @@ export function HabitCheckInCard() {
                     </div>
                     <CalendarIcon className="h-4 w-4 text-muted-foreground" />
 
-                    {!habit.completedToday && !habit.failedToday && (
+                    {!isHabitCompleted(habit) && (
                       <div className="flex items-center gap-1">
                         {habit.activeTierId && habit.challengeTiers ? (
                           <Button
