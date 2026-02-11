@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { TodoPriority } from "@/components/daily-start/todo-priority";
 import { TodoItem } from "@/components/daily-start/todo-item";
+import { SubtasksDisplay } from "@/components/daily-start/subtasks-display";
 import { DailyPlanningSteps } from "@/components/daily-start/daily-planning-steps";
 import {
   SunIcon,
@@ -39,12 +40,15 @@ export function DailyPlanning({
   const [showCompleted, setShowCompleted] = useState(false);
   const [pendingCollapsed, setPendingCollapsed] = useState<boolean>(false);
   const router = useRouter();
-  // 根据showCompleted状态过滤任务
+  // 根据showCompleted状态过滤任务（只显示主任务，不显示子任务）
   const filteredTodos = useMemo(() => {
     let result = todos;
     if (!showCompleted) {
       result = todos.filter(todo => todo.status !== "completed");
     }
+
+    // 过滤掉子任务（parentId不为null的任务），只显示主任务
+    result = result.filter(todo => !todo.parentId);
 
     // 按状态对任务进行排序，让in_progress排在前面
     return [...result].sort((a, b) => {
@@ -637,17 +641,27 @@ export function DailyPlanning({
                       </h4>
                       <div className="space-y-2 ml-2">
                         {priorityTodos.map((todo) => (
-                          <TodoItem
-                            key={todo.id}
-                            todo={todo}
-                            tags={todo.tags}
-                            selected={selectedTodos.includes(todo.id)}
-                            onSelect={(selected) => handleSelectTodo(todo.id, selected)}
-                            onUpdate={updateTodo}
-                            onComplete={completeTodo}
-                            onDelete={handleDelete}
-                            onStartPomodoro={() => handleStartFocusing(String(todo.id))}
-                          />
+                          <div key={todo.id}>
+                            <TodoItem
+                              todo={todo}
+                              tags={todo.tags}
+                              selected={selectedTodos.includes(todo.id)}
+                              onSelect={(selected) => handleSelectTodo(todo.id, selected)}
+                              onUpdate={updateTodo}
+                              onComplete={completeTodo}
+                              onDelete={handleDelete}
+                              onStartPomodoro={() => handleStartFocusing(String(todo.id))}
+                            />
+                            {/* 显示子任务 */}
+                            <SubtasksDisplay
+                              parentTodo={todo}
+                              allTodos={todos}
+                              onDataRefresh={onDataRefresh}
+                              onUpdateTodo={updateTodo}
+                              onDeleteTodo={handleDelete}
+                              onStartPomodoro={(subtaskId) => handleStartFocusing(String(subtaskId))}
+                            />
+                          </div>
                         ))}
                       </div>
                     </div>

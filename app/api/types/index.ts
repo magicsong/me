@@ -18,6 +18,10 @@ export interface TodoBO extends BusinessObject {
   tagIds?: number[];
   tags: TagBO[];
   pomodoroTimeMinutes?: number;
+  parentId?: number; // 父任务ID，用于子任务
+  isLargeTask?: boolean; // 标记为大任务（自动拆解的候选）
+  subtasks?: TodoBO[]; // 子任务列表
+  subtaskCount?: number; // 子任务数量
 }
 
 // 批量处理Todo请求

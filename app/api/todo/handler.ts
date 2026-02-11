@@ -12,7 +12,7 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
     if (!data.title) return false;
 
     // 验证 status 的有效性
-    if (data.status && !['active', 'completed', 'archived'].includes(data.status)) {
+    if (data.status && !['pending', 'in_progress', 'completed', 'archived'].includes(data.status)) {
       return false;
     }
 
@@ -73,6 +73,8 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
       createdAt: dataObject.created_at,
       updatedAt: dataObject.updated_at,
       tags: dataObject.tags,
+      parentId: dataObject.parent_id,
+      isLargeTask: dataObject.is_large_task,
     };
   }
 
@@ -88,6 +90,8 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
       planned_end_time: businessObject.plannedEndTime,
       completed_at: businessObject.completedAt,
       tag_ids: businessObject.tagIds,
+      parent_id: businessObject.parentId,
+      is_large_task: businessObject.isLargeTask,
     };
     if (businessObject.id && businessObject.id > 0) {
       result["id"] = businessObject.id;

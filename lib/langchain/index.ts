@@ -3,7 +3,7 @@ import { OpenAI } from "openai";
 
 // 从逗号分隔的模型列表中随机选择一个模型
 function getRandomModel(): string {
-  const models = (process.env.OPENAI_MODELS || "gpt-3.5-turbo").split(",").map(m => m.trim());
+  const models = (process.env.OPENAI_MODELS).split(",").map(m => m.trim());
   return models[Math.floor(Math.random() * models.length)];
 }
 

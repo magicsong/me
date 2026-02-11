@@ -239,12 +239,16 @@ export const todos = pgTable("todos", {
 	planned_date: timestamp("planned_date", { mode: 'string', withTimezone: true }),
 	planned_start_time: timestamp("planned_start_time", { mode: 'string', withTimezone: true }),
 	planned_end_time: timestamp("planned_end_time", { mode: 'string', withTimezone: true }),
+	parent_id: integer("parent_id").references(() => todos.id, { onDelete: 'cascade' }),
+	is_large_task: boolean("is_large_task").default(false),
 },
 	(table) => {
 		return {
 			idx_todos_user_id: index("idx_todos_user_id").using("btree", table.user_id),
 			idx_todos_status: index("idx_todos_status").using("btree", table.status),
 			idx_todos_due_date: index("idx_todos_due_date").using("btree", table.due_date),
+			idx_todos_parent_id: index("idx_todos_parent_id").using("btree", table.parent_id),
+			idx_todos_user_parent: index("idx_todos_user_parent").using("btree", table.user_id, table.parent_id),
 		}
 	});
 

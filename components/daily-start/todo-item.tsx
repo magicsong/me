@@ -53,7 +53,6 @@ interface TodoItemProps {
   onUpdateTags: (todoId: number, tagIds: number[]) => Promise<boolean>;
   onStartPomodoro?: (todoId: number) => void;
   onCreateTag: (name: string, color: string) => Promise<{ id: number; name: string; color: string }>;
-  onCreateSubTasks?: (todoId: number, subTasks: Array<{ title: string, description?: string }>) => Promise<boolean>;
 }
 
 export function TodoItem({
@@ -80,6 +79,7 @@ export function TodoItem({
   const [isAiSplitOpen, setIsAiSplitOpen] = useState(false);
   const [isGeneratingSubTasks, setIsGeneratingSubTasks] = useState(false);
   const [generatedSubTasks, setGeneratedSubTasks] = useState<Array<{ title: string, description?: string }>>([]);
+  const [aiSplitPrompt, setAiSplitPrompt] = useState("");
   const router = useRouter();
   const form = useForm<Partial<TodoBO>>({
     defaultValues: {
@@ -239,14 +239,17 @@ export function TodoItem({
   const generateSubTasks = async () => {
     setIsGeneratingSubTasks(true);
     try {
-      const response = await fetch(`/api/ai/split-task`, {
+      const response = await fetch(`/api/todo/ai-split`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          parentId: todo.id,
           title: todo.title,
           description: todo.description,
+          priority: todo.priority,
+          userPrompt: aiSplitPrompt,
         }),
       });
 
@@ -255,7 +258,11 @@ export function TodoItem({
       }
 
       const data = await response.json();
-      setGeneratedSubTasks(data.subTasks || []);
+      if (data.success && data.data) {
+        setGeneratedSubTasks(data.data);
+      } else {
+        throw new Error(data.error || '拆分失败');
+      }
     } catch (error) {
       console.error('AI拆分任务失败:', error);
       alert('AI拆分任务失败，请重试');
@@ -265,15 +272,46 @@ export function TodoItem({
   };
 
   const handleSaveSubTasks = async () => {
-    if (onCreateSubTasks && generatedSubTasks.length > 0) {
-      try {
-        await onCreateSubTasks(todo.id, generatedSubTasks);
+    if (generatedSubTasks.length === 0) return;
+
+    try {
+      // 为每个子任务创建
+      const createPromises = generatedSubTasks.map(subTask =>
+        fetch('/api/todo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: {
+              title: subTask.title,
+              description: subTask.description,
+              parentId: todo.id,
+              priority: todo.priority,
+              plannedDate: todo.plannedDate,
+              status: 'pending'
+            }
+          })
+        })
+      );
+
+      const results = await Promise.all(createPromises);
+      const allSuccess = results.every(r => r.ok);
+
+      if (allSuccess) {
+        alert('子任务已创建');
         setIsAiSplitOpen(false);
         setGeneratedSubTasks([]);
-      } catch (error) {
-        console.error('保存子任务失败:', error);
-        alert('保存子任务失败，请重试');
+        setAiSplitPrompt('');
+        // 刷新数据
+        if (onUpdate) {
+          const updatedTodo = { ...todo, isLargeTask: true };
+          await onUpdate(updatedTodo);
+        }
+      } else {
+        throw new Error('部分子任务创建失败');
       }
+    } catch (error) {
+      console.error('保存子任务失败:', error);
+      alert('保存子任务失败，请重试');
     }
   };
 
@@ -384,9 +422,8 @@ export function TodoItem({
           </Button>
 
           <Button
-            variant="outline"
             size="sm"
-            className="flex items-center gap-1 h-8"
+            className="flex items-center gap-2 h-8 px-3 font-medium text-white shadow-lg hover:shadow-xl transition-all duration-200 bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 hover:from-violet-600 hover:via-purple-600 hover:to-pink-600 border-0"
             onClick={handleAiSplit}
             title="AI拆分任务"
           >
@@ -671,7 +708,13 @@ export function TodoItem({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAiSplitOpen} onOpenChange={setIsAiSplitOpen}>
+      <Dialog open={isAiSplitOpen} onOpenChange={(open) => {
+        if (!open) {
+          setGeneratedSubTasks([]);
+          setAiSplitPrompt('');
+        }
+        setIsAiSplitOpen(open);
+      }}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>AI拆分任务</DialogTitle>
@@ -687,13 +730,28 @@ export function TodoItem({
             </div>
 
             {!generatedSubTasks.length && !isGeneratingSubTasks && (
-              <Button
-                onClick={generateSubTasks}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                <BrainIcon className="h-4 w-4" />
-                <span>开始AI任务拆分</span>
-              </Button>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium">拆分指示（可选）</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    告诉AI你想要如何拆分这个任务，比如按时间、按优先级、按工作性质等
+                  </p>
+                  <Textarea
+                    value={aiSplitPrompt}
+                    onChange={(e) => setAiSplitPrompt(e.target.value)}
+                    placeholder="例如：请按照前端开发、后端开发、测试和部署来拆分任务"
+                    className="text-sm"
+                    rows={3}
+                  />
+                </div>
+                <Button
+                  onClick={generateSubTasks}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 hover:from-violet-600 hover:via-purple-600 hover:to-pink-600 text-white"
+                >
+                  <BrainIcon className="h-4 w-4" />
+                  <span>开始AI任务拆分</span>
+                </Button>
+              </div>
             )}
 
             {isGeneratingSubTasks && (

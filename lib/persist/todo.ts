@@ -223,4 +223,43 @@ export class TodoPersistenceService extends BaseRepository<typeof todos, TodoDat
       throw error;
     }
   }
-}
+
+  /**
+   * 获取某个任务的所有子任务
+   * @param parentId 父任务ID
+   * @returns 子任务数组
+   */
+  async getSubtasks(parentId: number): Promise<TodoData[]> {
+    return this.db
+      .select()
+      .from(todos)
+      .where(eq(todos.parent_id, parentId))
+      .orderBy(todos.created_at);
+  }
+
+  /**
+   * 批量获取多个任务的子任务
+   * @param parentIds 父任务ID数组
+   * @returns 按parentId分组的子任务Map
+   */
+  async getSubtasksForMultiple(parentIds: number[]): Promise<Map<number, TodoData[]>> {
+    if (parentIds.length === 0) return new Map();
+
+    const subtasks = await this.db
+      .select()
+      .from(todos)
+      .where(inArray(todos.parent_id, parentIds))
+      .orderBy(todos.created_at);
+
+    const result = new Map<number, TodoData[]>();
+    subtasks.forEach(subtask => {
+      if (subtask.parent_id) {
+        if (!result.has(subtask.parent_id)) {
+          result.set(subtask.parent_id, []);
+        }
+        result.get(subtask.parent_id)!.push(subtask);
+      }
+    });
+
+    return result;
+  }

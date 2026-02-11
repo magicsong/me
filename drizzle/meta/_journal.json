@@ -225,6 +225,13 @@
       "when": 1767517783386,
       "tag": "0031_rapid_lady_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1770794978973,
+      "tag": "0032_glossy_maelstrom",
+      "breakpoints": true
     }
   ]
 }
