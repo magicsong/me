@@ -13,6 +13,7 @@ import { DailySummaryViewer } from './daily-summary-viewer';
 import { HabitCheckInCard } from './habit-check-in-card';
 import { FocusTasksCard } from '@/components/dashboard/focus-tasks-card';
 import { AIAdvisoryCard } from '@/components/dashboard/ai-advisory-card';
+import { HistoryTodayCard } from '@/components/dashboard/history-today-card';
 
 export default function DashboardPage() {
   // 使用 useState 保存数据
@@ -118,6 +119,7 @@ export default function DashboardPage() {
 
       <div className="flex flex-col lg:flex-row gap-4 mb-6">
         <div className="lg:w-2/3">
+          <HistoryTodayCard userId="current-user" />
           <DailySummaryViewer />
         </div>
 
