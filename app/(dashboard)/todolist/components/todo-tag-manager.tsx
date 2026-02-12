@@ -63,14 +63,15 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
   const fetchTags = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/todolist/tags');
+      const params = new URLSearchParams({ kind: 'todo' });
+      const response = await fetch(`/api/tag?${params.toString()}`);
       
       if (!response.ok) {
         throw new Error('获取标签失败');
       }
       
-      const data = await response.json();
-      setTags(data);
+      const result = await response.json();
+      setTags(result.data || []);
     } catch (error) {
       console.error('获取标签失败:', error);
       toast({
@@ -111,7 +112,7 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
     }
 
     try {
-      const response = await fetch('/api/todolist/tags', {
+      const response = await fetch('/api/tag', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,6 +120,7 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
         body: JSON.stringify({
           name: trimmedName,
           color: newTagColor,
+          kind: 'todo',
         }),
       });
       
@@ -177,14 +179,17 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
     }
 
     try {
-      const response = await fetch(`/api/todolist/tags/${id}`, {
+      const response = await fetch(`/api/tag`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: editedTagName.trim(),
-          color: editedTagColor,
+          id: [id],
+          fields: {
+            name: editedTagName.trim(),
+            color: editedTagColor,
+          },
         }),
       });
       
@@ -216,7 +221,7 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
   // 删除标签
   const deleteTag = async (id: number) => {
     try {
-      const response = await fetch(`/api/todolist/tags/${id}`, {
+      const response = await fetch(`/api/tag?id=${id}`, {
         method: 'DELETE',
       });
       

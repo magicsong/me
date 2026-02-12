@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -65,13 +65,11 @@ export function DailySummaryForm({
   const { toast } = useToast();
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const router = useRouter();
-
-  // 更新三件好事中的一项
-  const updateGoodThing = (index: number, value: string) => {
-    const newGoodThings = [...goodThings];
-    newGoodThings[index] = value;
-    setGoodThings(newGoodThings);
-  };
+  
+  // 新增：用于追踪表单是否有改动，以及用于自动保存的定时器引用
+  const [hasChanges, setHasChanges] = useState(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
 
   // 获取日期字符串和显示文本
   const getDateString = () => {
@@ -84,6 +82,81 @@ export function DailySummaryForm({
       : yesterday.toISOString().split('T')[0];
   };
 
+  // 获取 localStorage key
+  const getDraftKey = () => {
+    const dateStr = getDateString();
+    return `daily-summary-draft-${dateStr}`;
+  };
+
+  // 保存草稿到 localStorage
+  const saveDraftToLocalStorage = () => {
+    const draftData = {
+      completionScore,
+      goodThings,
+      learnings,
+      challenges,
+      improvements,
+      moodIndex,
+      energyLevel,
+      sleepQuality,
+      tomorrowGoals,
+      savedAt: new Date().toISOString(),
+    };
+    
+    try {
+      localStorage.setItem(getDraftKey(), JSON.stringify(draftData));
+    } catch (error) {
+      console.error('保存草稿失败:', error);
+    }
+  };
+
+  // 从 localStorage 恢复草稿
+  const restoreDraftFromLocalStorage = () => {
+    try {
+      const draftData = localStorage.getItem(getDraftKey());
+      if (draftData) {
+        const draft = JSON.parse(draftData);
+        setCompletionScore(draft.completionScore ?? 5);
+        setGoodThings(draft.goodThings ?? ['', '', '']);
+        setLearnings(draft.learnings ?? '');
+        setChallenges(draft.challenges ?? '');
+        setImprovements(draft.improvements ?? '');
+        setMoodIndex(draft.moodIndex ?? 0);
+        setEnergyLevel(draft.energyLevel ?? 'medium');
+        setSleepQuality(draft.sleepQuality ?? 'average');
+        setTomorrowGoals(draft.tomorrowGoals ?? '');
+        setHasRestoredDraft(true);
+        
+        // 显示提示信息
+        toast({
+          title: "已恢复草稿",
+          description: "检测到上次未保存的内容，已自动恢复",
+        });
+        
+        return true;
+      }
+    } catch (error) {
+      console.error('恢复草稿失败:', error);
+    }
+    return false;
+  };
+
+  // 清除 localStorage 中的草稿
+  const clearDraftFromLocalStorage = () => {
+    try {
+      localStorage.removeItem(getDraftKey());
+    } catch (error) {
+      console.error('清除草稿失败:', error);
+    }
+  };
+
+  // 更新三件好事中的一项
+  const updateGoodThing = (index: number, value: string) => {
+    const newGoodThings = [...goodThings];
+    newGoodThings[index] = value;
+    setGoodThings(newGoodThings);
+  };
+
   const getDateDisplay = () => {
     const dateStr = getDateString();
     const [year, month, day] = dateStr.split('-');
@@ -93,16 +166,24 @@ export function DailySummaryForm({
   // 清空表单
   useEffect(() => {
     if (isOpen) {
-      // 打开时重置表单数据
-      setCompletionScore(5);
-      setGoodThings(['', '', '']);
-      setLearnings('');
-      setChallenges('');
-      setImprovements('');
-      setMoodIndex(0);
-      setEnergyLevel('medium');
-      setSleepQuality('average');
-      setTomorrowGoals('');
+      // 打开时尝试恢复草稿
+      if (!hasRestoredDraft) {
+        const hasDraft = restoreDraftFromLocalStorage();
+        
+        // 如果没有草稿，则重置表单
+        if (!hasDraft) {
+          setCompletionScore(5);
+          setGoodThings(['', '', '']);
+          setLearnings('');
+          setChallenges('');
+          setImprovements('');
+          setMoodIndex(0);
+          setEnergyLevel('medium');
+          setSleepQuality('average');
+          setTomorrowGoals('');
+        }
+        setHasChanges(false);
+      }
     }
   }, [isOpen, summaryDate]);
 
@@ -123,6 +204,7 @@ export function DailySummaryForm({
     failedTasks: string[];
     failedHabits: FailedHabit[];
   };
+  
   // 加载已有总结数据
   useEffect(() => {
     async function loadExistingSummary() {
@@ -152,14 +234,17 @@ export function DailySummaryForm({
           if (summaryData.energyLevel) setEnergyLevel(summaryData.energyLevel);
           if (summaryData.sleepQuality) setSleepQuality(summaryData.sleepQuality);
           if (summaryData.tomorrowGoals) setTomorrowGoals(summaryData.tomorrowGoals);
+          
+          // 加载成功后清除草稿
+          clearDraftFromLocalStorage();
         } else {
-          // 重置表单
-          resetForm();
+          // 没有已保存的数据，不重置表单，允许草稿恢复生效
+          // resetForm();
         }
       } catch (error) {
         console.error('加载总结数据失败:', error);
-        // 出错时重置表单
-        resetForm();
+        // 出错时不重置表单，允许草稿恢复生效
+        // resetForm();
       } finally {
         setLoading(false);
       }
@@ -180,6 +265,42 @@ export function DailySummaryForm({
     setSleepQuality('average');
     setTomorrowGoals('');
   };
+
+  // 新增：定期自动保存草稿
+  useEffect(() => {
+    if (!isOpen) {
+      // 关闭表单时清除定时器
+      if (autoSaveTimerRef.current) {
+        clearInterval(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      return;
+    }
+
+    // 标记已有改动
+    setHasChanges(true);
+
+    // 清除之前的定时器
+    if (autoSaveTimerRef.current) {
+      clearInterval(autoSaveTimerRef.current);
+    }
+
+    // 立即保存一次
+    saveDraftToLocalStorage();
+
+    // 设置定期自动保存（每30秒）
+    autoSaveTimerRef.current = setInterval(() => {
+      saveDraftToLocalStorage();
+    }, 30000);
+
+    return () => {
+      // 组件卸载时清除定时器
+      if (autoSaveTimerRef.current) {
+        clearInterval(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
+  }, [isOpen, completionScore, goodThings, learnings, challenges, improvements, moodIndex, energyLevel, sleepQuality, tomorrowGoals]);
 
   // 处理表单提交
   const handleSubmit = async () => {
@@ -213,6 +334,13 @@ export function DailySummaryForm({
           description: "你的日常总结已保存",
         });
 
+        // 清除草稿
+        clearDraftFromLocalStorage();
+        
+        // 重置标志
+        setHasChanges(false);
+        setHasRestoredDraft(false);
+
         // 关闭表单
         onClose();
 
@@ -237,11 +365,29 @@ export function DailySummaryForm({
     }
   };
 
+  // 处理表单关闭
+  const handleClose = () => {
+    // 如果有改动且还有内容，提示用户
+    if (hasChanges && (learnings || challenges || improvements || tomorrowGoals || goodThings.some(t => t.trim()))) {
+      const confirmed = window.confirm('您有未保存的内容，是否确定关闭？内容将自动保存为草稿，下次打开时会自动恢复。');
+      if (!confirmed) {
+        return;
+      }
+    }
+    
+    // 重置标志
+    setHasChanges(false);
+    setHasRestoredDraft(false);
+    
+    // 调用父组件的 onClose
+    onClose();
+  };
+
   // 计算完成率
   const completionRate = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -558,7 +704,7 @@ export function DailySummaryForm({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>取消</Button>
+          <Button variant="outline" onClick={handleClose}>取消</Button>
           <Button
             onClick={handleSubmit}
             disabled={loading || submitting}
