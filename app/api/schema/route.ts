@@ -31,7 +31,7 @@ export async function GET() {
         color: tag.color,
         category: tag.category,
         user_id: SYSTEM_USER_ID,
-        kind: null,
+        kind: "todo",
       }));
 
       await db.insert(tags).values(tagsToInsert);

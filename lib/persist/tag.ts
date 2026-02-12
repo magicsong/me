@@ -1,5 +1,5 @@
 import { tags } from '@/lib/db/schema';
-import { eq, ilike } from 'drizzle-orm';
+import { eq, ilike, or, and } from 'drizzle-orm';
 import { BaseRepository } from '../db/';
 
 // Tag数据类型定义
@@ -20,7 +20,7 @@ export class TagPersistenceService extends BaseRepository<typeof tags, TagData> 
     }
 
     /**
-     * 根据用户ID查找标签
+     * 根据用户ID查找标签 - 包含系统标签
      * @param userId 用户ID
      * @param options 查询选项，可以包含 kind 类型筛选
      * @returns 标签数组
@@ -29,43 +29,62 @@ export class TagPersistenceService extends BaseRepository<typeof tags, TagData> 
         kind?: string;
         search?: string;
     }): Promise<TagData[]> {
-        const query: any = { userId };
-
+        // 构建 OR 条件：用户标签 OR 系统标签
+        let whereCondition: any;
+        
         if (options?.kind) {
-            return this.findMany({
-                userId,
-                kind: options.kind
-            });
+            whereCondition = or(
+                and(eq(tags.user_id, userId), eq(tags.kind, options.kind)),
+                and(eq(tags.user_id, 'system'), eq(tags.kind, options.kind))
+            );
+        } else {
+            whereCondition = or(
+                eq(tags.user_id, userId),
+                eq(tags.user_id, 'system')
+            );
         }
-
-        let tags = await this.findMany({
-            userId
-        });
+        
+        let result = await this.db
+            .select()
+            .from(tags)
+            .where(whereCondition);
 
         // 如果有搜索关键词，在内存中过滤
         if (options?.search && options.search.trim()) {
             const searchTerm = options.search.toLowerCase().trim();
-            tags = tags.filter(tag =>
+            result = result.filter(tag =>
                 tag.name.toLowerCase().includes(searchTerm)
             );
         }
 
-        return tags;
+        return result as TagData[];
     }
 
     /**
-     * 根据名称和用户ID查找标签
+     * 求通过名称和用户ID查找标签
      * @param name 标签名称
      * @param userId 用户ID
      * @returns 标签或null
      */
     async findByNameAndUserId(name: string, userId: string): Promise<TagData | null> {
-        const results = await this.findMany({
-            name,
-            userId
-        });
+        const results = await this.db
+            .select()
+            .from(tags)
+            .where(
+                or(
+                    and(eq(tags.name, name), eq(tags.user_id, userId)),
+                    and(eq(tags.name, name), eq(tags.user_id, 'system'))
+                )
+            );
 
         return results.length > 0 ? results[0] : null;
+    }
+
+    /**
+     * 通过用户ID获取记录 - 包含系统标签
+     */
+    async getByUserId(userId: string): Promise<TagData[]> {
+        return this.findByUserId(userId);
     }
 
     /**
@@ -99,7 +118,7 @@ export class TagPersistenceService extends BaseRepository<typeof tags, TagData> 
     }
 
     /**
-     * 搜索用户的标签
+     * 搜索用户的标签 - 包含系统标签
      * @param userId 用户ID
      * @param searchTerm 搜索关键词
      * @returns 标签数组
@@ -108,7 +127,12 @@ export class TagPersistenceService extends BaseRepository<typeof tags, TagData> 
         let query = this.db
             .select()
             .from(tags)
-            .where(eq(tags.userId, userId));
+            .where(
+                or(
+                    eq(tags.user_id, userId),
+                    eq(tags.user_id, 'system')
+                )
+            );
 
         // 如果提供了类型，也按类型筛选
         if (kind) {

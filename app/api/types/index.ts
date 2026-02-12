@@ -80,6 +80,7 @@ export interface TagBO {
   name: string;
   color: string;
   kind?: string;
+  category?: 'decision_type' | 'domain_type' | 'work_nature';
   userId: string;
 }
 

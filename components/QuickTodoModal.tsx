@@ -315,70 +315,76 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
                                 {/* 决策类型 */}
                                 <div>
                                     <Label className="text-xs font-medium text-muted-foreground">决策类 - 帮你判断"先做什么"</Label>
-                                    <Select value={selectedDecisionTypeTagId?.toString() || ''} onValueChange={(val) => setSelectedDecisionTypeTagId(val ? parseInt(val) : null)}>
-                                        <SelectTrigger className="mt-1">
-                                            <SelectValue placeholder="选择决策类标签" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableTags.filter(t => t.category === 'decision_type').map(tag => (
-                                                <SelectItem key={tag.id} value={tag.id.toString()}>
-                                                    <div className="flex items-center gap-2">
-                                                        <div 
-                                                            className="w-3 h-3 rounded-full" 
-                                                            style={{ backgroundColor: tag.color }}
-                                                        />
-                                                        {tag.name}
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {availableTags.filter(t => t.category === 'decision_type').map(tag => (
+                                            <Button
+                                                key={tag.id}
+                                                type="button"
+                                                variant={selectedDecisionTypeTagId === tag.id ? 'default' : 'outline'}
+                                                className={selectedDecisionTypeTagId === tag.id ? 'ring-2 ring-offset-2' : ''}
+                                                onClick={() => setSelectedDecisionTypeTagId(tag.id)}
+                                                style={selectedDecisionTypeTagId === tag.id ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div 
+                                                        className="w-2 h-2 rounded-full" 
+                                                        style={{ backgroundColor: tag.color }}
+                                                    />
+                                                    {tag.name}
+                                                </div>
+                                            </Button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 {/* 领域类型 */}
                                 <div>
                                     <Label className="text-xs font-medium text-muted-foreground">领域类 - 避免碎片化，能看出精力投入分布</Label>
-                                    <Select value={selectedDomainTypeTagId?.toString() || ''} onValueChange={(val) => setSelectedDomainTypeTagId(val ? parseInt(val) : null)}>
-                                        <SelectTrigger className="mt-1">
-                                            <SelectValue placeholder="选择领域类标签" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableTags.filter(t => t.category === 'domain_type').map(tag => (
-                                                <SelectItem key={tag.id} value={tag.id.toString()}>
-                                                    <div className="flex items-center gap-2">
-                                                        <div 
-                                                            className="w-3 h-3 rounded-full" 
-                                                            style={{ backgroundColor: tag.color }}
-                                                        />
-                                                        {tag.name}
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {availableTags.filter(t => t.category === 'domain_type').map(tag => (
+                                            <Button
+                                                key={tag.id}
+                                                type="button"
+                                                variant={selectedDomainTypeTagId === tag.id ? 'default' : 'outline'}
+                                                className={selectedDomainTypeTagId === tag.id ? 'ring-2 ring-offset-2' : ''}
+                                                onClick={() => setSelectedDomainTypeTagId(tag.id)}
+                                                style={selectedDomainTypeTagId === tag.id ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div 
+                                                        className="w-2 h-2 rounded-full" 
+                                                        style={{ backgroundColor: tag.color }}
+                                                    />
+                                                    {tag.name}
+                                                </div>
+                                            </Button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 {/* 工作性质 */}
                                 <div>
                                     <Label className="text-xs font-medium text-muted-foreground">工作性质 - 区分"产出型"和"救火型"</Label>
-                                    <Select value={selectedWorkNatureTagId?.toString() || ''} onValueChange={(val) => setSelectedWorkNatureTagId(val ? parseInt(val) : null)}>
-                                        <SelectTrigger className="mt-1">
-                                            <SelectValue placeholder="选择工作性质标签" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableTags.filter(t => t.category === 'work_nature').map(tag => (
-                                                <SelectItem key={tag.id} value={tag.id.toString()}>
-                                                    <div className="flex items-center gap-2">
-                                                        <div 
-                                                            className="w-3 h-3 rounded-full" 
-                                                            style={{ backgroundColor: tag.color }}
-                                                        />
-                                                        {tag.name}
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {availableTags.filter(t => t.category === 'work_nature').map(tag => (
+                                            <Button
+                                                key={tag.id}
+                                                type="button"
+                                                variant={selectedWorkNatureTagId === tag.id ? 'default' : 'outline'}
+                                                className={selectedWorkNatureTagId === tag.id ? 'ring-2 ring-offset-2' : ''}
+                                                onClick={() => setSelectedWorkNatureTagId(tag.id)}
+                                                style={selectedWorkNatureTagId === tag.id ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div 
+                                                        className="w-2 h-2 rounded-full" 
+                                                        style={{ backgroundColor: tag.color }}
+                                                    />
+                                                    {tag.name}
+                                                </div>
+                                            </Button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 {!checkRequiredTags() && (
@@ -589,70 +595,76 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
                                         {/* 决策类型 */}
                                         <div>
                                             <Label className="text-xs font-medium text-muted-foreground">决策类 - 帮你判断"先做什么"</Label>
-                                            <Select value={selectedDecisionTypeTagId?.toString() || ''} onValueChange={(val) => setSelectedDecisionTypeTagId(val ? parseInt(val) : null)}>
-                                                <SelectTrigger className="mt-1">
-                                                    <SelectValue placeholder="选择决策类标签" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availableTags.filter(t => t.category === 'decision_type').map(tag => (
-                                                        <SelectItem key={tag.id} value={tag.id.toString()}>
-                                                            <div className="flex items-center gap-2">
-                                                                <div 
-                                                                    className="w-3 h-3 rounded-full" 
-                                                                    style={{ backgroundColor: tag.color }}
-                                                                />
-                                                                {tag.name}
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {availableTags.filter(t => t.category === 'decision_type').map(tag => (
+                                                    <Button
+                                                        key={tag.id}
+                                                        type="button"
+                                                        variant={selectedDecisionTypeTagId === tag.id ? 'default' : 'outline'}
+                                                        className={selectedDecisionTypeTagId === tag.id ? 'ring-2 ring-offset-2' : ''}
+                                                        onClick={() => setSelectedDecisionTypeTagId(tag.id)}
+                                                        style={selectedDecisionTypeTagId === tag.id ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <div 
+                                                                className="w-2 h-2 rounded-full" 
+                                                                style={{ backgroundColor: tag.color }}
+                                                            />
+                                                            {tag.name}
+                                                        </div>
+                                                    </Button>
+                                                ))}
+                                            </div>
                                         </div>
 
                                         {/* 领域类型 */}
                                         <div>
                                             <Label className="text-xs font-medium text-muted-foreground">领域类 - 避免碎片化，能看出精力投入分布</Label>
-                                            <Select value={selectedDomainTypeTagId?.toString() || ''} onValueChange={(val) => setSelectedDomainTypeTagId(val ? parseInt(val) : null)}>
-                                                <SelectTrigger className="mt-1">
-                                                    <SelectValue placeholder="选择领域类标签" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availableTags.filter(t => t.category === 'domain_type').map(tag => (
-                                                        <SelectItem key={tag.id} value={tag.id.toString()}>
-                                                            <div className="flex items-center gap-2">
-                                                                <div 
-                                                                    className="w-3 h-3 rounded-full" 
-                                                                    style={{ backgroundColor: tag.color }}
-                                                                />
-                                                                {tag.name}
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {availableTags.filter(t => t.category === 'domain_type').map(tag => (
+                                                    <Button
+                                                        key={tag.id}
+                                                        type="button"
+                                                        variant={selectedDomainTypeTagId === tag.id ? 'default' : 'outline'}
+                                                        className={selectedDomainTypeTagId === tag.id ? 'ring-2 ring-offset-2' : ''}
+                                                        onClick={() => setSelectedDomainTypeTagId(tag.id)}
+                                                        style={selectedDomainTypeTagId === tag.id ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <div 
+                                                                className="w-2 h-2 rounded-full" 
+                                                                style={{ backgroundColor: tag.color }}
+                                                            />
+                                                            {tag.name}
+                                                        </div>
+                                                    </Button>
+                                                ))}
+                                            </div>
                                         </div>
 
                                         {/* 工作性质 */}
                                         <div>
                                             <Label className="text-xs font-medium text-muted-foreground">工作性质 - 区分"产出型"和"救火型"</Label>
-                                            <Select value={selectedWorkNatureTagId?.toString() || ''} onValueChange={(val) => setSelectedWorkNatureTagId(val ? parseInt(val) : null)}>
-                                                <SelectTrigger className="mt-1">
-                                                    <SelectValue placeholder="选择工作性质标签" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availableTags.filter(t => t.category === 'work_nature').map(tag => (
-                                                        <SelectItem key={tag.id} value={tag.id.toString()}>
-                                                            <div className="flex items-center gap-2">
-                                                                <div 
-                                                                    className="w-3 h-3 rounded-full" 
-                                                                    style={{ backgroundColor: tag.color }}
-                                                                />
-                                                                {tag.name}
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {availableTags.filter(t => t.category === 'work_nature').map(tag => (
+                                                    <Button
+                                                        key={tag.id}
+                                                        type="button"
+                                                        variant={selectedWorkNatureTagId === tag.id ? 'default' : 'outline'}
+                                                        className={selectedWorkNatureTagId === tag.id ? 'ring-2 ring-offset-2' : ''}
+                                                        onClick={() => setSelectedWorkNatureTagId(tag.id)}
+                                                        style={selectedWorkNatureTagId === tag.id ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color } : { borderColor: tag.color }}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <div 
+                                                                className="w-2 h-2 rounded-full" 
+                                                                style={{ backgroundColor: tag.color }}
+                                                            />
+                                                            {tag.name}
+                                                        </div>
+                                                    </Button>
+                                                ))}
+                                            </div>
                                         </div>
 
                                         {!checkRequiredTags() && (

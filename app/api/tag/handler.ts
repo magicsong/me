@@ -44,6 +44,7 @@ export class TagApiHandler extends BaseApiHandler<TagData, TagBO> {
       name: dataObject.name,
       color: dataObject.color || '#3b82f6',
       kind: dataObject.kind || undefined,
+      category: dataObject.category as 'decision_type' | 'domain_type' | 'work_nature' | undefined,
       userId: dataObject.user_id,
     };
   }
@@ -57,6 +58,10 @@ export class TagApiHandler extends BaseApiHandler<TagData, TagBO> {
     
     if (businessObject.kind) {
       result["kind"] = businessObject.kind;
+    }
+
+    if (businessObject.category) {
+      result["category"] = businessObject.category;
     }
     
     if (businessObject.id && businessObject.id > 0) {
@@ -115,6 +120,55 @@ export class TagApiHandler extends BaseApiHandler<TagData, TagBO> {
     } catch (error) {
       console.error('创建标签失败:', error);
       return null;
+    }
+  }
+
+  /**
+   * 获取所有资源 - 包含系统标签
+   * @param userId 可选的用户ID过滤
+   */
+  async getAll(userId?: string): Promise<TagBO[]> {
+    try {
+      if (!userId) {
+        return [];
+      }
+      // 使用 findByUserId 来获取用户标签和系统标签
+      const tags = await (this.persistenceService as TagPersistenceService).findByUserId(userId);
+      return this.toBusinessObjects(tags);
+    } catch (error) {
+      console.error(`获取所有${this.getResourceName()}失败:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * 使用过滤器获取资源 - 包含系统标签
+   * @param filters 过滤选项
+   * @param userId 可选的用户ID
+   */
+  async getWithFilters(filters: any, userId?: string): Promise<{
+    items: TagBO[];
+    total: number;
+    metadata?: Record<string, any>;
+  }> {
+    try {
+      if (!userId) {
+        return { items: [], total: 0 };
+      }
+
+      // 提取kind过滤参数
+      const kind = filters.conditions?.find((c: any) => c.field === 'kind')?.value;
+      
+      // 使用 findByUserId 来获取用户标签和系统标签
+      const tags = await (this.persistenceService as TagPersistenceService).findByUserId(userId, { kind });
+      
+      return {
+        items: this.toBusinessObjects(tags),
+        total: tags.length
+      };
+    } catch (error) {
+      console.error(`过滤查询${this.getResourceName()}失败:`, error);
+      throw error;
     }
   }
 

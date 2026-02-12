@@ -7,11 +7,11 @@ export type TagCategory = 'decision_type' | 'domain_type' | 'work_nature';
 
 // 决策类标签 - 帮你判断"先做什么"
 export const DECISION_TYPE_TAGS = [
-  { emoji: '🔥', name: '高风险', color: '#EF4444' },
-  { emoji: '🎯', name: '高收益', color: '#10B981' },
-  { emoji: '⛔', name: '阻塞中', color: '#F97316' },
-  { emoji: '🧨', name: '技术债', color: '#8B5CF6' },
-  { emoji: '🧪', name: '实验性', color: '#3B82F6' },
+  { emoji: '🔥', name: '高风险', color: '#EF4444', kind: "todo" },
+  { emoji: '🎯', name: '高收益', color: '#10B981', kind: "todo" },
+  { emoji: '⛔', name: '阻塞中', color: '#F97316', kind: "todo" },
+  { emoji: '🧨', name: '技术债', color: '#8B5CF6', kind: "todo" },
+  { emoji: '🧪', name: '实验性', color: '#3B82F6', kind: "todo" },
 ];
 
 // 领域类标签 - 避免碎片化，能看出精力投入分布
@@ -60,9 +60,9 @@ export const getCategoryTags = (category: TagCategory) => {
 // 获取所有预定义标签
 export const getAllPredefinedTags = () => {
   return [
-    ...DECISION_TYPE_TAGS.map(tag => ({ ...tag, category: 'decision_type' as TagCategory })),
-    ...DOMAIN_TYPE_TAGS.map(tag => ({ ...tag, category: 'domain_type' as TagCategory })),
-    ...WORK_NATURE_TAGS.map(tag => ({ ...tag, category: 'work_nature' as TagCategory })),
+    ...DECISION_TYPE_TAGS.map(tag => ({ ...tag, kind:'todo',category: 'decision_type' as TagCategory })),
+    ...DOMAIN_TYPE_TAGS.map(tag => ({ ...tag, kind:'todo',category: 'domain_type' as TagCategory })),
+    ...WORK_NATURE_TAGS.map(tag => ({ ...tag, kind:'todo',category: 'work_nature' as TagCategory })),
   ];
 };
 
