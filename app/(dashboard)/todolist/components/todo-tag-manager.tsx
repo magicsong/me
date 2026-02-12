@@ -28,10 +28,12 @@ interface TodoTag {
   color: string;
   user_id?: string;
   created_at?: string;
+  category?: 'decision_type' | 'domain_type' | 'work_nature';
 }
 
 interface TodoTagManagerProps {
   onTagsChange?: () => void;
+  filterCategory?: 'decision_type' | 'domain_type' | 'work_nature';
 }
 
 // 生成随机颜色
@@ -44,15 +46,18 @@ function generateRandomColor(): string {
   return color;
 }
 
-export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
+export function TodoTagManager({ onTagsChange, filterCategory }: TodoTagManagerProps) {
   const { toast } = useToast();
   const [tags, setTags] = useState<TodoTag[]>([]);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState(generateRandomColor()); // 使用随机颜色
+  const [newTagCategory, setNewTagCategory] = useState<'decision_type' | 'domain_type' | 'work_nature'>('decision_type');
   const [editingTagId, setEditingTagId] = useState<number | null>(null);
   const [editedTagName, setEditedTagName] = useState('');
   const [editedTagColor, setEditedTagColor] = useState('');
+  const [editedTagCategory, setEditedTagCategory] = useState<'decision_type' | 'domain_type' | 'work_nature'>('decision_type');
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<'decision_type' | 'domain_type' | 'work_nature' | 'all'>(filterCategory || 'all');
 
   // 加载标签
   useEffect(() => {
@@ -99,7 +104,8 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
     const trimmedName = newTagName.trim();
     const isDuplicate = tags.some(tag => 
       tag.name.toLowerCase() === trimmedName.toLowerCase() && 
-      tag.color === newTagColor
+      tag.color === newTagColor &&
+      tag.category === newTagCategory
     );
 
     if (isDuplicate) {
@@ -121,6 +127,7 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
           name: trimmedName,
           color: newTagColor,
           kind: 'todo',
+          category: newTagCategory,
         }),
       });
       
@@ -166,7 +173,8 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
     const isDuplicate = tags.some(tag => 
       tag.id !== id && // 排除自身
       tag.name.toLowerCase() === trimmedName.toLowerCase() && 
-      tag.color === editedTagColor
+      tag.color === editedTagColor &&
+      tag.category === editedTagCategory
     );
     
     if (isDuplicate) {
@@ -189,6 +197,7 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
           fields: {
             name: editedTagName.trim(),
             color: editedTagColor,
+            category: editedTagCategory,
           },
         }),
       });
@@ -261,6 +270,20 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
             placeholder="输入标签名称"
           />
         </div>
+
+        <div className="grid w-full max-w-[150px] items-center gap-1.5">
+          <Label htmlFor="new-tag-category">分类</Label>
+          <select
+            id="new-tag-category"
+            value={newTagCategory}
+            onChange={(e) => setNewTagCategory(e.target.value as any)}
+            className="h-10 px-3 py-2 border border-input bg-background rounded-md text-sm"
+          >
+            <option value="decision_type">决策类</option>
+            <option value="domain_type">领域类</option>
+            <option value="work_nature">工作性质</option>
+          </select>
+        </div>
         
         <div className="grid w-full max-w-[100px] items-center gap-1.5">
           <Label htmlFor="new-tag-color">颜色</Label>
@@ -290,7 +313,41 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">已有标签</h3>
+        <div>
+          <h3 className="text-lg font-medium mb-3">已有标签</h3>
+          
+          {/* 分类选项卡 */}
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <Button
+              variant={selectedCategory === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory('all')}
+            >
+              全部
+            </Button>
+            <Button
+              variant={selectedCategory === 'decision_type' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory('decision_type')}
+            >
+              决策类
+            </Button>
+            <Button
+              variant={selectedCategory === 'domain_type' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory('domain_type')}
+            >
+              领域类
+            </Button>
+            <Button
+              variant={selectedCategory === 'work_nature' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory('work_nature')}
+            >
+              工作性质
+            </Button>
+          </div>
+        </div>
         
         {isLoading ? (
           <p className="text-muted-foreground">加载中...</p>
@@ -298,98 +355,117 @@ export function TodoTagManager({ onTagsChange }: TodoTagManagerProps) {
           <p className="text-muted-foreground">暂无标签，请添加新标签</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <div key={tag.id} className="flex items-center">
-                {editingTagId === tag.id ? (
-                  <div className="flex items-center border rounded-md p-1">
-                    <Input
-                      value={editedTagName}
-                      onChange={(e) => setEditedTagName(e.target.value)}
-                      className="h-7 w-32 mr-1"
-                    />
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className="w-7 h-7 p-1 mr-1"
-                          style={{ backgroundColor: editedTagColor }}
-                        >
-                          <span className="sr-only">选择颜色</span>
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <ChromePicker 
-                          color={editedTagColor} 
-                          onChange={(color) => setEditedTagColor(color.hex)} 
-                          disableAlpha={true}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => updateTag(tag.id)}
-                      className="h-7 w-7"
+            {tags
+              .filter(tag => selectedCategory === 'all' || tag.category === selectedCategory)
+              .map((tag) => (
+                <div key={tag.id} className="flex items-center">
+                  {editingTagId === tag.id ? (
+                    <div className="flex items-center border rounded-md p-1">
+                      <Input
+                        value={editedTagName}
+                        onChange={(e) => setEditedTagName(e.target.value)}
+                        className="h-7 w-32 mr-1"
+                      />
+                      <select
+                        value={editedTagCategory}
+                        onChange={(e) => setEditedTagCategory(e.target.value as any)}
+                        className="h-7 mr-1 px-2 text-xs border rounded"
+                      >
+                        <option value="decision_type">决策</option>
+                        <option value="domain_type">领域</option>
+                        <option value="work_nature">性质</option>
+                      </select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-7 h-7 p-1 mr-1"
+                            style={{ backgroundColor: editedTagColor }}
+                          >
+                            <span className="sr-only">选择颜色</span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <ChromePicker 
+                            color={editedTagColor} 
+                            onChange={(color) => setEditedTagColor(color.hex)} 
+                            disableAlpha={true}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => updateTag(tag.id)}
+                        className="h-7 w-7"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setEditingTagId(null)}
+                        className="h-7 w-7"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Badge 
+                      className="flex items-center gap-1 px-3 py-1"
+                      style={{ backgroundColor: tag.color, color: getContrastColor(tag.color) }}
                     >
-                      <Check className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => setEditingTagId(null)}
-                      className="h-7 w-7"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Badge 
-                    className="flex items-center gap-1 px-3 py-1"
-                    style={{ backgroundColor: tag.color, color: getContrastColor(tag.color) }}
-                  >
-                    <span>{tag.name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 p-0 ml-1"
-                      onClick={() => {
-                        setEditingTagId(tag.id);
-                        setEditedTagName(tag.name);
-                        setEditedTagColor(tag.color);
-                      }}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 p-0 ml-1"
-                        >
-                          <Trash className="h-3 w-3" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>确认删除</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            您确定要删除标签 "{tag.name}" 吗？相关的待办事项将会保留但不再与此标签关联。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => deleteTag(tag.id)}>
-                            删除
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </Badge>
-                )}
-              </div>
-            ))}
+                      <span>{tag.name}</span>
+                      {tag.category && (
+                        <span className="text-xs opacity-70">
+                          {tag.category === 'decision_type' && '(决)'}
+                          {tag.category === 'domain_type' && '(域)'}
+                          {tag.category === 'work_nature' && '(性)'}
+                        </span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 p-0 ml-1"
+                        onClick={() => {
+                          setEditingTagId(tag.id);
+                          setEditedTagName(tag.name);
+                          setEditedTagColor(tag.color);
+                          setEditedTagCategory(tag.category || 'decision_type');
+                        }}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 p-0 ml-1"
+                          >
+                            <Trash className="h-3 w-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>确认删除</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              您确定要删除标签 "{tag.name}" 吗？相关的待办事项将会保留但不再与此标签关联。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteTag(tag.id)}>
+                              删除
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </Badge>
+                  )}
+                </div>
+              ))}
           </div>
         )}
       </div>

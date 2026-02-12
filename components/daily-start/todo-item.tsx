@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { TodoBO } from "@/app/api/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { CheckIcon, TrashIcon, PencilIcon, TimerIcon, TagIcon, PlusIcon, XIcon, BrainIcon, Loader2 } from "lucide-react";
+import { CheckIcon, TrashIcon, PencilIcon, TimerIcon, TagIcon, PlusIcon, XIcon, BrainIcon, Loader2, AlertCircle } from "lucide-react";
 import { TodoPriority } from "./todo-priority";
 import { Badge } from "@/components/ui/badge";
+import { RequiredTagsSelection } from '@/components/required-tags-selection';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -80,6 +82,7 @@ export function TodoItem({
   const [isGeneratingSubTasks, setIsGeneratingSubTasks] = useState(false);
   const [generatedSubTasks, setGeneratedSubTasks] = useState<Array<{ title: string, description?: string }>>([]);
   const [aiSplitPrompt, setAiSplitPrompt] = useState("");
+  const [showRequiredTagsModal, setShowRequiredTagsModal] = useState(false);
   const router = useRouter();
   const form = useForm<Partial<TodoBO>>({
     defaultValues: {
@@ -93,6 +96,37 @@ export function TodoItem({
       plannedEndTime: todo.plannedEndTime,
     },
   });
+
+  // 检查是否已选择所有必填标签分类
+  const checkRequiredTags = () => {
+    const hasDecisionType = selectedTagIds.some(id => {
+      const tag = allTags.find(t => t.id === id);
+      return tag?.category === 'decision_type';
+    });
+    const hasDomainType = selectedTagIds.some(id => {
+      const tag = allTags.find(t => t.id === id);
+      return tag?.category === 'domain_type';
+    });
+    const hasWorkNature = selectedTagIds.some(id => {
+      const tag = allTags.find(t => t.id === id);
+      return tag?.category === 'work_nature';
+    });
+    
+    return hasDecisionType && hasDomainType && hasWorkNature;
+  };
+
+  const handleRequiredTagsConfirm = (tagIds: number[]) => {
+    setSelectedTagIds(prev => {
+      // 移除旧的必填标签
+      const oldRequiredIds = prev.filter(id => {
+        const tag = allTags.find(t => t.id === id);
+        return tag?.category === 'decision_type' || tag?.category === 'domain_type' || tag?.category === 'work_nature';
+      });
+      const nonRequiredIds = prev.filter(id => !oldRequiredIds.includes(id));
+      return [...nonRequiredIds, ...tagIds];
+    });
+    setShowRequiredTagsModal(false);
+  };
 
   const handleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -609,37 +643,64 @@ export function TodoItem({
       </Dialog>
 
       <Dialog open={isTagsOpen} onOpenChange={setIsTagsOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>管理标签</DialogTitle>
+            <DialogTitle>编辑标签</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="flex flex-wrap gap-2 my-4">
-              {allTags.length === 0 ? (
-                <div className="w-full text-center py-4 text-muted-foreground">
-                  暂无标签，请先创建标签
-                </div>
-              ) : (
-                allTags.map(tag => (
-                  <Badge
-                    key={tag.id}
-                    variant={selectedTagIds.includes(tag.id) ? "default" : "outline"}
-                    className="cursor-pointer text-sm py-1 px-2"
-                    style={{
-                      backgroundColor: selectedTagIds.includes(tag.id) ? tag.color : 'transparent',
-                      borderColor: tag.color,
-                      color: selectedTagIds.includes(tag.id) ? '#fff' : 'inherit'
-                    }}
-                    onClick={() => toggleTag(tag.id)}
-                  >
-                    {tag.name}
-                    {selectedTagIds.includes(tag.id) && (
-                      <XIcon className="h-3 w-3 ml-1" />
-                    )}
-                  </Badge>
-                ))
+            {/* 选择必填标签 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium">必填标签</h4>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowRequiredTagsModal(true)}
+                >
+                  {checkRequiredTags() ? '已选择' : '选择标签'}
+                </Button>
+              </div>
+
+              {!checkRequiredTags() && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    请为决策类、领域类、工作性质各选择一个标签
+                  </AlertDescription>
+                </Alert>
               )}
+            </div>
+
+            {/* 显示所有标签 */}
+            <div>
+              <h4 className="text-sm font-medium mb-2">所有标签</h4>
+              <div className="flex flex-wrap gap-2 my-4">
+                {allTags.length === 0 ? (
+                  <div className="w-full text-center py-4 text-muted-foreground text-sm">
+                    暂无标签，请先创建标签
+                  </div>
+                ) : (
+                  allTags.map(tag => (
+                    <Badge
+                      key={tag.id}
+                      variant={selectedTagIds.includes(tag.id) ? "default" : "outline"}
+                      className="cursor-pointer text-sm py-1 px-2 transition-all"
+                      style={{
+                        backgroundColor: selectedTagIds.includes(tag.id) ? tag.color : 'transparent',
+                        borderColor: tag.color,
+                        color: selectedTagIds.includes(tag.id) ? '#fff' : 'inherit'
+                      }}
+                      onClick={() => toggleTag(tag.id)}
+                    >
+                      {tag.name}
+                      {selectedTagIds.includes(tag.id) && (
+                        <XIcon className="h-3 w-3 ml-1" />
+                      )}
+                    </Badge>
+                  ))
+                )}
+              </div>
             </div>
 
             {onCreateTag && (
@@ -811,6 +872,15 @@ export function TodoItem({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 必填标签选择对话框 */}
+      <RequiredTagsSelection
+        open={showRequiredTagsModal}
+        onOpenChange={setShowRequiredTagsModal}
+        allTags={allTags || []}
+        selectedTagIds={selectedTagIds}
+        onConfirm={handleRequiredTagsConfirm}
+      />
     </>
   );
 }

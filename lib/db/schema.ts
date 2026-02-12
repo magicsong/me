@@ -306,16 +306,25 @@ export const notes = pgTable("notes", {
 	updated_at: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
 });
 
+// 标签分类枚举：决策类、领域类、工作性质类
+export const tagCategory = pgEnum("tag_category", [
+	'decision_type',  // 决策类
+	'domain_type',    // 领域类
+	'work_nature',    // 工作性质
+]);
+
 // 标签表
 export const tags = pgTable("tags", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 100 }).notNull(),
 	color: varchar("color", { length: 50 }),
 	kind:  varchar("kind", { length: 50 }),
+	category: tagCategory("category"), // 标签分类：决策类、领域类、工作性质类
 	user_id: varchar("user_id", { length: 255 }).notNull(),
 }, (table) => {
 	return {
 		nameUserIdIdx: uniqueIndex("nameUserIdIdx").on(table.name, table.user_id),
+		categoryIdx: index("categoryIdx").using("btree", table.category),
 	};
 });
 

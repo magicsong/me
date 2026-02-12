@@ -20,6 +20,7 @@ export interface Tag {
   name: string;
   color: string;
   kind: string;
+  category?: 'decision_type' | 'domain_type' | 'work_nature';
 }
 
 // 可用的标签类型定义
@@ -30,9 +31,21 @@ export const TAG_KINDS = [
   { value: "habit", label: "习惯" },
 ];
 
+// 标签分类定义
+export const TAG_CATEGORIES = [
+  { value: "decision_type", label: "决策类（最重要）" },
+  { value: "domain_type", label: "领域类（按实际工作）" },
+  { value: "work_nature", label: "工作性质" },
+];
+
 // 根据类型获取标签
 export const filterTagsByKind = (tags: Tag[], kind: string) => {
   return tags.filter(tag => tag.kind === kind);
+};
+
+// 根据分类获取标签
+export const filterTagsByCategory = (tags: Tag[], category: string) => {
+  return tags.filter(tag => tag.category === category);
 };
 
 // 获取标签数据结构
@@ -43,4 +56,16 @@ export const getTagById = (tags: Tag[], id: number) => {
 // 根据IDs获取多个标签
 export const getTagsByIds = (tags: Tag[], ids: number[] = []) => {
   return tags.filter(tag => ids.includes(tag.id));
+};
+
+// 按分类分组标签
+export const groupTagsByCategory = (tags: Tag[]) => {
+  return tags.reduce((acc, tag) => {
+    const category = tag.category || 'uncategorized';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(tag);
+    return acc;
+  }, {} as Record<string, Tag[]>);
 };

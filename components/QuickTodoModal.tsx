@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/select";
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
-import { BrainIcon, Loader2, XIcon } from "lucide-react";
+import { BrainIcon, Loader2, XIcon, AlertCircle } from "lucide-react";
 import { fetchTags } from '@/app/(dashboard)/actions';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface QuickTodoModalProps {
     isOpen: boolean;
@@ -32,6 +33,7 @@ interface Tag {
   id: number;
   name: string;
   color: string;
+  category?: 'decision_type' | 'domain_type' | 'work_nature';
 }
 
 export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoModalProps) {
@@ -43,9 +45,13 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState('medium');
     const [isLargeTask, setIsLargeTask] = useState(false);
-    const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
     const [availableTags, setAvailableTags] = useState<Tag[]>([]);
     const [isLoadingTags, setIsLoadingTags] = useState(true);
+    
+    // 必选标签分类选择
+    const [selectedDecisionTypeTagId, setSelectedDecisionTypeTagId] = useState<number | null>(null);
+    const [selectedDomainTypeTagId, setSelectedDomainTypeTagId] = useState<number | null>(null);
+    const [selectedWorkNatureTagId, setSelectedWorkNatureTagId] = useState<number | null>(null);
 
     // AI拆解相关
     const [aiSplitPrompt, setAiSplitPrompt] = useState('');
@@ -73,12 +79,19 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
         }
     }, [isOpen]);
 
-    const handleTagToggle = (tagId: number) => {
-        setSelectedTagIds(prev =>
-            prev.includes(tagId)
-                ? prev.filter(id => id !== tagId)
-                : [...prev, tagId]
-        );
+    // 检查是否已选择所有必填标签分类
+    const checkRequiredTags = () => {
+        return selectedDecisionTypeTagId !== null && 
+               selectedDomainTypeTagId !== null && 
+               selectedWorkNatureTagId !== null;
+    };
+
+    const getSelectedTagIds = () => {
+        const ids: number[] = [];
+        if (selectedDecisionTypeTagId) ids.push(selectedDecisionTypeTagId);
+        if (selectedDomainTypeTagId) ids.push(selectedDomainTypeTagId);
+        if (selectedWorkNatureTagId) ids.push(selectedWorkNatureTagId);
+        return ids;
     };
 
     const generateSubTasks = async () => {
@@ -198,7 +211,9 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
         setDescription('');
         setPriority('medium');
         setIsLargeTask(false);
-        setSelectedTagIds([]);
+        setSelectedDecisionTypeTagId(null);
+        setSelectedDomainTypeTagId(null);
+        setSelectedWorkNatureTagId(null);
         setAiSplitPrompt('');
         setGeneratedSubTasks([]);
         setMode('form');
@@ -293,33 +308,103 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
                                 </div>
                             </div>
 
-                            {/* 标签选择 - 直接罗列 */}
-                            <div>
-                                <Label className="text-sm font-medium mb-2 inline-block">标签选择</Label>
-                                {isLoadingTags ? (
-                                    <div className="text-sm text-muted-foreground">加载中...</div>
-                                ) : availableTags.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground">暂无标签</div>
-                                ) : (
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        {availableTags.map(tag => (
-                                            <Badge
-                                                key={tag.id}
-                                                variant={selectedTagIds.includes(tag.id) ? "default" : "outline"}
-                                                className="cursor-pointer px-3 py-1"
-                                                style={{
-                                                    backgroundColor: selectedTagIds.includes(tag.id) ? tag.color : 'transparent',
-                                                    borderColor: tag.color,
-                                                    color: selectedTagIds.includes(tag.id) ? '#fff' : 'inherit'
-                                                }}
-                                                onClick={() => handleTagToggle(tag.id)}
-                                            >
-                                                {tag.name}
-                                                {selectedTagIds.includes(tag.id) && (
-                                                    <XIcon className="h-3 w-3 ml-1" />
-                                                )}
-                                            </Badge>
-                                        ))}
+                            {/* 必选标签分类 */}
+                            <div className="space-y-4">
+                                <Label className="text-sm font-medium block">选择必填标签</Label>
+                                
+                                {/* 决策类型 */}
+                                <div>
+                                    <Label className="text-xs font-medium text-muted-foreground">决策类 - 帮你判断"先做什么"</Label>
+                                    <Select value={selectedDecisionTypeTagId?.toString() || ''} onValueChange={(val) => setSelectedDecisionTypeTagId(val ? parseInt(val) : null)}>
+                                        <SelectTrigger className="mt-1">
+                                            <SelectValue placeholder="选择决策类标签" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableTags.filter(t => t.category === 'decision_type').map(tag => (
+                                                <SelectItem key={tag.id} value={tag.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <div 
+                                                            className="w-3 h-3 rounded-full" 
+                                                            style={{ backgroundColor: tag.color }}
+                                                        />
+                                                        {tag.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* 领域类型 */}
+                                <div>
+                                    <Label className="text-xs font-medium text-muted-foreground">领域类 - 避免碎片化，能看出精力投入分布</Label>
+                                    <Select value={selectedDomainTypeTagId?.toString() || ''} onValueChange={(val) => setSelectedDomainTypeTagId(val ? parseInt(val) : null)}>
+                                        <SelectTrigger className="mt-1">
+                                            <SelectValue placeholder="选择领域类标签" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableTags.filter(t => t.category === 'domain_type').map(tag => (
+                                                <SelectItem key={tag.id} value={tag.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <div 
+                                                            className="w-3 h-3 rounded-full" 
+                                                            style={{ backgroundColor: tag.color }}
+                                                        />
+                                                        {tag.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* 工作性质 */}
+                                <div>
+                                    <Label className="text-xs font-medium text-muted-foreground">工作性质 - 区分"产出型"和"救火型"</Label>
+                                    <Select value={selectedWorkNatureTagId?.toString() || ''} onValueChange={(val) => setSelectedWorkNatureTagId(val ? parseInt(val) : null)}>
+                                        <SelectTrigger className="mt-1">
+                                            <SelectValue placeholder="选择工作性质标签" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableTags.filter(t => t.category === 'work_nature').map(tag => (
+                                                <SelectItem key={tag.id} value={tag.id.toString()}>
+                                                    <div className="flex items-center gap-2">
+                                                        <div 
+                                                            className="w-3 h-3 rounded-full" 
+                                                            style={{ backgroundColor: tag.color }}
+                                                        />
+                                                        {tag.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {!checkRequiredTags() && (
+                                    <Alert variant="destructive">
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertDescription>
+                                            请为三个标签分类各选择一个
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {/* 显示已选择的标签 */}
+                                {checkRequiredTags() && (
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {[selectedDecisionTypeTagId, selectedDomainTypeTagId, selectedWorkNatureTagId].map(id => {
+                                            const tag = availableTags.find(t => t.id === id);
+                                            return tag ? (
+                                                <Badge
+                                                    key={id}
+                                                    className="px-3 py-1"
+                                                    style={{ backgroundColor: tag.color, color: '#fff' }}
+                                                >
+                                                    {tag.name}
+                                                </Badge>
+                                            ) : null;
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -380,8 +465,12 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
                                     取消
                                 </Button>
                                 <Button
-                                    disabled={!title.trim() || isSubmitting}
+                                    disabled={!title.trim() || isSubmitting || !checkRequiredTags()}
                                     onClick={() => {
+                                        if (!checkRequiredTags()) {
+                                            toast.error('请先选择所有必填标签分类');
+                                            return;
+                                        }
                                         handleSubmitForm(
                                             {
                                                 title,
@@ -390,7 +479,7 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
                                                 status: 'pending',
                                                 isLargeTask,
                                             },
-                                            selectedTagIds
+                                            getSelectedTagIds()
                                         );
                                     }}
                                 >
@@ -494,31 +583,85 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
                                         </div>
                                     ))}
 
-                                    <div className="border-t pt-4">
-                                        <Label className="text-sm font-medium mb-2 inline-block">标签选择</Label>
-                                        {availableTags.length === 0 ? (
-                                            <div className="text-sm text-muted-foreground">暂无标签</div>
-                                        ) : (
-                                            <div className="flex flex-wrap gap-2 mt-2">
-                                                {availableTags.map(tag => (
-                                                    <Badge
-                                                        key={tag.id}
-                                                        variant={selectedTagIds.includes(tag.id) ? "default" : "outline"}
-                                                        className="cursor-pointer px-3 py-1"
-                                                        style={{
-                                                            backgroundColor: selectedTagIds.includes(tag.id) ? tag.color : 'transparent',
-                                                            borderColor: tag.color,
-                                                            color: selectedTagIds.includes(tag.id) ? '#fff' : 'inherit'
-                                                        }}
-                                                        onClick={() => handleTagToggle(tag.id)}
-                                                    >
-                                                        {tag.name}
-                                                        {selectedTagIds.includes(tag.id) && (
-                                                            <XIcon className="h-3 w-3 ml-1" />
-                                                        )}
-                                                    </Badge>
-                                                ))}
-                                            </div>
+                                    <div className="border-t pt-4 space-y-4">
+                                        <Label className="text-sm font-medium block">选择必填标签</Label>
+                                        
+                                        {/* 决策类型 */}
+                                        <div>
+                                            <Label className="text-xs font-medium text-muted-foreground">决策类 - 帮你判断"先做什么"</Label>
+                                            <Select value={selectedDecisionTypeTagId?.toString() || ''} onValueChange={(val) => setSelectedDecisionTypeTagId(val ? parseInt(val) : null)}>
+                                                <SelectTrigger className="mt-1">
+                                                    <SelectValue placeholder="选择决策类标签" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableTags.filter(t => t.category === 'decision_type').map(tag => (
+                                                        <SelectItem key={tag.id} value={tag.id.toString()}>
+                                                            <div className="flex items-center gap-2">
+                                                                <div 
+                                                                    className="w-3 h-3 rounded-full" 
+                                                                    style={{ backgroundColor: tag.color }}
+                                                                />
+                                                                {tag.name}
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* 领域类型 */}
+                                        <div>
+                                            <Label className="text-xs font-medium text-muted-foreground">领域类 - 避免碎片化，能看出精力投入分布</Label>
+                                            <Select value={selectedDomainTypeTagId?.toString() || ''} onValueChange={(val) => setSelectedDomainTypeTagId(val ? parseInt(val) : null)}>
+                                                <SelectTrigger className="mt-1">
+                                                    <SelectValue placeholder="选择领域类标签" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableTags.filter(t => t.category === 'domain_type').map(tag => (
+                                                        <SelectItem key={tag.id} value={tag.id.toString()}>
+                                                            <div className="flex items-center gap-2">
+                                                                <div 
+                                                                    className="w-3 h-3 rounded-full" 
+                                                                    style={{ backgroundColor: tag.color }}
+                                                                />
+                                                                {tag.name}
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* 工作性质 */}
+                                        <div>
+                                            <Label className="text-xs font-medium text-muted-foreground">工作性质 - 区分"产出型"和"救火型"</Label>
+                                            <Select value={selectedWorkNatureTagId?.toString() || ''} onValueChange={(val) => setSelectedWorkNatureTagId(val ? parseInt(val) : null)}>
+                                                <SelectTrigger className="mt-1">
+                                                    <SelectValue placeholder="选择工作性质标签" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableTags.filter(t => t.category === 'work_nature').map(tag => (
+                                                        <SelectItem key={tag.id} value={tag.id.toString()}>
+                                                            <div className="flex items-center gap-2">
+                                                                <div 
+                                                                    className="w-3 h-3 rounded-full" 
+                                                                    style={{ backgroundColor: tag.color }}
+                                                                />
+                                                                {tag.name}
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {!checkRequiredTags() && (
+                                            <Alert variant="destructive">
+                                                <AlertCircle className="h-4 w-4" />
+                                                <AlertDescription>
+                                                    请为三个标签分类各选择一个
+                                                </AlertDescription>
+                                            </Alert>
                                         )}
                                     </div>
                                 </div>
@@ -532,8 +675,12 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
                                     取消
                                 </Button>
                                 <Button
-                                    disabled={!title.trim() || generatedSubTasks.length === 0 || isSubmitting}
+                                    disabled={!title.trim() || generatedSubTasks.length === 0 || isSubmitting || !checkRequiredTags()}
                                     onClick={() => {
+                                        if (!checkRequiredTags()) {
+                                            toast.error('请先选择所有必填标签分类');
+                                            return;
+                                        }
                                         handleSubmitForm(
                                             {
                                                 title,
@@ -542,7 +689,7 @@ export default function QuickTodoModal({ isOpen, onClose, onSaved }: QuickTodoMo
                                                 status: 'pending',
                                                 isLargeTask: true,
                                             },
-                                            selectedTagIds
+                                            getSelectedTagIds()
                                         );
                                     }}
                                 >

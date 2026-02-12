@@ -232,6 +232,13 @@
       "when": 1770794978973,
       "tag": "0032_glossy_maelstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1770878287082,
+      "tag": "0033_normal_franklin_storm",
+      "breakpoints": true
     }
   ]
 }
