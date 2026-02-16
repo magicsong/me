@@ -72,9 +72,11 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
       completedAt: dataObject.completed_at,
       createdAt: dataObject.created_at,
       updatedAt: dataObject.updated_at,
-      tags: dataObject.tags,
+      tags: dataObject.tags || [],
       parentId: dataObject.parent_id,
       isLargeTask: dataObject.is_large_task,
+      // 递归转换子任务
+      subtasks: dataObject.subtasks ? dataObject.subtasks.map(sub => this.toBusinessObject(sub)) : undefined,
     };
   }
 

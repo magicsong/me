@@ -40,15 +40,13 @@ export function DailyPlanning({
   const [showCompleted, setShowCompleted] = useState(false);
   const [pendingCollapsed, setPendingCollapsed] = useState<boolean>(false);
   const router = useRouter();
-  // 根据showCompleted状态过滤任务（只显示主任务，不显示子任务）
+  // 根据showCompleted状态过滤任务
+  // 注意：后端已经确保返回的是主任务列表，子任务包含在主任务的 subtasks 字段中
   const filteredTodos = useMemo(() => {
     let result = todos;
     if (!showCompleted) {
       result = todos.filter(todo => todo.status !== "completed");
     }
-
-    // 过滤掉子任务（parentId不为null的任务），只显示主任务
-    result = result.filter(todo => !todo.parentId);
 
     // 按状态对任务进行排序，让in_progress排在前面
     return [...result].sort((a, b) => {
@@ -694,15 +692,25 @@ export function DailyPlanning({
           {todos
             .filter(todo => todo.status === "completed")
             .map((todo) => (
-              <TodoItem
-                key={todo.id}
-                todo={todo}
-                tags={todo.tags}
-                selected={selectedTodos.includes(todo.id)}
-                onSelect={(selected) => handleSelectTodo(todo.id, selected)}
-                onUpdate={updateTodo}
-                onDelete={handleDelete}
-              />
+              <div key={todo.id}>
+                <TodoItem
+                  todo={todo}
+                  tags={todo.tags}
+                  selected={selectedTodos.includes(todo.id)}
+                  onSelect={(selected) => handleSelectTodo(todo.id, selected)}
+                  onUpdate={updateTodo}
+                  onDelete={handleDelete}
+                />
+                {/* 显示已完成任务的子任务 */}
+                <SubtasksDisplay
+                  parentTodo={todo}
+                  allTodos={todos}
+                  onDataRefresh={onDataRefresh}
+                  onUpdateTodo={updateTodo}
+                  onDeleteTodo={handleDelete}
+                  onStartPomodoro={(subtaskId) => handleStartFocusing(String(subtaskId))}
+                />
+              </div>
             ))
           }
         </div>

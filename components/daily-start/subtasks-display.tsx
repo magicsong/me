@@ -38,8 +38,9 @@ export function SubtasksDisplay({
     description: '',
   });
 
-  // 从所有TODO中筛选出属于该父任务的子任务
-  const subtasks = allTodos.filter(todo => todo.parentId === parentTodo.id);
+  // 优先使用后端返回的 subtasks 字段，其次从 allTodos 中过滤
+  // 这样可以确保显示所有子任务，包括已完成的
+  const subtasks = parentTodo.subtasks || allTodos.filter(todo => todo.parentId === parentTodo.id);
 
   const handleSubtaskComplete = async (subtask: TodoBO) => {
     try {

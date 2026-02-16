@@ -9,6 +9,7 @@ export type TodoData = typeof todos.$inferSelect & {
     name: string;
     color: string;
   }>;
+  subtasks?: TodoData[];
 };
 
 // 创建输入类型
@@ -34,18 +35,22 @@ export class TodoPersistenceService extends BaseRepository<typeof todos, TodoDat
   constructor(connectionString?: string) {
     super(todos);
 
-    // 设置钩子，在查询后自动加载关联的标签
+    // 设置钩子，在查询后自动加载关联的标签和子任务
     this.setHooks({
       afterQuery: async (data) => {
         if (!data) return data;
 
         // 处理单个 Todo 对象
         if (!Array.isArray(data)) {
-          return this.loadTagsForSingleTodo(data);
+          let result = await this.loadTagsForSingleTodo(data);
+          result = await this.loadSubtasksForSingleTodo(result);
+          return result;
         }
 
         // 处理 Todo 数组
-        return this.loadTagsForMultipleTodos(data);
+        let result = await this.loadTagsForMultipleTodos(data);
+        result = await this.loadSubtasksForMultipleTodos(result);
+        return result;
       }
     });
   }
@@ -99,6 +104,14 @@ export class TodoPersistenceService extends BaseRepository<typeof todos, TodoDat
   }
 
   /**
+   * 为单个 Todo 加载子任务
+   */
+  private async loadSubtasksForSingleTodo(todo: TodoData): Promise<TodoData> {
+    todo.subtasks = await this.getSubtasks(todo.id);
+    return todo;
+  }
+
+  /**
    * 为多个 Todo 批量加载标签
    */
   private async loadTagsForMultipleTodos(todos: TodoData[]): Promise<TodoData[]> {
@@ -132,6 +145,31 @@ export class TodoPersistenceService extends BaseRepository<typeof todos, TodoDat
           name: tag.name,
           color: tag.color
         }))
+    }));
+  }
+
+  /**
+   * 为多个 Todo 批量加载子任务
+   */
+  private async loadSubtasksForMultipleTodos(todos: TodoData[]): Promise<TodoData[]> {
+    if (todos.length === 0) return todos;
+
+    // 分离主任务和子任务
+    const mainTodos = todos.filter(todo => !todo.parent_id);
+    const mainTodoIds = mainTodos.map(todo => todo.id);
+    
+    if (mainTodoIds.length === 0) {
+      // 如果没有主任务，说明查询的是子任务列表，直接返回
+      return todos;
+    }
+
+    // 批量获取所有子任务
+    const subtasksMap = await this.getSubtasksForMultiple(mainTodoIds);
+
+    // 只返回主任务，并为其添加 subtasks 字段
+    return mainTodos.map(todo => ({
+      ...todo,
+      subtasks: subtasksMap.get(todo.id) || []
     }));
   }
 
