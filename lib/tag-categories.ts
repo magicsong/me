@@ -12,6 +12,7 @@ export const DECISION_TYPE_TAGS = [
   { emoji: '⛔', name: '阻塞中', color: '#F97316', kind: "todo" },
   { emoji: '🧨', name: '技术债', color: '#8B5CF6', kind: "todo" },
   { emoji: '🧪', name: '实验性', color: '#3B82F6', kind: "todo" },
+  { emoji: '📌', name: '常规', color: '#6B7280' },
 ];
 
 // 领域类标签 - 避免碎片化，能看出精力投入分布
@@ -22,6 +23,9 @@ export const DOMAIN_TYPE_TAGS = [
   { emoji: '🔐', name: '安全', color: '#DC2626' },
   { emoji: '📊', name: '数据 / 观测', color: '#F59E0B' },
   { emoji: '🧩', name: '架构设计', color: '#14B8A6' },
+  { emoji: '☁️', name: 'VKE-APP', color: '#3B82F6' },
+  { emoji: '⚙️', name: '集群管理', color: '#8B5CF6' },
+  { emoji: '🔑', name: '权限管理', color: '#DC2626' },
 ];
 
 // 工作性质标签 - 区分"产出型"和"救火型"
@@ -31,6 +35,8 @@ export const WORK_NATURE_TAGS = [
   { emoji: '📝', name: '文档 / 输出', color: '#84CC16' },
   { emoji: '🔍', name: '调研', color: '#A855F7' },
   { emoji: '🧯', name: '故障 / Oncall', color: '#FB923C' },
+  { emoji: '⏱️', name: '临时调度', color: '#EAB308' },
+  { emoji: '🐛', name: 'Bugfix', color: '#F97316' },
 ];
 
 // 标签分类配置

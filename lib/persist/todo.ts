@@ -7,7 +7,7 @@ export type TodoData = typeof todos.$inferSelect & {
   tags?: Array<{
     id: number;
     name: string;
-    color: string;
+    color: string | null;
   }>;
   subtasks?: TodoData[];
 };
@@ -24,7 +24,7 @@ export interface TodoWithTags {
   tags: Array<{
     id: number;
     name: string;
-    color: string;
+    color: string | null;
   }>;
 }
 
@@ -176,7 +176,7 @@ export class TodoPersistenceService extends BaseRepository<typeof todos, TodoDat
   /**
    * 获取单个 Todo 的标签
    */
-  private async getTagsForTodo(todoId: number): Promise<Array<{ id: number; name: string; color: string; }>> {
+  async getTagsForTodo(todoId: number): Promise<Array<{ id: number; name: string; color: string | null; }>> {
     return this.db
       .select({
         id: tags.id,

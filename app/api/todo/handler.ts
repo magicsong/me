@@ -1,8 +1,9 @@
-import { TodoData, TodoPersistenceService } from '@/lib/persist/todo';
+import { TodoData, TodoPersistenceService, TodoWithTags } from '@/lib/persist/todo';
 import { BaseApiHandler } from '../lib/BaseApiHandler';
 import { BusinessObject } from '../lib/types';
 import { TodoPromptBuilder, TodoOutputParser } from './prompt';
 import { TodoBO } from '../types';
+import { BaseRequest, BaseResponse } from '../lib/types';
 
 export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
   validateBO(data: TodoBO): boolean {
@@ -63,25 +64,32 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
       id: dataObject.id,
       userId: dataObject.user_id,
       title: dataObject.title,
-      description: dataObject.description,
+      description: dataObject.description || undefined,
       status: dataObject.status,
       priority: dataObject.priority,
-      plannedDate: dataObject.planned_date,
-      plannedStartTime: dataObject.planned_start_time,
-      plannedEndTime: dataObject.planned_end_time,
-      completedAt: dataObject.completed_at,
+      plannedDate: dataObject.planned_date || undefined,
+      plannedStartTime: dataObject.planned_start_time || undefined,
+      plannedEndTime: dataObject.planned_end_time || undefined,
+      completedAt: dataObject.completed_at || undefined,
       createdAt: dataObject.created_at,
       updatedAt: dataObject.updated_at,
-      tags: dataObject.tags || [],
-      parentId: dataObject.parent_id,
-      isLargeTask: dataObject.is_large_task,
+      tags: (dataObject.tags || []).map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        color: tag.color || '',
+        userId: dataObject.user_id,
+        kind: undefined,
+        category: undefined
+      })),
+      parentId: dataObject.parent_id || undefined,
+      isLargeTask: dataObject.is_large_task || false,
       // 递归转换子任务
       subtasks: dataObject.subtasks ? dataObject.subtasks.map(sub => this.toBusinessObject(sub)) : undefined,
     };
   }
 
   toDataObject(businessObject: TodoBO): Partial<TodoData> {
-    const result = {
+    const result: any = {
       user_id: businessObject.userId,
       title: businessObject.title,
       description: businessObject.description,
@@ -91,14 +99,125 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
       planned_start_time: businessObject.plannedStartTime,
       planned_end_time: businessObject.plannedEndTime,
       completed_at: businessObject.completedAt,
-      tag_ids: businessObject.tagIds,
       parent_id: businessObject.parentId,
       is_large_task: businessObject.isLargeTask,
     };
     if (businessObject.id && businessObject.id > 0) {
-      result["id"] = businessObject.id;
+      result.id = businessObject.id;
     }
     return result;
+  }
+
+  /**
+   * 重写 handleCreate 方法，处理标签关联
+   */
+  async handleCreate(request: BaseRequest<TodoBO>): Promise<BaseResponse<TodoBO>> {
+    try {
+      // 调用父类的 handleCreate
+      const response = await super.handleCreate(request);
+      
+      if (!response.success || !response.data || Array.isArray(response.data)) {
+        return response;
+      }
+
+      // 处理标签关联
+      const createdTodo = response.data as TodoBO;
+      const tagIds = request.data?.tagIds || request.data?.tags?.map(tag => tag.id).filter(id => id !== undefined) || [];
+      
+      if (tagIds.length > 0 && createdTodo.id) {
+        try {
+          const todoService = this.persistenceService as TodoPersistenceService;
+          await todoService.addTagsToTodo(createdTodo.id, tagIds as number[]);
+          // 重新加载标签信息
+          const freshTags = await todoService.getTagsForTodo(createdTodo.id);
+          createdTodo.tags = freshTags.map(tag => ({
+            id: tag.id,
+            name: tag.name,
+            color: tag.color || '',
+            userId: createdTodo.userId,
+            kind: undefined,
+            category: undefined
+          }));
+        } catch (error) {
+          console.error('添加标签关联失败:', error);
+          // 不中断流程，只是记录错误
+        }
+      }
+
+      return {
+        success: true,
+        data: createdTodo
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '创建资源失败'
+      };
+    }
+  }
+
+  /**
+   * 重写 handleUpdate 方法，处理标签关联
+   */
+  async handleUpdate(request: BaseRequest<TodoBO>): Promise<BaseResponse<TodoBO>> {
+    try {
+      // 调用父类的 handleUpdate
+      const response = await super.handleUpdate(request);
+      
+      if (!response.success || !response.data || Array.isArray(response.data)) {
+        return response;
+      }
+
+      // 处理标签关联
+      const updatedTodo = response.data as TodoBO;
+      const newTagIds = request.data?.tagIds || request.data?.tags?.map(tag => tag.id).filter(id => id !== undefined) || [];
+      
+      if (updatedTodo.id) {
+        try {
+          const todoService = this.persistenceService as TodoPersistenceService;
+          
+          // 获取当前有效的标签ID
+          const currentTags = await todoService.getTagsForTodo(updatedTodo.id);
+          const currentTagIds = currentTags.map(tag => tag.id);
+          
+          // 找出需要删除和添加的标签
+          const tagsToRemove = currentTagIds.filter(id => !newTagIds.includes(id));
+          const tagsToAdd = (newTagIds as number[]).filter(id => !currentTagIds.includes(id));
+          
+          // 执行标签操作
+          if (tagsToRemove.length > 0) {
+            await todoService.removeTagsFromTodo(updatedTodo.id, tagsToRemove);
+          }
+          if (tagsToAdd.length > 0) {
+            await todoService.addTagsToTodo(updatedTodo.id, tagsToAdd);
+          }
+          
+          // 重新加载标签信息
+          const freshTags = await todoService.getTagsForTodo(updatedTodo.id);
+          updatedTodo.tags = freshTags.map(tag => ({
+            id: tag.id,
+            name: tag.name,
+            color: tag.color || '',
+            userId: updatedTodo.userId,
+            kind: undefined,
+            category: undefined
+          }));
+        } catch (error) {
+          console.error('处理标签关联失败:', error);
+          // 不中断流程，只是记录错误
+        }
+      }
+
+      return {
+        success: true,
+        data: updatedTodo
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '更新资源失败'
+      };
+    }
   }
 
   toBusinessObjects(dataObjects: TodoData[]): TodoBO[] {
@@ -161,6 +280,58 @@ export class TodoApiHandler extends BaseApiHandler<TodoData, TodoBO> {
     } catch (error) {
       console.error('获取待办事项及其标签失败:', error);
       return null;
+    }
+  }
+
+  /**
+   * 重写 handleBatchCreate 方法，处理标签关联
+   */
+  async handleBatchCreate(request: any): Promise<BaseResponse<TodoBO[]>> {
+    try {
+      // 调用父类的 handleBatchCreate
+      const response = await super.handleBatchCreate(request);
+      
+      if (!response.success || !response.data || !Array.isArray(response.data)) {
+        return response as BaseResponse<TodoBO[]>;
+      }
+
+      // 为每个创建的Todo处理标签关联
+      const todoService = this.persistenceService as TodoPersistenceService;
+      const createdTodos = response.data as TodoBO[];
+      
+      for (let i = 0; i < createdTodos.length; i++) {
+        const createdTodo = createdTodos[i];
+        const originalData = request.data?.[i];
+        const tagIds = originalData?.tagIds || originalData?.tags?.map((tag: any) => tag.id).filter((id: any) => id !== undefined) || [];
+        
+        if (tagIds.length > 0 && createdTodo.id) {
+          try {
+            await todoService.addTagsToTodo(createdTodo.id, tagIds as number[]);
+            // 重新加载标签信息
+            const freshTags = await todoService.getTagsForTodo(createdTodo.id);
+            createdTodo.tags = freshTags.map(tag => ({
+              id: tag.id,
+              name: tag.name,
+              color: tag.color || '',
+              userId: createdTodo.userId,
+              kind: undefined,
+              category: undefined
+            }));
+          } catch (error) {
+            console.error('为批量创建的Todo添加标签关联失败:', error);
+          }
+        }
+      }
+
+      return {
+        success: true,
+        data: createdTodos
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '批量创建资源失败'
+      };
     }
   }
 

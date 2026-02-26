@@ -14,19 +14,24 @@ export async function GET() {
     await migrate(db, { migrationsFolder: "./drizzle" });
     console.log("Migrations applied!");
 
-    // 检查系统标签是否已存在
+    // 获取所有预定义标签
+    const predefinedTags = getAllPredefinedTags();
+
+    // 获取现有的系统标签
     const existingSystemTags = await db
-      .select({ id: tags.id })
+      .select({ id: tags.id, name: tags.name, category: tags.category })
       .from(tags)
-      .where(eq(tags.user_id, SYSTEM_USER_ID))
-      .limit(1);
+      .where(eq(tags.user_id, SYSTEM_USER_ID));
 
-    if (existingSystemTags.length === 0) {
-      // 获取预定义标签
-      const predefinedTags = getAllPredefinedTags();
+    // 构建现有标签的查找表 (key: "name:category")
+    const existingTagsMap = new Map(
+      existingSystemTags.map((tag) => [`${tag.name}:${tag.category}`, tag.id])
+    );
 
-      // 批量插入系统标签
-      const tagsToInsert = predefinedTags.map((tag) => ({
+    // 筛选出新增的标签（不在existingTagsMap中）
+    const tagsToInsert = predefinedTags
+      .filter((tag) => !existingTagsMap.has(`${tag.name}:${tag.category}`))
+      .map((tag) => ({
         name: tag.name,
         color: tag.color,
         category: tag.category,
@@ -34,15 +39,17 @@ export async function GET() {
         kind: "todo",
       }));
 
+    // 只有当有新标签时才执行插入
+    if (tagsToInsert.length > 0) {
       await db.insert(tags).values(tagsToInsert);
-      console.log(`Inserted ${tagsToInsert.length} system tags!`);
-    } else {
-      console.log("System tags already exist, skipping initialization!");
+      console.log(`Inserted ${tagsToInsert.length} new system tags!`);
     }
 
     return Response.json({
       message: 'Schema created successfully',
-      systemTagsInitialized: existingSystemTags.length === 0,
+      existingTagsCount: existingSystemTags.length,
+      newTagsInserted: tagsToInsert.length,
+      totalTagsCount: existingSystemTags.length + tagsToInsert.length,
     });
   } catch (error) {
     console.error('Failed to create schema:', error);
