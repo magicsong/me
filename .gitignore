@@ -41,3 +41,4 @@ venv
 __pycache__
 # macOS
 output
+backups
