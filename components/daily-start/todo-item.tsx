@@ -137,6 +137,7 @@ export function TodoItem({
 
   const handleEdit = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    // 在打开对话框前加载标签和设置初始选中的标签
     setSelectedTagIds(todo.tagIds || []);
     setLoadingTags(true);
     try {
@@ -193,6 +194,13 @@ export function TodoItem({
 
   const handleStartPomodoro = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // 检查是否有子任务，如果有则不允许直接开始番茄钟
+    if (todo.subtasks && todo.subtasks.length > 0) {
+      alert('该任务有子任务，请先完成子任务或删除子任务后再开始番茄钟');
+      return;
+    }
+    
     // 如果任务状态为 pending，先将其更新为 in_progress
     if (todo.status === 'pending') {
       try {
@@ -399,7 +407,7 @@ export function TodoItem({
       <div
         id={`todo-item-${todo.id}`}
         className={`
-          flex items-center p-2 rounded-md border border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all
+          flex items-center p-2 rounded-md border border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all overflow-hidden
           ${todo.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20 line-through text-gray-500' : ''}
           ${isCompleting ? 'todo-completing' : ''}
         `}
@@ -444,7 +452,7 @@ export function TodoItem({
           )}
         </div>
 
-        <div className="flex items-center gap-2 ml-2">
+        <div className="flex items-center gap-2 ml-2 min-w-0 flex-wrap justify-end">
           <Button
             variant="custom"
             size="sm"
@@ -481,6 +489,8 @@ export function TodoItem({
             size="sm"
             className="flex items-center gap-1 h-8"
             onClick={handleStartPomodoro}
+            disabled={todo.subtasks && todo.subtasks.length > 0}
+            title={todo.subtasks && todo.subtasks.length > 0 ? '该任务有子任务，请先完成或删除子任务' : '开始番茄钟'}
           >
             <TimerIcon className="h-4 w-4" />
             <span>番茄钟</span>
@@ -508,13 +518,29 @@ export function TodoItem({
         </div>
       </div>
 
-      <Dialog open={isEditOpen} onOpenChange={(open) => {
-        if (!open) {
+      <Dialog open={isEditOpen} onOpenChange={async (open) => {
+        if (open) {
+          // 打开对话框时，确保标签已加载
+          setSelectedTagIds(todo.tagIds || []);
+          setLoadingTags(true);
+          try {
+            const response = await fetch('/api/tag?kind=todo');
+            const result = await response.json();
+            if (result.success && result.data) {
+              setLocalAllTags(result.data);
+            }
+          } catch (error) {
+            console.error('加载标签失败:', error);
+          } finally {
+            setLoadingTags(false);
+          }
+        } else {
+          // 关闭对话框时，重置标签
           setSelectedTagIds(todo.tagIds || []);
         }
         setIsEditOpen(open);
       }}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>编辑任务</DialogTitle>
           </DialogHeader>
@@ -913,7 +939,7 @@ export function TodoItem({
         }
         setIsAiSplitOpen(open);
       }}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>AI拆分任务</DialogTitle>
           </DialogHeader>

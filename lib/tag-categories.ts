@@ -26,6 +26,7 @@ export const DOMAIN_TYPE_TAGS = [
   { emoji: '☁️', name: 'VKE-APP', color: '#3B82F6' },
   { emoji: '⚙️', name: '集群管理', color: '#8B5CF6' },
   { emoji: '🔑', name: '权限管理', color: '#DC2626' },
+  { emoji: '💚', name: 'ME 应用', color: '#10B981' },
 ];
 
 // 工作性质标签 - 区分"产出型"和"救火型"

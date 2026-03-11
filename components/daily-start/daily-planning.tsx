@@ -315,7 +315,7 @@ export function DailyPlanning({
       {/* 待办事项管理 */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
             <CardTitle className="flex items-center gap-2">
               <ClockIcon className="h-5 w-5 text-blue-500" />
               任务管理
@@ -330,7 +330,7 @@ export function DailyPlanning({
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="today">
@@ -357,7 +357,7 @@ export function DailyPlanning({
                   </div>
 
                   <Tabs defaultValue="all">
-                    <TabsList className="mb-4">
+                    <TabsList className="mb-4 flex-wrap w-full justify-start">
                       <TabsTrigger value="all" className="flex items-center gap-1">
                         <CalendarIcon className="h-4 w-4" />
                         全部 ({incompleteTodos.length})
@@ -431,7 +431,7 @@ export function DailyPlanning({
 
                       return (
                         <TabsContent key={priority} value={priority} className="space-y-4">
-                          <div className="flex justify-between items-center mb-4">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
                             <Button
                               variant="outline"
                               size="sm"
@@ -520,7 +520,7 @@ export function DailyPlanning({
 
               {filteredTodos.length > 0 ? (
                 <>
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
                     <Button
                       variant="outline"
                       size="sm"
@@ -529,7 +529,7 @@ export function DailyPlanning({
                       {selectedTodos.length === filteredTodos.length ? "取消全选" : "全选"}
                     </Button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TodoBO } from "@/app/api/types";
 import { Button } from "@/components/ui/button";
-import { ChevronDownIcon, ChevronUpIcon, CheckIcon, PencilIcon, TimerIcon, TrashIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon, CheckIcon, PencilIcon, TimerIcon, TrashIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -34,6 +34,11 @@ export function SubtasksDisplay({
   const [editingSubtask, setEditingSubtask] = useState<TodoBO | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<{ title: string; description?: string }>({
+    title: '',
+    description: '',
+  });
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createFormData, setCreateFormData] = useState<{ title: string; description?: string }>({
     title: '',
     description: '',
   });
@@ -113,6 +118,47 @@ export function SubtasksDisplay({
     }
   };
 
+  const handleCreateSubtask = async () => {
+    if (!createFormData.title.trim()) {
+      toast.error('请输入子任务标题');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/todo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            title: createFormData.title,
+            description: createFormData.description,
+            parentId: parentTodo.id,
+            priority: parentTodo.priority,
+            plannedDate: parentTodo.plannedDate,
+            status: 'pending'
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('创建子任务失败');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success('子任务已创建');
+        setIsCreateDialogOpen(false);
+        setCreateFormData({ title: '', description: '' });
+        onDataRefresh();
+      } else {
+        throw new Error(result.error || '创建失败');
+      }
+    } catch (error) {
+      console.error('创建子任务失败:', error);
+      toast.error('创建子任务失败');
+    }
+  };
+
   if (!subtasks || subtasks.length === 0) {
     return null;
   }
@@ -120,21 +166,33 @@ export function SubtasksDisplay({
   return (
     <>
       <div className="ml-4 mt-2 border-l-2 border-blue-200 pl-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mb-2 p-0 h-auto flex items-center gap-1"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          {isExpanded ? (
-            <ChevronDownIcon className="h-4 w-4 text-blue-500" />
-          ) : (
-            <ChevronUpIcon className="h-4 w-4 text-blue-500" />
-          )}
-          <span className="text-sm text-blue-600 font-medium">
-            子任务 ({subtasks.filter(st => st.status !== 'completed').length}/{subtasks.length})
-          </span>
-        </Button>
+        <div className="flex justify-between items-center mb-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="p-0 h-auto flex items-center gap-1"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? (
+              <ChevronDownIcon className="h-4 w-4 text-blue-500" />
+            ) : (
+              <ChevronUpIcon className="h-4 w-4 text-blue-500" />
+            )}
+            <span className="text-sm text-blue-600 font-medium">
+              子任务 ({subtasks.filter(st => st.status !== 'completed').length}/{subtasks.length})
+            </span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 flex items-center gap-1"
+            onClick={() => setIsCreateDialogOpen(true)}
+            title="新增子任务"
+          >
+            <PlusIcon className="h-4 w-4" />
+            <span className="text-xs">新增</span>
+          </Button>
+        </div>
 
         {isExpanded && (
           <div className="space-y-3">
@@ -216,7 +274,7 @@ export function SubtasksDisplay({
 
       {/* 编辑子任务对话框 */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>编辑子任务</DialogTitle>
           </DialogHeader>
@@ -253,7 +311,48 @@ export function SubtasksDisplay({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 创建子任务对话框 */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] overflow-y-auto overflow-x-hidden">
+          <DialogHeader>
+            <DialogTitle>创建子任务</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium">标题</label>
+              <Input
+                value={createFormData.title}
+                onChange={(e) => setCreateFormData({ ...createFormData, title: e.target.value })}
+                placeholder="子任务标题"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">描述</label>
+              <Textarea
+                value={createFormData.description}
+                onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
+                placeholder="子任务描述（可选）"
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              取消
+            </Button>
+            <Button type="button" onClick={handleCreateSubtask}>
+              创建
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
 
