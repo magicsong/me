@@ -112,9 +112,28 @@ export function SubtasksDisplay({
     }
   };
 
-  const handleStartPomodoro = (subtask: TodoBO) => {
+  const handleStartPomodoro = async (subtask: TodoBO) => {
+    // 首先启动子任务的番茄钟
     if (onStartPomodoro) {
       onStartPomodoro(subtask.id);
+    }
+
+    // 然后检查父任务是否需要更新为已排期状态
+    if (parentTodo.status === 'pending') {
+      try {
+        const updatedParent = {
+          ...parentTodo,
+          status: 'in_progress',
+        };
+        if (!updatedParent.plannedStartTime) {
+          updatedParent.plannedStartTime = new Date().toISOString();
+        }
+        await onUpdateTodo(updatedParent);
+        toast.success('父任务已自动设置为进行中');
+      } catch (error) {
+        console.error('更新父任务状态失败:', error);
+        toast.error('更新父任务状态失败');
+      }
     }
   };
 
@@ -195,80 +214,127 @@ export function SubtasksDisplay({
         </div>
 
         {isExpanded && (
-          <div className="space-y-3">
-            {subtasks.map(subtask => (
-              <div
-                key={subtask.id}
-                className="flex items-center gap-3 p-3 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
-              >
-                {/* 完成按钮 - 仿照主任务 */}
-                <Button
-                  variant="custom"
-                  size="sm"
-                  className={`h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-white flex-shrink-0`}
-                  onClick={() => handleSubtaskComplete(subtask)}
-                  disabled={false}
-                  title="完成"
+          <>
+            {/* 未完成的子任务 - 正常显示 */}
+            <div className="space-y-3">
+              {subtasks
+                .filter(st => st.status !== 'completed')
+                .map(subtask => (
+                <div
+                  key={subtask.id}
+                  className="flex items-center gap-3 p-3 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
                 >
-                  <CheckIcon className="h-4 w-4" />
-                </Button>
-
-                {/* 任务信息 */}
-                <div className="flex-1 min-w-0">
-                  <div
-                    className={`font-medium ${
-                      subtask.status === 'completed'
-                        ? 'line-through text-gray-500'
-                        : 'text-gray-800'
-                    }`}
+                  {/* 完成按钮 - 仿照主任务 */}
+                  <Button
+                    variant="custom"
+                    size="sm"
+                    className={`h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-white flex-shrink-0`}
+                    onClick={() => handleSubtaskComplete(subtask)}
+                    disabled={false}
+                    title="完成"
                   >
-                    {subtask.title}
-                  </div>
-                  {subtask.description && (
-                    <div className="text-xs text-gray-500 line-clamp-1 mt-0.5">
-                      {subtask.description}
+                    <CheckIcon className="h-4 w-4" />
+                  </Button>
+
+                  {/* 任务信息 */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-800">
+                      {subtask.title}
                     </div>
-                  )}
+                    {subtask.description && (
+                      <div className="text-xs text-gray-500 line-clamp-1 mt-0.5">
+                        {subtask.description}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 操作按钮 - 更大更清晰 */}
+                  <div className="flex gap-2 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-200"
+                      onClick={() => handleEditSubtask(subtask)}
+                      title="编辑"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                      <span className="text-xs">编辑</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 h-8 px-3 text-orange-600 hover:text-orange-700 hover:bg-orange-100 border-orange-200"
+                      onClick={() => handleStartPomodoro(subtask)}
+                      title="番茄钟"
+                    >
+                      <TimerIcon className="h-4 w-4" />
+                      <span className="text-xs">番茄钟</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1 h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-100 border-red-200"
+                      onClick={() => handleDeleteSubtask(subtask.id)}
+                      title="删除"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                      <span className="text-xs">删除</span>
+                    </Button>
+                  </div>
                 </div>
+              ))}
+            </div>
 
-                {/* 操作按钮 - 更大更清晰 */}
-                <div className="flex gap-2 flex-shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-100 border-blue-200"
-                    onClick={() => handleEditSubtask(subtask)}
-                    title="编辑"
-                  >
-                    <PencilIcon className="h-4 w-4" />
-                    <span className="text-xs">编辑</span>
-                  </Button>
+            {/* 已完成的子任务 - 紧凑显示 */}
+            {subtasks.some(st => st.status === 'completed') && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="space-y-1">
+                  {subtasks
+                    .filter(st => st.status === 'completed')
+                    .map(subtask => (
+                    <div
+                      key={subtask.id}
+                      className="flex items-center gap-2 p-1.5 rounded bg-gray-50 hover:bg-gray-100 transition-colors text-sm"
+                    >
+                      {/* 完成按钮 - 更小 */}
+                      <Button
+                        variant="custom"
+                        size="sm"
+                        className={`h-6 w-6 rounded-full bg-gray-400 hover:bg-gray-500 text-white flex-shrink-0`}
+                        onClick={() => handleSubtaskComplete(subtask)}
+                        disabled={false}
+                        title="取消完成"
+                      >
+                        <CheckIcon className="h-3 w-3" />
+                      </Button>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 h-8 px-3 text-orange-600 hover:text-orange-700 hover:bg-orange-100 border-orange-200"
-                    onClick={() => handleStartPomodoro(subtask)}
-                    title="番茄钟"
-                  >
-                    <TimerIcon className="h-4 w-4" />
-                    <span className="text-xs">番茄钟</span>
-                  </Button>
+                      {/* 任务信息 - 更紧凑 */}
+                      <div className="flex-1 min-w-0">
+                        <div className="line-through text-gray-500 text-sm">
+                          {subtask.title}
+                        </div>
+                      </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1 h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-100 border-red-200"
-                    onClick={() => handleDeleteSubtask(subtask.id)}
-                    title="删除"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                    <span className="text-xs">删除</span>
-                  </Button>
+                      {/* 操作按钮 - 仅在hover时显示或更小 */}
+                      <div className="flex gap-1 flex-shrink-0 opacity-0 hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-200 border-gray-200"
+                          onClick={() => handleDeleteSubtask(subtask.id)}
+                          title="删除"
+                        >
+                          <TrashIcon className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 

@@ -55,6 +55,7 @@ interface TodoItemProps {
   onUpdateTags: (todoId: number, tagIds: number[]) => Promise<boolean>;
   onStartPomodoro?: (todoId: number) => void;
   onCreateTag: (name: string, color: string) => Promise<{ id: number; name: string; color: string }>;
+  onCreateSubTasks?: (todoId: number, subtasks: Array<{ title: string, description?: string }>) => Promise<boolean>;
 }
 
 export function TodoItem({
@@ -74,7 +75,7 @@ export function TodoItem({
   const [isCompleting, setIsCompleting] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isTagsOpen, setIsTagsOpen] = useState(false);
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>(todo.tagIds || []);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>(todo.tagIds || (todo.tags?.map(t => t.id) || []));
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#3b82f6"); // 默认蓝色
   const [isCreatingTag, setIsCreatingTag] = useState(false);
@@ -82,8 +83,6 @@ export function TodoItem({
   const [isGeneratingSubTasks, setIsGeneratingSubTasks] = useState(false);
   const [generatedSubTasks, setGeneratedSubTasks] = useState<Array<{ title: string, description?: string }>>([]);
   const [aiSplitPrompt, setAiSplitPrompt] = useState("");
-  const [loadingTags, setLoadingTags] = useState(false);
-  const [localAllTags, setLocalAllTags] = useState<any[]>(allTags || []);
   const router = useRouter();
   const form = useForm<Partial<TodoBO>>({
     defaultValues: {
@@ -137,26 +136,23 @@ export function TodoItem({
 
   const handleEdit = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    // 在打开对话框前加载标签和设置初始选中的标签
-    setSelectedTagIds(todo.tagIds || []);
-    setLoadingTags(true);
-    try {
-      const response = await fetch('/api/tag?kind=todo');
-      const result = await response.json();
-      if (result.success && result.data) {
-        setLocalAllTags(result.data);
-      }
-    } catch (error) {
-      console.error('加载标签失败:', error);
-    } finally {
-      setLoadingTags(false);
-      setIsEditOpen(true);
-    }
+    // 优先使用tagIds，如果没有则从tags对象数组中提取ID
+    const tagIds = todo.tagIds || (todo.tags?.map(t => t.id) || []);
+    setSelectedTagIds(tagIds);
+    console.log('=== 编辑任务（使用全局缓存标签） ===');
+    console.log('todo.id:', todo.id);
+    console.log('todo.tagIds:', todo.tagIds);
+    console.log('todo.tags:', todo.tags);
+    console.log('提取的tagIds:', tagIds);
+    console.log('allTags:', allTags);
+    console.log('selectedTagIds:', tagIds);
+    // 不需要再加载标签，直接打开对话框，因为allTags已经是全局加载的
+    setIsEditOpen(true);
   };
 
   const handleSubmitEdit = async (data: Partial<TodoBO>) => {
     // 验证必填标签
-    if (!checkRequiredTags(selectedTagIds, localAllTags)) {
+    if (!checkRequiredTags(selectedTagIds, allTags)) {
       alert('请先为三个标签分类各选择一个');
       return;
     }
@@ -167,7 +163,7 @@ export function TodoItem({
     });
     
     // 如果标签有变化，则更新标签
-    const oldTagIds = todo.tagIds || [];
+    const oldTagIds = todo.tagIds || (todo.tags?.map(t => t.id) || []);
     if (JSON.stringify(selectedTagIds.sort()) !== JSON.stringify(oldTagIds.sort())) {
       const tagsToAdd = selectedTagIds.filter(id => !oldTagIds.includes(id));
       const tagsToRemove = oldTagIds.filter(id => !selectedTagIds.includes(id));
@@ -228,14 +224,15 @@ export function TodoItem({
 
   const handleTagsEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedTagIds(todo.tagIds || []);
+    const tagIds = todo.tagIds || (todo.tags?.map(t => t.id) || []);
+    setSelectedTagIds(tagIds);
     setIsTagsOpen(true);
   };
 
   const handleTagsSubmit = async () => {
     try {
       // 获取当前标签和选中标签的差集
-      const currentTagIds = todo.tagIds || [];
+      const currentTagIds = todo.tagIds || (todo.tags?.map(t => t.id) || []);
       const tagsToAdd = selectedTagIds.filter(id => !currentTagIds.includes(id));
       const tagsToRemove = currentTagIds.filter(id => !selectedTagIds.includes(id));
 
@@ -518,25 +515,11 @@ export function TodoItem({
         </div>
       </div>
 
-      <Dialog open={isEditOpen} onOpenChange={async (open) => {
-        if (open) {
-          // 打开对话框时，确保标签已加载
-          setSelectedTagIds(todo.tagIds || []);
-          setLoadingTags(true);
-          try {
-            const response = await fetch('/api/tag?kind=todo');
-            const result = await response.json();
-            if (result.success && result.data) {
-              setLocalAllTags(result.data);
-            }
-          } catch (error) {
-            console.error('加载标签失败:', error);
-          } finally {
-            setLoadingTags(false);
-          }
-        } else {
+      <Dialog open={isEditOpen} onOpenChange={(open) => {
+        if (!open) {
           // 关闭对话框时，重置标签
-          setSelectedTagIds(todo.tagIds || []);
+          const tagIds = todo.tagIds || (todo.tags?.map(t => t.id) || []);
+          setSelectedTagIds(tagIds);
         }
         setIsEditOpen(open);
       }}>
@@ -697,7 +680,7 @@ export function TodoItem({
               <div className="space-y-4">
                 <div>
                   <FormLabel>必填标签</FormLabel>
-                  {!checkRequiredTags(selectedTagIds, localAllTags) && (
+                  {!checkRequiredTags(selectedTagIds, allTags) && (
                     <Alert variant="destructive" className="mt-2">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription className="text-xs">
@@ -707,24 +690,19 @@ export function TodoItem({
                   )}
                 </div>
 
-                {/* 加载中提示 */}
-                {loadingTags ? (
-                  <div className="text-center text-sm text-muted-foreground">加载标签中...</div>
-                ) : (
-                  <>
-                    {/* 必填标签分类选择 */}
+                {/* 必填标签分类选择 */}
                     <TagCategorySelector
                       label="决策类 - 帮你判断'先做什么'"
                       category="decision_type"
-                      tags={localAllTags}
+                      tags={allTags}
                       selectedTagId={selectedTagIds.find(id => {
-                        const tag = localAllTags.find(t => t.id === id);
+                        const tag = allTags.find(t => t.id === id);
                         return tag?.category === 'decision_type';
                       }) || null}
                       onSelect={(tagId: any) => {
                         setSelectedTagIds(prev => {
                           const oldDecision = prev.find(id => {
-                            const tag = localAllTags.find(t => t.id === id);
+                            const tag = allTags.find(t => t.id === id);
                             return tag?.category === 'decision_type';
                           });
                           return oldDecision 
@@ -737,15 +715,15 @@ export function TodoItem({
                     <TagCategorySelector
                       label="领域类 - 避免碎片化，能看出精力投入分布"
                       category="domain_type"
-                      tags={localAllTags}
+                      tags={allTags}
                       selectedTagId={selectedTagIds.find(id => {
-                        const tag = localAllTags.find(t => t.id === id);
+                        const tag = allTags.find(t => t.id === id);
                         return tag?.category === 'domain_type';
                       }) || null}
                       onSelect={(tagId) => {
                         setSelectedTagIds(prev => {
                           const oldDomain = prev.find(id => {
-                            const tag = localAllTags.find(t => t.id === id);
+                            const tag = allTags.find(t => t.id === id);
                             return tag?.category === 'domain_type';
                           });
                           return oldDomain 
@@ -758,15 +736,15 @@ export function TodoItem({
                     <TagCategorySelector
                       label="工作性质 - 区分'产出型'和'救火型'"
                       category="work_nature"
-                      tags={localAllTags}
+                      tags={allTags}
                       selectedTagId={selectedTagIds.find(id => {
-                        const tag = localAllTags.find(t => t.id === id);
+                        const tag = allTags.find(t => t.id === id);
                         return tag?.category === 'work_nature';
                       }) || null}
                       onSelect={(tagId: any) => {
                         setSelectedTagIds(prev => {
                           const oldWorkNature = prev.find(id => {
-                            const tag = localAllTags.find(t => t.id === id);
+                            const tag = allTags.find(t => t.id === id);
                             return tag?.category === 'work_nature';
                           });
                           return oldWorkNature 
@@ -775,15 +753,13 @@ export function TodoItem({
                         });
                       }}
                     />
-                  </>
-                )}
 
                 {/* 其他标签 */}
-                {localAllTags.length > 0 && (
+                {allTags.length > 0 && (
                   <div className="space-y-2 pt-4 border-t">
                     <FormLabel className="text-xs text-muted-foreground">其他标签（可选）</FormLabel>
                     <div className="flex flex-wrap gap-2">
-                      {localAllTags.map(tag => (
+                      {allTags.map(tag => (
                         <Badge
                           key={tag.id}
                           variant={selectedTagIds.includes(tag.id) ? "default" : "outline"}

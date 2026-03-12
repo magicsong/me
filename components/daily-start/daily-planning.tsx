@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,7 +39,26 @@ export function DailyPlanning({
   const [activeTab, setActiveTab] = useState("today");
   const [showCompleted, setShowCompleted] = useState(false);
   const [pendingCollapsed, setPendingCollapsed] = useState<boolean>(false);
+  const [allTags, setAllTags] = useState<any[]>([]);
   const router = useRouter();
+
+  // 加载所有标签
+  useEffect(() => {
+    const loadAllTags = async () => {
+      try {
+        const response = await fetch('/api/tag?kind=todo');
+        const result = await response.json();
+        if (result.success && result.data) {
+          console.log('加载全局标签:', result.data);
+          setAllTags(result.data);
+        }
+      } catch (error) {
+        console.error('加载标签失败:', error);
+      }
+    };
+
+    loadAllTags();
+  }, []);
   // 根据showCompleted状态过滤任务
   // 注意：后端已经确保返回的是主任务列表，子任务包含在主任务的 subtasks 字段中
   const filteredTodos = useMemo(() => {
@@ -126,6 +145,74 @@ export function DailyPlanning({
       console.error("更新待办事项失败:", error);
       toast.error("更新待办事项时出错");
       return false;
+    }
+  }
+
+  async function handleUpdateTags(todoId: number, tagIds: number[]): Promise<boolean> {
+    try {
+      // 获取当前todo
+      const currentTodo = todos.find(t => t.id === todoId);
+      if (!currentTodo) return false;
+
+      const currentTagIds = currentTodo.tagIds || [];
+      const tagsToAdd = tagIds.filter(id => !currentTagIds.includes(id));
+      const tagsToRemove = currentTagIds.filter(id => !tagIds.includes(id));
+
+      if (tagsToAdd.length > 0) {
+        const response = await fetch(`/api/todo/${todoId}/tags`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tagIds: tagsToAdd }),
+        });
+        if (!response.ok) throw new Error('添加标签失败');
+      }
+
+      if (tagsToRemove.length > 0) {
+        const queryParams = new URLSearchParams({
+          tagIds: tagsToRemove.join(',')
+        }).toString();
+        const response = await fetch(`/api/todo/${todoId}/tags?${queryParams}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('移除标签失败');
+      }
+
+      toast.success("标签已更新");
+      onDataRefresh();
+      return true;
+    } catch (error) {
+      console.error("更新标签失败:", error);
+      toast.error("更新标签时出错");
+      return false;
+    }
+  }
+
+  async function handleCreateTag(name: string, color: string): Promise<{ id: number; name: string; color: string }> {
+    try {
+      const response = await fetch('/api/tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name, 
+          color, 
+          kind: 'todo',
+          category: 'work_nature' // 默认分类
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        toast.success("标签已创建");
+        // 更新本地allTags
+        setAllTags(prev => [...prev, result.data]);
+        return result.data;
+      } else {
+        throw new Error(result.error || '创建标签失败');
+      }
+    } catch (error) {
+      console.error("创建标签失败:", error);
+      toast.error("创建标签时出错");
+      throw error;
     }
   }
 
@@ -412,10 +499,13 @@ export function DailyPlanning({
                                   key={todo.id}
                                   todo={todo}
                                   tags={todo.tags}
+                                  allTags={allTags}
                                   selected={selectedTodos.includes(todo.id)}
                                   onSelect={(selected) => handleSelectTodo(todo.id, selected)}
                                   onUpdate={updateTodo}
                                   onDelete={handleDelete}
+                                  onUpdateTags={handleUpdateTags}
+                                  onCreateTag={handleCreateTag}
                                   onStartPomodoro={() => handleStartFocusing(todo.id)}
                                 />
                               ))}
@@ -464,10 +554,14 @@ export function DailyPlanning({
                                 key={todo.id}
                                 todo={todo}
                                 tags={todo.tags}
+                                allTags={allTags}
                                 selected={selectedTodos.includes(todo.id)}
                                 onSelect={(selected) => handleSelectTodo(todo.id, selected)}
                                 onUpdate={updateTodo}
                                 onDelete={handleDelete}
+                                onUpdateTags={handleUpdateTags}
+                                onCreateTag={handleCreateTag}
+                                onStartPomodoro={() => handleStartFocusing(todo.id)}
                               />
                             ))}
                           </div>
@@ -643,11 +737,14 @@ export function DailyPlanning({
                             <TodoItem
                               todo={todo}
                               tags={todo.tags}
+                              allTags={allTags}
                               selected={selectedTodos.includes(todo.id)}
                               onSelect={(selected) => handleSelectTodo(todo.id, selected)}
                               onUpdate={updateTodo}
                               onComplete={completeTodo}
                               onDelete={handleDelete}
+                              onUpdateTags={handleUpdateTags}
+                              onCreateTag={handleCreateTag}
                               onStartPomodoro={() => handleStartFocusing(String(todo.id))}
                             />
                             {/* 显示子任务 */}
@@ -696,10 +793,14 @@ export function DailyPlanning({
                 <TodoItem
                   todo={todo}
                   tags={todo.tags}
+                  allTags={allTags}
                   selected={selectedTodos.includes(todo.id)}
                   onSelect={(selected) => handleSelectTodo(todo.id, selected)}
                   onUpdate={updateTodo}
                   onDelete={handleDelete}
+                  onUpdateTags={handleUpdateTags}
+                  onCreateTag={handleCreateTag}
+                  onStartPomodoro={() => handleStartFocusing(String(todo.id))}
                 />
                 {/* 显示已完成任务的子任务 */}
                 <SubtasksDisplay
