@@ -22,7 +22,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
-import { addDays, format, isToday, isYesterday, subDays } from 'date-fns';
+import { addDays, format, isSameDay, isToday, isYesterday, parseISO, subDays } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import {
   ArrowLeft,
@@ -44,7 +44,7 @@ import {
 import { useEffect, useState, useMemo } from 'react';
 import { fetchDailySummary, saveDailySummary } from './actions';
 import { AISummarySection } from './components/ai-summary-section';
-import { DailySummaryForm, FailedHabit } from './daily-summary-form';
+import { DailySummaryForm, FailedHabit, TaskDisplayGroup } from './daily-summary-form';
 import { getHabits } from '../habits/client-actions';
 import { DailySummaryContext, TodoBO } from '@/app/api/types';
 import { fetchTodosByDate } from '../actions';
@@ -58,10 +58,12 @@ export function DailySummaryViewer() {
   const [error, setError] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [completedTasks, setCompletedTasks] = useState<string[]>([]); // 完成的普通任务
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]); // 完成的普通任务（扁平，用于提交）
   const [completedHabits, setCompletedHabits] = useState<string[]>([]); // 完成的习惯任务
-  const [failedTasks, setFailedTasks] = useState<string[]>([]); // 未完成的普通任务
+  const [failedTasks, setFailedTasks] = useState<string[]>([]); // 未完成的普通任务（扁平，用于提交）
   const [failedHabits, setFailedHabits] = useState<FailedHabit[]>([]); // 未完成的习惯
+  const [completedTaskGroups, setCompletedTaskGroups] = useState<TaskDisplayGroup[]>([]); // 完成任务分组（用于展示）
+  const [failedTaskGroups, setFailedTaskGroups] = useState<TaskDisplayGroup[]>([]); // 未完成任务分组（用于展示）
   const [totalTasks, setTotalTasks] = useState(0);
   const [habitsLoading, setHabitsLoading] = useState(false);
 
@@ -115,19 +117,62 @@ export function DailySummaryViewer() {
       const result = await fetchTodosByDate(selectedDate);
 
       if (result.success && result.data) {
-        // 过滤出已完成的任务
-        const todos = result.data as TodoBO[];
-        const completed = todos.filter(todo => todo.completedAt);
-        const failed = todos.filter(todo => !todo.completedAt && todo.priority !== 'low' && todo.status === "in_progress");
+        const isCompletedOnSelectedDate = (completedAt?: string) => {
+          if (!completedAt) return false;
+          return isSameDay(parseISO(completedAt), selectedDate);
+        };
 
-        // 设置任务数据，不添加前缀
-        setCompletedTasks(completed.map(todo => todo.title));
-        setFailedTasks(failed.map(todo => todo.title));
-        setTotalTasks(todos.length);
+        const todos = result.data as TodoBO[];
+        const completedList: string[] = [];
+        const failedList: string[] = [];
+        const completedGroups: TaskDisplayGroup[] = [];
+        const failedGroups: TaskDisplayGroup[] = [];
+        let totalCount = 0;
+
+        for (const todo of todos) {
+          if (isCompletedOnSelectedDate(todo.completedAt)) {
+            // 父任务本身已完成，直接记录
+            completedList.push(todo.title);
+            completedGroups.push({ parentTitle: todo.title, subtasks: [] });
+            totalCount += 1;
+          } else if (todo.subtasks && todo.subtasks.length > 0) {
+            // 父任务未完成但有子任务，按子任务维度统计
+            totalCount += todo.subtasks.length;
+            const doneSubs = todo.subtasks
+              .filter(s => isCompletedOnSelectedDate(s.completedAt))
+              .map(s => s.title);
+            const failSubs = todo.subtasks
+              .filter(s => !s.completedAt && s.priority !== 'low' && s.status === 'in_progress')
+              .map(s => s.title);
+            if (doneSubs.length > 0) {
+              completedList.push(...doneSubs);
+              completedGroups.push({ parentTitle: todo.title, subtasks: doneSubs });
+            }
+            if (failSubs.length > 0) {
+              failedList.push(...failSubs);
+              failedGroups.push({ parentTitle: todo.title, subtasks: failSubs });
+            }
+          } else {
+            // 普通任务（无子任务）
+            totalCount += 1;
+            if (todo.priority !== 'low' && todo.status === 'in_progress') {
+              failedList.push(todo.title);
+              failedGroups.push({ parentTitle: todo.title, subtasks: [] });
+            }
+          }
+        }
+
+        setCompletedTasks(completedList);
+        setFailedTasks(failedList);
+        setCompletedTaskGroups(completedGroups);
+        setFailedTaskGroups(failedGroups);
+        setTotalTasks(totalCount);
       }
       else {
         setCompletedTasks([]);
         setFailedTasks([]);
+        setCompletedTaskGroups([]);
+        setFailedTaskGroups([]);
         setTotalTasks(0);
       }
     } catch (err) {
@@ -321,9 +366,22 @@ export function DailySummaryViewer() {
       }
       if (completedTasks.length > 0) {
         text += `  任务:\n`;
-        completedTasks.forEach(task => {
-          text += `    • ${task}\n`;
-        });
+        if (completedTaskGroups.length > 0) {
+          completedTaskGroups.forEach(group => {
+            if (group.subtasks.length > 0) {
+              text += `    • ${group.parentTitle}\n`;
+              group.subtasks.forEach(sub => {
+                text += `      ◦ ${sub}\n`;
+              });
+            } else {
+              text += `    • ${group.parentTitle}\n`;
+            }
+          });
+        } else {
+          completedTasks.forEach(task => {
+            text += `    • ${task}\n`;
+          });
+        }
       }
       text += '\n';
     }
@@ -339,9 +397,22 @@ export function DailySummaryViewer() {
       }
       if (failedTasks.length > 0) {
         text += `  任务:\n`;
-        failedTasks.forEach(task => {
-          text += `    • ${task}\n`;
-        });
+        if (failedTaskGroups.length > 0) {
+          failedTaskGroups.forEach(group => {
+            if (group.subtasks.length > 0) {
+              text += `    • ${group.parentTitle}\n`;
+              group.subtasks.forEach(sub => {
+                text += `      ◦ ${sub}\n`;
+              });
+            } else {
+              text += `    • ${group.parentTitle}\n`;
+            }
+          });
+        } else {
+          failedTasks.forEach(task => {
+            text += `    • ${task}\n`;
+          });
+        }
       }
       text += '\n';
     }
@@ -576,11 +647,13 @@ export function DailySummaryViewer() {
                     </CardHeader>
                     <CardContent className="py-2 pb-4">
                       {/* 任务和习惯完成情况 */}
-                      {(completedHabits.length > 0 || completedTasks.length > 0) && (
+                      {(completedHabits.length > 0 || completedTasks.length > 0 || failedHabits.length > 0 || failedTasks.length > 0) && (
                         <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-4 hover:bg-indigo-50/80 transition-colors md:col-span-2">
                           <div className="flex items-center text-sm font-medium mb-3">
                             <CheckCircle className="h-4 w-4 mr-2 text-indigo-500" />
-                            <span className="text-indigo-900">今日完成</span>
+                            <span className="text-indigo-900">
+                              {dateType === 'today' ? '今日完成' : dateType === 'yesterday' ? '昨日完成' : '当日完成'}
+                            </span>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -606,22 +679,75 @@ export function DailySummaryViewer() {
                             )}
 
                             {/* 任务完成情况 */}
-                            {completedTasks.length > 0 && (
+                            {(completedTasks.length > 0 || failedTasks.length > 0) && (
                               <div>
                                 <h4 className="text-xs font-medium text-indigo-700 mb-2">任务</h4>
                                 <div className="space-y-1.5">
-                                  {completedTasks.map((task, index) => (
-                                    <div key={`task-${index}`} className="flex items-center">
-                                      <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-2" />
-                                      <span className="text-sm text-slate-700">{task}</span>
-                                    </div>
-                                  ))}
-                                  {failedTasks.map((task, index) => (
-                                    <div key={`failed-task-${index}`} className="flex items-center opacity-60">
-                                      <Circle className="h-3.5 w-3.5 text-gray-400 mr-2" />
-                                      <span className="text-sm text-slate-500 line-through">{task}</span>
-                                    </div>
-                                  ))}
+                                  {completedTaskGroups.length > 0 ? (
+                                    completedTaskGroups.map((group, groupIndex) => (
+                                      group.subtasks.length > 0 ? (
+                                        <div key={`task-group-${groupIndex}`} className="space-y-1">
+                                          <div className="flex items-center">
+                                            <CheckCircle className="h-3.5 w-3.5 text-indigo-400 mr-2" />
+                                            <span className="text-xs font-medium text-slate-600">{group.parentTitle}</span>
+                                          </div>
+                                          <div className="pl-5 space-y-1">
+                                            {group.subtasks.map((task, subIndex) => (
+                                              <div key={`task-${groupIndex}-${subIndex}`} className="flex items-center">
+                                                <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-2" />
+                                                <span className="text-sm text-slate-700">{task}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div key={`task-group-${groupIndex}`} className="flex items-center">
+                                          <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-2" />
+                                          <span className="text-sm text-slate-700">{group.parentTitle}</span>
+                                        </div>
+                                      )
+                                    ))
+                                  ) : (
+                                    completedTasks.map((task, index) => (
+                                      <div key={`task-${index}`} className="flex items-center">
+                                        <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-2" />
+                                        <span className="text-sm text-slate-700">{task}</span>
+                                      </div>
+                                    ))
+                                  )}
+
+                                  {failedTaskGroups.length > 0 ? (
+                                    failedTaskGroups.map((group, groupIndex) => (
+                                      group.subtasks.length > 0 ? (
+                                        <div key={`failed-task-group-${groupIndex}`} className="space-y-1 opacity-60">
+                                          <div className="flex items-center">
+                                            <Circle className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                                            <span className="text-xs font-medium text-slate-500">{group.parentTitle}</span>
+                                          </div>
+                                          <div className="pl-5 space-y-1">
+                                            {group.subtasks.map((task, subIndex) => (
+                                              <div key={`failed-task-${groupIndex}-${subIndex}`} className="flex items-center">
+                                                <Circle className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                                                <span className="text-sm text-slate-500 line-through">{task}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div key={`failed-task-group-${groupIndex}`} className="flex items-center opacity-60">
+                                          <Circle className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                                          <span className="text-sm text-slate-500 line-through">{group.parentTitle}</span>
+                                        </div>
+                                      )
+                                    ))
+                                  ) : (
+                                    failedTasks.map((task, index) => (
+                                      <div key={`failed-task-${index}`} className="flex items-center opacity-60">
+                                        <Circle className="h-3.5 w-3.5 text-gray-400 mr-2" />
+                                        <span className="text-sm text-slate-500 line-through">{task}</span>
+                                      </div>
+                                    ))
+                                  )}
                                 </div>
                               </div>
                             )}
@@ -737,6 +863,8 @@ export function DailySummaryViewer() {
         failedHabits={failedHabits}
         totalTasks={totalTasks}
         summaryDate={dateType === 'today' ? 'today' : 'yesterday'}
+        completedTaskGroups={completedTaskGroups}
+        failedTaskGroups={failedTaskGroups}
       />
 
       {/* 详情模态框 */}

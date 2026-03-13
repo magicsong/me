@@ -26,6 +26,11 @@ export type FailedHabit = {
   id: string | number;
 };
 
+export type TaskDisplayGroup = {
+  parentTitle: string;  // 父任务名（或独立任务名）
+  subtasks: string[];   // 子任务列表；独立任务时为空数组
+};
+
 type DailySummaryFormProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -36,6 +41,8 @@ type DailySummaryFormProps = {
   summaryDate: 'today' | 'yesterday';
   completedHabits: string[],
   failedHabits: FailedHabit[],
+  completedTaskGroups?: TaskDisplayGroup[];
+  failedTaskGroups?: TaskDisplayGroup[];
 };
 
 const emojis = ['😊', '😃', '😐', '😔', '😢'];
@@ -50,6 +57,8 @@ export function DailySummaryForm({
   summaryDate,
   completedHabits,
   failedHabits,
+  completedTaskGroups,
+  failedTaskGroups,
 }: DailySummaryFormProps) {
   const [completionScore, setCompletionScore] = useState(5);
   const [goodThings, setGoodThings] = useState(['', '', '']);
@@ -424,12 +433,38 @@ export function DailySummaryForm({
                     <div className="border rounded-md p-3 bg-slate-50 h-[150px] overflow-y-auto">
                       {completedTasks.length > 0 ? (
                         <div className="space-y-2">
-                          {completedTasks.map((task) => (
-                            <div key={task} className="flex items-center space-x-2">
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              <span className="text-sm">{task}</span>
-                            </div>
-                          ))}
+                          {completedTaskGroups ? (
+                            completedTaskGroups.map((group, gi) => (
+                              group.subtasks.length > 0 ? (
+                                <div key={gi} className="space-y-1">
+                                  <div className="flex items-center space-x-1.5">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                                    <span className="text-xs font-medium text-slate-500">{group.parentTitle}</span>
+                                  </div>
+                                  <div className="pl-5 space-y-1">
+                                    {group.subtasks.map((sub, si) => (
+                                      <div key={si} className="flex items-center space-x-2">
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                        <span className="text-sm">{sub}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div key={gi} className="flex items-center space-x-2">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  <span className="text-sm">{group.parentTitle}</span>
+                                </div>
+                              )
+                            ))
+                          ) : (
+                            completedTasks.map((task) => (
+                              <div key={task} className="flex items-center space-x-2">
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                <span className="text-sm">{task}</span>
+                              </div>
+                            ))
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">没有完成任何任务</p>
@@ -446,12 +481,38 @@ export function DailySummaryForm({
                     <div className="border rounded-md p-3 bg-slate-50 h-[150px] overflow-y-auto">
                       {failedTasks.length > 0 ? (
                         <div className="space-y-2">
-                          {failedTasks.map((task) => (
-                            <div key={task} className="flex items-center space-x-2">
-                              <XCircle className="h-4 w-4 text-red-500" />
-                              <span className="text-sm">{task}</span>
-                            </div>
-                          ))}
+                          {failedTaskGroups ? (
+                            failedTaskGroups.map((group, gi) => (
+                              group.subtasks.length > 0 ? (
+                                <div key={gi} className="space-y-1">
+                                  <div className="flex items-center space-x-1.5">
+                                    <XCircle className="h-3.5 w-3.5 text-red-300 shrink-0" />
+                                    <span className="text-xs font-medium text-slate-500">{group.parentTitle}</span>
+                                  </div>
+                                  <div className="pl-5 space-y-1">
+                                    {group.subtasks.map((sub, si) => (
+                                      <div key={si} className="flex items-center space-x-2">
+                                        <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                                        <span className="text-sm">{sub}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div key={gi} className="flex items-center space-x-2">
+                                  <XCircle className="h-4 w-4 text-red-500" />
+                                  <span className="text-sm">{group.parentTitle}</span>
+                                </div>
+                              )
+                            ))
+                          ) : (
+                            failedTasks.map((task) => (
+                              <div key={task} className="flex items-center space-x-2">
+                                <XCircle className="h-4 w-4 text-red-500" />
+                                <span className="text-sm">{task}</span>
+                              </div>
+                            ))
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">没有未完成的任务</p>
